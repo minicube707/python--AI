@@ -45,7 +45,7 @@ def ouput_shape(input_size, k_size, stride, padding):
 #Fonction du CNN
 def show_information(x_shape0, tuple_size, dimensions):
     print("\nDétail de la convolution")
-    print(f"{x_shape0}({dimensions["1"][2]})->", end="")
+    print(f"{x_shape0}({dimensions['1'][2]})->", end="")
 
     for i in range(len(tuple_size)):
         if i < len(tuple_size)-1:
@@ -231,10 +231,7 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
 
             # Remplacer les valeurs maximales par les éléments de array2
             result[np.arange(activation["A" + str(c-1)].shape[0]), max_indices] = dZ.reshape((1, dZ.size))
-            
-            print("Array d'origine :\n", dZ.shape)
             dZ = deshape(result, dimensions[str(c)][0], dimensions[str(c)][1])
-            print(dZ.shape)
             
             
         elif parametres["l" + str(c)] == "kernel":
