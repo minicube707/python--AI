@@ -3,7 +3,32 @@ import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-#Fonction
+"""
+============================
+========Documentation=======
+============================
+
+Le but de ce CNN est de transforme les activation en matrice
+Allow to pass AxNxN grid to AxBC with A the number of layer, B the number of pixel and C the size of the kernel. To do cross product
+The kernel are shaped AxBxC A the number of layer, B the size of the kernel (ex:3*3=9) and C = 1.
+The biais are shaped AxBxC A the number of layer, B the size of the output (ex:3*3=9) and C = 1. To do cross product
+
+A : Activation in memory (Always in line format)
+K : Kernel  AxBxC
+b : bias    AxBxC
+X : input
+Z : Activation with function application
+dZ : derivative of the activation
+y : label
+"""
+
+
+
+"""
+============================
+==========Fonction==========
+============================
+"""
 def sigmoïde(X):
     return 1/(1 + np.exp(-X))
 
@@ -12,22 +37,34 @@ def relu(X):
 
 def max(X):
     a = np.int8(np.sqrt(X.shape[1]))
-    return np.max(X, axis=2).reshape((1, a, a))
+    return np.max(X, axis=2).reshape((X.shape[1], a, a))
 
 def correlate(A, K, b, x_size):
 
+    print("HAA\n", A.shape)
+    #First cross product
     Z = A[0].dot(K[0])
+    
+    #Other cross product if the number of layer is GT 1
     for i in range(1, A.shape[0]):
         Z = np.add(Z, A[i].dot(K[i]))
 
+    print(A.shape)
+    print(Z.shape)
     Z = np.add(Z, b)
+    print(Z.shape)
+
 
     Z = Z.reshape((1, x_size, x_size))
     Z = np.clip(Z, -88, 88)
     return Z
 
+
 def convolution(dZ, K, k_size_sqrt):
+    #new_dz is intput with a pas to do the the cross product with all value
     new_dZ = np.pad(dZ, pad_width=((0, 0), (k_size_sqrt - 1, k_size_sqrt - 1), (k_size_sqrt - 1, k_size_sqrt - 1)), mode='constant', constant_values=0)
+
+    #next_dz is the output
     next_dZ = np.zeros((dZ.shape[0], dZ.shape[1]+k_size_sqrt-1, dZ.shape[2]+k_size_sqrt-1))
 
     for k in range(next_dZ.shape[0]):
@@ -43,7 +80,11 @@ def ouput_shape(input_size, k_size, stride, padding):
 
 
 
-#Fonction du CNN
+"""
+============================
+======Fonction du CNN=======
+============================
+"""
 def show_information(x_shape0, tuple_size, dimensions):
     print("\nDétail de la convolution")
     print(f"{x_shape0}({dimensions['1'][2]})->", end="")
@@ -164,27 +205,31 @@ def initialisation(x_shape1, dimension, padding_mode):
 
 def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding):
 
-    
+    #Activation are in line format
     if type_layer == "kernel":
         Z = correlate(A, K, b, x_size)
 
     else:
         Z = A
 
+    #Kernel part
     if mode == "relu":
         Z = relu(Z)
 
     elif mode == "sigmoide":
        Z = sigmoïde(Z)
     
+    #Pooling part
     elif mode == "max":
         Z = max(Z)
-    
+
+    #Activation are in square format
     if padding != None:
         Z = add_padding(Z, padding)
     if k_size != None:
         Z = reshape(Z, k_size , x_size, stride, padding)  
 
+    #Activation are in line format
     return Z
 
 def foward_propagation(X, parametres, tuple_size, dimensions):
@@ -204,10 +249,14 @@ def foward_propagation(X, parametres, tuple_size, dimensions):
         stride = 1
         padding = 0
 
+
+        #This part is to get data for the reshape
+        #There is no information for the last reshape
         if c < C:
             k_size = dimensions[str(c+1)][0]
             stride = dimensions[str(c+1)][1]
-            
+        
+        #The information for the padding is at the next step
         if c+1 < C:
            padding = dimensions[str(c+2)][2] 
 
@@ -225,12 +274,16 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
     for c in reversed(range(1, C+1)):
         
         #Remove the padding
+        #Activation are in square format
         dZ = dZ[:,:tuple_size[c-1], :tuple_size[c-1]]
-
+        
         if parametres["l" + str(c)] == "pooling":
             
             # Trouve les valeurs maximales et leurs indices le long de l'axe 2
+            #Reshape dz to (A,BxC)
             max_dZ = dZ.reshape(dZ.shape[0], dZ.size//dZ.shape[0])
+
+            #Get the max value, before the operation max in foreword propagation
             max_indices = np.argmax(activation["A" + str(c-1)], axis=2)
 
             # Initialise le résultat avec des zéros
@@ -239,6 +292,8 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
             # Utilise un indexage avancé pour placer les valeurs maximales
             batch_indices = np.arange(activation["A" + str(c-1)].shape[0])[:, None]
             row_indices = np.arange(activation["A" + str(c-1)].shape[1])[None, :]
+
+            #Use a mask, everywhere is 0, exept where the max value while be take
             result[batch_indices, row_indices, max_indices] = max_dZ
 
             # Affichage
@@ -285,7 +340,11 @@ def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, 
 
     return parametres
 
-
+"""
+============================
+=======Shape fonction ======
+============================
+"""
 #Shape fonction 
 #Allow to pass nxn grid to axb with a the number of placement and b the size of the kernel. To do cross product
 def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
@@ -323,8 +382,11 @@ def add_padding(X, padding):
     return np.pad(X, pad_width=((0, 0), (0, padding), (0, padding)), mode='constant', constant_values=0)
 
 
-
-#Evaluation Metrics Function
+"""
+============================
+Evaluation Metrics Function
+============================
+"""
 def mean_square_error(A, y):
     A = A.reshape(y.shape)
     return  1/(2*len(y))*np.sum((A-y)**2)
@@ -348,7 +410,7 @@ def main():
     nb_iteration = 20_000
 
 
-    x_shape = 28
+    x_shape = 10
     X = np.random.rand(x_shape, x_shape)
 
     if len(X.shape) == 2:
@@ -358,9 +420,7 @@ def main():
     #Kernel size, stride, padding, nb_kernel, type layer, function
     dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
                   "2" :(2, 2, 0, 1, "pooling", "max"),
-                  "3" :(3, 1, 0, 1, "kernel", "relu"),
-                  "4" :(2, 2, 0, 1, "pooling", "max"),
-                  "5" :(5, 1, 0, 1, "kernel", "sigmoide")}
+                  "3" :(2, 1, 0, 1, "kernel", "sigmoide")}
 
     x_shape1 = X.shape[1]
     padding_mode = "auto"
