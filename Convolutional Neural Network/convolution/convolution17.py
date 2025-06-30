@@ -9,15 +9,15 @@ import matplotlib.pyplot as plt
 ============================
 
 Le but de ce CNN est de transforme les activation en matrice
-Allow to pass AxNxN grid to AxBC with A the number of layer, B the number of pixel and C the size of the kernel. To do cross product
+Allow to pass AxNxN grid to AxBxC with A the number of layer, B the number of pixel and C the size of the kernel. To do cross product
 The kernel are shaped AxBxC A the number of layer, B the size of the kernel (ex:3*3=9) and C = 1.
 The biais are shaped AxBxC A the number of layer, B the size of the output (ex:3*3=9) and C = 1. To do cross product
 
 A : Activation in memory (Always in line format)
-K : Kernel  AxBxC
-b : bias    AxBxC
+K : Kernel
+b : bias 
 X : input
-Z : Activation with function application
+Z : New activaton
 dZ : derivative of the activation
 y : label
 """
@@ -98,41 +98,92 @@ def show_information(x_shape0, tuple_size, dimensions):
     print(f"{tuple_size[i]}")  
     print("")
 
+    print("\nkernel size, stride, padding, nb_kernel, type layer, function")
     for keys, values in dimensions.items():
         print(keys, values)
 
+"""
+error_initialisation:
+=========DESCRIPTION=========
+Print message if an error is dectecedd
 
-def error_initialisation(x_shape1, list_size, dimension, input_size, previ_input_size, type_layer, fonction, stride):
+=========INPUT=========
+int         x_shape1 :          taile en largueur de l'input
+list        list_size :         list of all activation shape with padding
+dict        dimensions :         all the information on how is built the CNN
+int         input_size :        the size in row of the input activation 
+int         previ_input_size :  the size in row of the previous input activation
+string      type_layer :        the type of layer 
+string      fonction :          the type of function
+int         stride :            how many pixel the kernel move 
+
+=========OUTPUT=========
+void
+"""
+def error_initialisation(x_shape1, list_size, dimensions, input_size, previ_input_size, type_layer, fonction, stride):
 
     if input_size < 1:
-        show_information(x_shape1, list_size, dimension)
+        show_information(x_shape1, list_size, dimensions)
         raise ValueError(f"ERROR: The current dimensions is {input_size}. Dimension can't be negatif")
         
-    if previ_input_size%input_size !=0 and stride != 1:
-        show_information(x_shape1, list_size, dimension)
+    if previ_input_size % input_size != 0 and stride != 1:
+        show_information(x_shape1, list_size, dimensions)
         raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
     
     if type_layer not in ["kernel", "pooling"]:
-        show_information(x_shape1, list_size, dimension)
+        show_information(x_shape1, list_size, dimensions)
         raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pooling' or 'kernel'.")
     
     if fonction not in ["relu", "sigmoide", "max"]:
-        show_information(x_shape1, list_size, dimension)
+        show_information(x_shape1, list_size, dimensions)
         raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu' or 'sigmoide', 'max'.")
 
 
-def initialisation_extraction(dimension, i):
+"""
+initialisation_extraction:
+=========DESCRIPTION=========
+Extrait all the information inside the dict
+
+=========INPUT=========
+dict    dimensions :    all the information on how is built the CNN
+int     i :             the stage of the CNN
+
+=========OUTPUT=========
+int     k_size :        the size in row of kernel
+int     stride :        how many pixel the kernel move  
+int     padding :       how many pixel we add to the activation 
+int     nb_kernel :     how many kernel
+string  type_layer :    the type of layer 
+string  fonction :      the type of function
+"""
+def initialisation_extraction(dimensions, i):
     #Kernel size, stride, padding, nb_kernel, type layer, function
 
-    k_size = dimension[str(i)][0]
-    stride = dimension[str(i)][1]
-    padding = dimension[str(i)][2]
-    nb_kernel = dimension[str(i)][3]
-    type_layer = dimension[str(i)][4]
-    fonction = dimension[str(i)][5]
+    k_size = dimensions[str(i)][0]
+    stride = dimensions[str(i)][1]
+    padding = dimensions[str(i)][2]
+    nb_kernel = dimensions[str(i)][3]
+    type_layer = dimensions[str(i)][4]
+    fonction = dimensions[str(i)][5]
 
     return k_size, stride, padding, nb_kernel, type_layer, fonction
 
+
+"""
+initialisation_pooling:
+=========DESCRIPTION=========
+Set the value for pooling operation
+
+=========INPUT=========
+dict    parametres :    dictionary to fill with the pooling operation
+int     k_size :        the size in row of the kernel
+string  type_layer :    the type of layer 
+string  fonction :      the type of function
+int     i :             the stage of the CNN
+
+=========OUTPUT=========
+dict    parametres :    containt all the information for the pooling operation
+"""
 def initialisation_pooling(parametres, k_size, type_layer, fonction, i):
 
     parametres["K" + str(i)] = k_size**2
@@ -142,6 +193,26 @@ def initialisation_pooling(parametres, k_size, type_layer, fonction, i):
     
     return parametres
 
+
+"""
+initialisation_kernel:
+=========DESCRIPTION=========
+Set the value for kernel operation, the update operation
+
+=========INPUT=========
+dict    parametres :        dictionary to fill with the kernel information
+dict    parametres_grad :   dictionary to fill with the update information
+int     k_size :            the size in row of the kernel
+int     o_size :            the size in row of the output
+int     nb_kernel :         the number of kernel
+string  type_layer :        the type of layer 
+string  fonction :          the type of function
+int     i :                 the stage of the CNN
+
+=========OUTPUT=========
+dict    parametres :        containt all the information for the kernel operation
+dict    parametres_grad :   containt all the information for the update operation
+"""
 def initialisation_kernel(parametres, parametres_grad, k_size, o_size, nb_kernel, type_layer, fonction, i):
 
     parametres["K" + str(i)] = np.random.randn(nb_kernel, k_size**2, 1)
@@ -154,20 +225,35 @@ def initialisation_kernel(parametres, parametres_grad, k_size, o_size, nb_kernel
 
     return parametres, parametres_grad
 
-def initialisation_calcul(x_shape1, dimension, padding_mode):
+
+"""
+initialisation_calcul:
+=========DESCRIPTION=========
+Preproce the information to built the CNN
+
+=========INPUT=========
+int     x_shape1 :      the size in row of the 2nd  (2/3) of the input
+dict    dimensions :    all the information on how is built the CNN
+string  padding_mode :  string to know if the auto-padding is active
+
+=========OUTPUT=========
+dict    dimension :     all the information on how is built the CNN
+list    list_size :     list of all activation shape with padding
+"""
+def initialisation_calcul(x_shape1, dimensions, padding_mode):
 
     list_size = []
     input_size =  x_shape1
     previ_input_size = input_size
 
-    for i in range(1, len(dimension)+1):
+    for i in range(1, len(dimensions)+1):
 
-        k_size, stride, padding, nb_kernel, type_layer, fonction = initialisation_extraction(dimension, i)
+        k_size, stride, padding, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
 
-        #If the input doesn't match perfectly with the kernel and padding is in mode auto-correction, the system correct the mistake and add the right padding
+        #If the input doesn't match perfectly with the kernel and padding and is in mode auto-correction, the system correct the mistake and add the right padding
         if input_size % stride != 0 and padding_mode == "auto":
             padding = stride - input_size % stride
-            dimension[str(i)] = k_size, stride, padding, nb_kernel, type_layer, fonction
+            dimensions[str(i)] = k_size, stride, padding, nb_kernel, type_layer, fonction
             list_size[-1] = input_size + padding
 
         o_size = ouput_shape(input_size, k_size, stride, padding)
@@ -175,16 +261,29 @@ def initialisation_calcul(x_shape1, dimension, padding_mode):
         input_size = o_size
 
         list_size.append(input_size)
-        error_initialisation(x_shape1, list_size, dimension, input_size, previ_input_size, type_layer, fonction, stride)
+        error_initialisation(x_shape1, list_size, dimensions, input_size, previ_input_size, type_layer, fonction, stride)
 
-    return dimension, list_size
+    return dimensions, list_size
 
-def initialisation_affectation(dimension, list_size):
+"""
+initialisation_affectation:
+=========DESCRIPTION=========
+Set all the value to built the CNN
+
+=========INPUT=========
+dict    dimensions :    all the information on how is built the CNN
+list    list_size :     list of all activation shape with padding
+
+=========OUTPUT=========
+dict    parametres :        containt all the information for the kernel operation
+dict    parametres_grad :   containt all the information for the update operation
+"""
+def initialisation_affectation(dimensions, list_size):
 
     parametres = {}
     parametres_grad = {}
-    for i in range(1, len(dimension)+1):
-        k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimension, i)
+    for i in range(1, len(dimensions)+1):
+        k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
         o_size = list_size[i-1]
 
         if type_layer == "kernel":
@@ -196,15 +295,52 @@ def initialisation_affectation(dimension, list_size):
     return parametres, parametres_grad
 
 
-def initialisation(x_shape1, dimension, padding_mode):
+"""
+initialisation:
+=========DESCRIPTION=========
+Set all the value to built the CNN
 
-    dimension, list_size = initialisation_calcul(x_shape1, dimension, padding_mode)
-    parametres, parametres_grad = initialisation_affectation(dimension, list_size)
+=========INPUT=========
+int     x_shape1 :      the size in row of the 2nd  (2/3) of the input
+dict    dimensions :    all the information on how is built the CNN
+string  padding_mode :  string to know if the auto-padding is active
 
-    return parametres, parametres_grad, dimension, tuple(list_size)
+=========OUTPUT=========
+dict    parametres :        containt all the information for the kernel operation
+dict    parametres_grad :   containt all the information for the update operation
+dict    dimension :         all the information on how is built the CNN
+tuple   list_size:          tuple of all activation shape with padding
+"""
+def initialisation(x_shape1, dimensions, padding_mode):
 
+    dimensions, list_size = initialisation_calcul(x_shape1, dimensions, padding_mode)
+    parametres, parametres_grad = initialisation_affectation(dimensions, list_size)
+
+    return parametres, parametres_grad, dimensions, tuple(list_size)
+
+
+"""
+function_activation:
+=========DESCRIPTION=========
+Function that centrelize all the use to process the CNN
+
+=========INPUT=========
+numpy.array     A :             the activation matrice
+numpy.array     K :             the kernel matrice           
+numpy.array     b :             the biais matrice           
+string          mode :          the type of activation function we use
+string          type_layer :    the type of layer 
+int             k_size :        the size in row of the kernel
+int             x_size :        the size in row of the activation matrice
+int             stride :        how many pixel the kernel move  
+int             padding :       how many pixel we add to the activation 
+
+=========OUTPUT=========
+numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
+"""
 def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding):
 
+    print(type(A))
     #Activation are in line format
     if type_layer == "kernel":
         Z = correlate(A, K, b, x_size)
@@ -232,6 +368,21 @@ def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, paddi
     #Activation are in line format
     return Z
 
+
+"""
+foward_propagation:
+=========DESCRIPTION=========
+Pass the input into the activation functions for the foreward propagation
+
+=========INPUT=========
+numpy.array     X :             the features,input of the CNN
+dict            parametres :    containt all the information for the kernel operation
+tuple           tuple_size :    tuple of all activation shape with padding
+dict            dimensions :    all the information on how is built the CNN
+
+=========OUTPUT=========
+dict            activation :     containt all the activation during the foreward propagation
+"""
 def foward_propagation(X, parametres, tuple_size, dimensions):
 
     activation = {"A0" : X}
@@ -264,6 +415,22 @@ def foward_propagation(X, parametres, tuple_size, dimensions):
 
     return activation
 
+
+"""
+back_propagation:
+=========DESCRIPTION=========
+Evalaute the difference between the target and the resultat got
+
+=========INPUT=========
+dict            activation :    containt all the activation during the foreward propagation
+dict            parametres :    containt all the information for the kernel operation
+dict            dimensions :    all the information on how is built the CNN
+numpy.array     y :             the target, the objectif of the CNN
+tuple           tuple_size :    tuple of all activation shape with padding
+
+=========OUTPUT=========
+dict           gradients :     containt all the gradient need for the update
+"""
 def back_propagation(activation, parametres, dimensions, y, tuple_size):
 
     #Here the derivative activation are in shape nxn, then they are modify to work effectively with code
@@ -309,7 +476,7 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
                 for j in range(activation["A" + str(c-1)].shape[2]):    #For each weight
                     dK[i, j, 0] = np.dot(activation["A" + str(c-1)][i, :, j], dZ.flatten())
             
-            #Add the result in the dictionnaire
+            #Add the result in the dictionary
             gradients["dK" + str(c)] = dK
             gradients["db" + str(c)] = dZ.reshape((dZ.size, -1))
             
@@ -318,6 +485,24 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
 
     return gradients
 
+
+"""
+update:
+=========DESCRIPTION=========
+Update the kernel and the biais, to improve the accuracy of the CNN
+
+=========INPUT=========
+dict            gradients :         containt all the gradient need for the update
+dict            parametres :        containt all the information for the kernel operation
+dict            parametres_grad :   containt all the information for the update operation
+float           learning_rate :     constante to slow down the update of the parametre
+float           beta1 :             constante for Adam
+float           beta2 :             constante for Adam
+int             C :                 constante the number of stage in CNN
+
+=========OUTPUT=========
+dict            parametres :        containt all the information for the kernel operation
+"""
 def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
     
     epsilon = 1e-8 #Pour empecher les log(0) = /0
@@ -340,13 +525,27 @@ def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, 
 
     return parametres
 
+
 """
 ============================
 =======Shape fonction ======
 ============================
 """
-#Shape fonction 
-#Allow to pass nxn grid to axb with a the number of placement and b the size of the kernel. To do cross product
+"""
+reshape:
+=========DESCRIPTION=========
+Allow to pass nxn grid to axb with a the number of placement and b the size of the kernel. To do cross product
+
+=========INPUT=========
+numpy.array     X :             the activation matrice
+int             k_size_sqrt :   the size in row of the kernel
+int             x_size_sqrt :   the size in row of the activation matrice
+int             stride :        how many pixel the kernel move  
+int             padding :       how many pixel we add to the activation 
+
+=========OUTPUT=========
+numpy.array      :             the activation matrice
+"""
 def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
 
     k_size = k_size_sqrt**2
@@ -360,7 +559,20 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
     o_size = ouput_shape(x_size_sqrt, k_size_sqrt, stride, padding)
     return new_X.reshape(X.shape[0], (o_size)**2, k_size)
 
-#Is the inverse function of reshape. Allow to pass axb to nxn
+
+"""
+deshape:
+=========DESCRIPTION=========
+#Is the inverse function of reshape. Allow to pass ABxC to AxnNxN
+
+=========INPUT=========
+numpy.array     X :             the activation matrice
+int             k_size_sqrt :   the size in row of the kernel
+int             stride :        how many pixel the kernel move  
+
+=========OUTPUT=========
+numpy.array      :             the activation matrice
+"""
 def deshape(X, k_size_sqrt, stride):
 
     input_size = np.int8(np.sqrt(X.shape[1]*X.shape[2]))
@@ -377,7 +589,19 @@ def deshape(X, k_size_sqrt, stride):
     new_X = new_X.reshape((1, input_size ,input_size))
     return new_X
 
-#Add zeros to the bottom right corner to fit perfectly with the kernel
+
+"""
+deadd_paddinghape:
+=========DESCRIPTION=========
+Add zeros to the bottom right corner to fit perfectly with the kernel
+
+=========INPUT=========
+numpy.array     X :             the activation matrice
+int             padding :       how many pixel we add to the activation 
+
+=========OUTPUT=========
+numpy.array      :             the activation matrice
+"""
 def add_padding(X, padding):
     return np.pad(X, pad_width=((0, 0), (0, padding), (0, padding)), mode='constant', constant_values=0)
 
