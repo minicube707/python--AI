@@ -3,6 +3,9 @@ import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
+#Allow to show all tab with numpy
+np.set_printoptions(linewidth=200, threshold=np.inf)
+
 """
 ============================
 ========Documentation=======
@@ -407,6 +410,80 @@ def foward_propagation(X, parametres, tuple_size, dimensions):
 
     return activation
 
+"""
+back_propagation_pooling:
+=========DESCRIPTION=========
+Evalaute the difference between the target and the resultat got for the layer pooling
+
+=========INPUT=========
+dict            activation :    containt all the activation during the foreward propagation
+dict            dimensions :    all the information on how is built the CNN
+numpy.array     DZ :            the derivated of the previous activation (what should be the activation)
+int             c  :            which stage we are in backpropagatioin 
+
+=========OUTPUT=========
+numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
+"""
+def back_propagation_pooling(activation, dimensions, dZ, c):
+
+    # Trouve les valeurs maximales et leurs indices le long de l'axe 2
+    #Reshape dz to (A,BxC)
+    max_dZ = dZ.reshape(dZ.shape[0], dZ.size//dZ.shape[0])
+
+    #Get the max value, before the operation max in foreword propagation
+    max_indices = np.argmax(activation["A" + str(c-1)], axis=2)
+
+    # Initialise le résultat avec des zéros
+    result = np.zeros_like(activation["A" + str(c-1)])
+
+    # Utilise un indexage avancé pour placer les valeurs maximales
+    batch_indices = np.arange(activation["A" + str(c-1)].shape[0])[:, None]
+    row_indices = np.arange(activation["A" + str(c-1)].shape[1])[None, :]
+
+    #Use a mask, everywhere is 0, exept where the max value while be take
+    result[batch_indices, row_indices, max_indices] = max_dZ
+
+    # Affichage
+    dZ = deshape(result, dimensions[str(c)][0], dimensions[str(c)][1])
+
+    return dZ
+
+
+"""
+back_propagation_kernel:
+=========DESCRIPTION=========
+Evalaute the difference between the target and the resultat got for the layer kernel
+
+=========INPUT=========
+dict            activation :    containt all the activation during the foreward propagation
+dict            parametres :    containt all the information for the kernel operation
+dict            parametres :    containt all the information for the kernel operation
+dict            gradients  :    containt all the information for the update
+numpy.array     DZ :            the derivated of the previous activation (what should be the activation)
+int             c  :            which stage we are in backpropagatioin 
+
+=========OUTPUT=========
+dict            gradients :     containt all the gradient need for the update
+numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
+"""
+def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c):
+            
+    #Create a table for each dx of the kernel
+    dK = np.zeros((activation["A" + str(c-1)].shape[0], activation["A" + str(c-1)].shape[2], 1))
+
+    for i in range(activation["A" + str(c-1)].shape[0]):        #For each layer
+        for j in range(activation["A" + str(c-1)].shape[2]):    #For each weight
+            dK[i, j, 0] = np.dot(activation["A" + str(c-1)][i, :, j], dZ.flatten())
+            
+    #Add the result in the dictionary
+    gradients["dK" + str(c)] = dK
+    gradients["db" + str(c)] = dZ.reshape((dZ.size, -1))
+            
+    if c > 1:
+        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+
+    return gradients, dZ
+
 
 """
 back_propagation:
@@ -437,43 +514,10 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
         dZ = dZ[:,:tuple_size[c-1], :tuple_size[c-1]]
         
         if parametres["l" + str(c)] == "pooling":
-            
-            # Trouve les valeurs maximales et leurs indices le long de l'axe 2
-            #Reshape dz to (A,BxC)
-            max_dZ = dZ.reshape(dZ.shape[0], dZ.size//dZ.shape[0])
-
-            #Get the max value, before the operation max in foreword propagation
-            max_indices = np.argmax(activation["A" + str(c-1)], axis=2)
-
-            # Initialise le résultat avec des zéros
-            result = np.zeros_like(activation["A" + str(c-1)])
-
-            # Utilise un indexage avancé pour placer les valeurs maximales
-            batch_indices = np.arange(activation["A" + str(c-1)].shape[0])[:, None]
-            row_indices = np.arange(activation["A" + str(c-1)].shape[1])[None, :]
-
-            #Use a mask, everywhere is 0, exept where the max value while be take
-            result[batch_indices, row_indices, max_indices] = max_dZ
-
-            # Affichage
-            dZ = deshape(result, dimensions[str(c)][0], dimensions[str(c)][1])
-            
-            
+           dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
+           
         elif parametres["l" + str(c)] == "kernel":
-            
-            #Create a table for each dx of the kernel
-            dK = np.zeros((activation["A" + str(c-1)].shape[0], activation["A" + str(c-1)].shape[2], 1))
-
-            for i in range(activation["A" + str(c-1)].shape[0]):        #For each layer
-                for j in range(activation["A" + str(c-1)].shape[2]):    #For each weight
-                    dK[i, j, 0] = np.dot(activation["A" + str(c-1)][i, :, j], dZ.flatten())
-            
-            #Add the result in the dictionary
-            gradients["dK" + str(c)] = dK
-            gradients["db" + str(c)] = dZ.reshape((dZ.size, -1))
-            
-            if c > 1:
-                dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c)
 
     return gradients
 
@@ -634,7 +678,7 @@ def main():
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(3, 1, 0, 1, "kernel", "relu"),
+    dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
                   "2" :(2, 2, 0, 1, "pooling", "max"),
                   "3" :(2, 1, 0, 1, "kernel", "sigmoide")}
 
@@ -660,7 +704,7 @@ def main():
     X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], dimensions["2"][2])
 
     """print("\nData\n",X)
-    for keys, values in parametres_grad.items():
+    for keys, values in parametres.items():
         print(keys)
         print(values)"""
 
@@ -690,9 +734,9 @@ def main():
     for keys, values in activations.items():
         print("")
         print(keys)
-        print(values)
+        print(values)"""
 
-    for keys, values in parametres.items():
+    """for keys, values in parametres.items():
         print("")
         print(keys)
         print(values)"""
