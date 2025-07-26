@@ -37,23 +37,16 @@ def relu(X):
 
 def max(X):
     a = np.int8(np.sqrt(X.shape[1]))
-    return np.max(X, axis=2).reshape((X.shape[1], a, a))
+    return np.max(X, axis=2).reshape((1, a, a))
 
 def correlate(A, K, b, x_size):
 
-    print("HAA\n", A.shape)
     #First cross product
     Z = A[0].dot(K[0])
     
     #Other cross product if the number of layer is GT 1
     for i in range(1, A.shape[0]):
         Z = np.add(Z, A[i].dot(K[i]))
-
-    print(A.shape)
-    print(Z.shape)
-    Z = np.add(Z, b)
-    print(Z.shape)
-
 
     Z = Z.reshape((1, x_size, x_size))
     Z = np.clip(Z, -88, 88)
@@ -340,7 +333,6 @@ numpy.array     Z   : the resultat of the activation matrice after pass throw th
 """
 def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding):
 
-    print(type(A))
     #Activation are in line format
     if type_layer == "kernel":
         Z = correlate(A, K, b, x_size)
@@ -642,7 +634,7 @@ def main():
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
+    dimensions = {"1" :(3, 1, 0, 1, "kernel", "relu"),
                   "2" :(2, 2, 0, 1, "pooling", "max"),
                   "3" :(2, 1, 0, 1, "kernel", "sigmoide")}
 
@@ -681,6 +673,8 @@ def main():
     #the activation are in different shape, that allow the cross product for more efficy
     #the kernel are vector to do cross product
     #the gradient are vector
+
+
     for _ in tqdm(range(nb_iteration)):
 
         activations = foward_propagation(X, parametres, tuple_size, dimensions)
@@ -716,59 +710,91 @@ def main():
 
     plt.subplot(1, 3, 3)
     plt.plot(b_array, label="Variation de l'apprentisage")
-    plt.title("L'acccuracy en fonction des itérations")
+    plt.title("Deriver de l'acccuracy en fonction des itérations")
     plt.legend()
 
     plt.show()
 
+    layer_kernel_count = 0
     kernel_count = 0
     keys_with_kernel = []
     for key, value in dimensions.items():
         # Si "kernel" est dans la valeur
         if "kernel" in value:
-            kernel_count += 1
+            layer_kernel_count += 1
+            kernel_count += value[3]
             keys_with_kernel.append(key)
 
-    plt.figure(figsize=(16,8))
-    for i in range(1,kernel_count+1):
 
-        a = keys_with_kernel[i-1]
-        plt.subplot(1,kernel_count, i)
-        plt.imshow(parametres["K" + str(a)].reshape((np.int8(np.sqrt(parametres["K" + str(a)].size)), -1)), cmap="gray")
-        plt.title(f"Kernel {a}",)
-        plt.tight_layout()
-        plt.axis("off")
-        plt.colorbar()
-    plt.show() 
+    plt.figure(figsize=(16, 8))
+    # Compteur global pour les sous-graphes
+    subplot_index = 1
 
-    plt.figure(figsize=(16,8))
-    for i in range(1,kernel_count+1):
+    for i in range(1, layer_kernel_count + 1):
+        a = keys_with_kernel[i - 1]  # Nom/clé de la couche, ex: 1, 2, etc.
 
-        a = keys_with_kernel[i-1]
-        plt.subplot(1,kernel_count, i)
+        kernels = parametres["K" + str(a)]
+        num_kernels = kernels.shape[0]
 
-        plt.imshow(parametres["b" + str(a)].reshape((np.int8(np.sqrt(parametres["b" + str(a)].size)), -1)), cmap="gray")
-        plt.title(f"Biais {a}")
-        plt.tight_layout()
-        plt.axis("off")
-        plt.colorbar()
-    plt.show() 
+        for x in range(num_kernels):
+            # Calculer la taille de l'image du noyau (supposée carrée)
+            kernel_size = int(np.sqrt(kernels[x].size))
+            plt.subplot(1, layer_kernel_count + num_kernels, subplot_index)
+            plt.imshow(kernels[x].reshape(kernel_size, kernel_size), cmap="gray")
+            plt.title(f"Kernel {a} : {x}")
+            plt.axis("off")
+            plt.colorbar()
+            subplot_index += 1
 
-    plt.figure(figsize=(16,8))
-
-    plt.subplot(1,2, 1)
-    plt.title("Y prediction")
-    plt.imshow(activations["A" + str(C)].reshape((np.int8(np.sqrt(activations["A" + str(C)].size)), -1)), cmap="gray")
     plt.tight_layout()
+    plt.show()
+
+
+    plt.figure(figsize=(16, 8))
+    # Compteur global pour les sous-graphes
+    subplot_index = 1
+
+    for i in range(1, layer_kernel_count + 1):
+        a = keys_with_kernel[i - 1]  # Nom/clé de la couche, ex: 1, 2, etc.
+
+        kernels = parametres["b" + str(a)]
+        num_kernels = kernels.shape[0]
+
+        for x in range(num_kernels):
+            # Calculer la taille de l'image du noyau (supposée carrée)
+            kernel_size = int(np.sqrt(kernels[x].size))
+            plt.subplot(1, layer_kernel_count + num_kernels, subplot_index)
+            plt.imshow(kernels[x].reshape(kernel_size, kernel_size), cmap="gray")
+            plt.title(f"Biais {a} : {x}")
+            plt.axis("off")
+            plt.colorbar()
+            subplot_index += 1
+
+    plt.tight_layout()
+    plt.show()
+
+
+    plt.figure(figsize=(16, 8))
+
+    # ---- Affichage de la prédiction ----
+    plt.subplot(1, 2, 1)
+    plt.title("Y prediction")
+
+    A = activations["A" + str(C)]
+    size = int(np.sqrt(A.size))  # On suppose que c'est une image carrée
+    plt.imshow(A.reshape(size, size), cmap="gray")
     plt.axis("off")
     plt.colorbar()
 
-    plt.subplot(1,2, 2)
+    # ---- Affichage de la vérité réelle ----
+    plt.subplot(1, 2, 2)
     plt.title("Y")
     plt.imshow(y, cmap="gray")
-    plt.tight_layout()
     plt.axis("off")
     plt.colorbar()
-    plt.show() 
+
+    # ---- Mise en page finale ----
+    plt.tight_layout()
+    plt.show()
 
 main()
