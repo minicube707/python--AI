@@ -190,17 +190,17 @@ for keys, values in parametres.items():
 plt.figure(figsize=(12,4))
 plt.subplot(1, 3, 1)
 plt.plot(l_array, label="Cost function")
-plt.title("Fonction Cout en fonction des itérations")
+plt.title("Fonction Cout")
 plt.legend()
 
 plt.subplot(1, 3, 2)
 plt.plot(a_array, label="Accuracy du train_set")
-plt.title("L'acccuracy en fonction des itérations")
+plt.title("L'Acccuracy")
 plt.legend()
 
 plt.subplot(1, 3, 3)
 plt.plot(b_array, label="Variation de l'apprentisage")
-plt.title("L'acccuracy en fonction des itérations")
+plt.title("Deriver de la fonction cout")
 plt.legend()
 
 plt.show()
