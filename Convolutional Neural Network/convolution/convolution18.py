@@ -47,19 +47,21 @@ def correlate(A, K, b, x_size):
 
     # Liste pour stocker chaque couche transformée
     layers = []
+    nb_channel = K.shape[0] // A.shape[0]
 
     #For each activation
     for j in range(A.shape[0]):
 
-        #Do the calcul for each kernem
-        for i in range(K.shape[0]): 
-            Z = A[j].dot(K[i]) + b[i]
+        #Do the calcul for each kernel of the channel
+        for i in range(nb_channel): 
+            k = i + (j * nb_channel)
+
+            Z = A[j].dot(K[k]) + b[k]
             Z = Z.reshape((1, x_size, x_size))
             layers.append(Z)
 
     # Concaténation des couches le long de l'axe des canaux (ici axe 0)
     Z_concat = np.concatenate(layers, axis=0)
-
     # Clipping des valeurs
     Z_concat = np.clip(Z_concat, -88, 88)
 
@@ -73,22 +75,18 @@ def convolution(dZ, K, k_size_sqrt):
 
     #next_dz is the output
     next_dZ = np.zeros((dZ.shape[0], dZ.shape[1]+k_size_sqrt-1, dZ.shape[2]+k_size_sqrt-1))
-
-    print("")
-    print(dZ.shape)
-    print(next_dZ.shape)
-    print(new_dZ.shape)
-    print(K.shape)
-
-    #FOR THE NEXT TIME
-    #FOR EACH ACTIVATION
-    #FOR EACH KERNEL
-    #DO THE CONVOLUTION
     
-    for k in range(next_dZ.shape[0]):
-        for i in range(next_dZ.shape[1]):
-            for j in range(next_dZ.shape[2]): 
-                next_dZ[k, i, j] = np.dot(new_dZ[k, i:i + k_size_sqrt, j:j + k_size_sqrt].flatten(), K[k][::-1].flatten())
+    #FOR EACH LAYER
+    for a in range(next_dZ.shape[0]):
+
+        #FOR SELCTION COLOMN
+        for b in range(next_dZ.shape[1]):
+
+            #FOR SELCTION ROW
+            for c in range(next_dZ.shape[2]): 
+
+                #DO THE CONVOLUTION
+                next_dZ[a, b, c] = np.dot(new_dZ[a, b:b + k_size_sqrt, c:c + k_size_sqrt].flatten(), K[a][::-1].flatten())
 
     return next_dZ
 
@@ -289,7 +287,7 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
             new_nb_kernel = nb_kernel * list_size_activaton[i - 1][0]
 
             #Add the modificaton to the dict
-            dimensions[str(i)] = k_size, stride, padding, nb_kernel, type_layer, fonction
+            dimensions[str(i)] = k_size, stride, padding, nb_kernel, type_layer, fonction #new_nb_kernel OU nb_kernel
         
         else:
             dimensions[str(i)] = k_size, stride, padding, 1, type_layer, fonction
@@ -321,7 +319,8 @@ def initialisation_affectation(dimensions, list_size_activation):
     parametres = {}
     parametres_grad = {}
     for i in range(1, len(dimensions)+1):
-        k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
+        k_size, _, _, _, type_layer, fonction = initialisation_extraction(dimensions, i)
+        nb_kernel = list_size_activation[i][0]
         o_size = list_size_activation[i][1]
 
         if type_layer == "kernel":
@@ -521,15 +520,22 @@ numpy.array     DZ :            the derivated of this activation for the next st
 def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c):
         
     #Create a table for each dx of the kernel
-    dK = np.zeros((activation["A" + str(c-1)].shape[0], activation["A" + str(c-1)].shape[2], 1))
+    nb_activation = activation["A" + str(c-1)].shape[0]
+    nb_kernel = dimensions[str(c)][3]
+    nb_weight = activation["A" + str(c-1)].shape[2]
+    dK = np.zeros((nb_activation * nb_kernel, nb_weight, 1))
 
-    for i in range(activation["A" + str(c-1)].shape[0]):        #For each layer
-        for j in range(activation["A" + str(c-1)].shape[2]):    #For each weight
-            dK[i, j, 0] = np.dot(activation["A" + str(c-1)][i, :, j], dZ[i].flatten())
+    for i in range(nb_activation):        #For each activation
+        for j in range(nb_kernel):        #For each kernel of the channel
+            l = j + (i * nb_kernel)
+
+            for k in range(nb_weight):          #For each weight
+
+                dK[i, k, 0] = np.dot(activation["A" + str(c-1)][i, :, k], dZ[l].flatten())
 
     #Add the result in the dictionary
     gradients["dK" + str(c)] = dK
-    gradients["db" + str(c)] = dZ.reshape((activation["A" + str(c-1)].shape[0], dZ.shape[1] * dZ.shape[2], -1))
+    gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
         dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
@@ -560,14 +566,14 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size_activatio
     gradients = {}
 
     for c in reversed(range(1, C+1)):
-        
+
         #Remove the padding
         #Activation are in square format
         dZ = dZ[:,:tuple_size_activation[c-1][1], :tuple_size_activation[c-1][1]]
-        
+
         if parametres["l" + str(c)] == "pooling":
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
-           
+
         elif parametres["l" + str(c)] == "kernel":
             gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c)
 
@@ -594,16 +600,11 @@ dict            parametres :        containt all the information for the kernel 
 def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
     
     epsilon = 1e-8 #Pour empecher les log(0) = /0
-
     #Adam (Adaptativ Momentum)
     for c in range(1, C+1):
         if parametres["l" + str(c)] == "kernel":
 
             #Update moment
-            print("\n")
-            print(parametres_grad["m" + str(c)].shape)
-            print(gradients["dK" + str(c)].shape)
-
             parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + (1 - beta1) * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
             parametres_grad["v" + str(c)] = beta2 * parametres_grad["v" + str(c)] + (1 - beta2) * gradients["dK" + str(c)]**2  # Deuxième estimation des moments (moyenne des carrés des gradients)
 
@@ -670,15 +671,15 @@ def deshape(X, k_size_sqrt, stride):
     input_size = np.int8(np.sqrt(X.shape[1]*X.shape[2]))
     new_X = np.array([])
     
-    step1 = input_size//stride
+    step1 = input_size // stride
     step2 = k_size_sqrt
 
-    for i in range(0, X.shape[0], step1):
+    for i in range(0, X.shape[0]):
         for j in range(0, X.shape[1], step1):
             for k in range(0, X.shape[2], step2):
                 new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
 
-    new_X = new_X.reshape((1, input_size ,input_size))
+    new_X = new_X.reshape((X.shape[0], input_size ,input_size))
     return new_X
 
 
@@ -723,10 +724,10 @@ def main():
     learning_rate = 0.001
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 20_000
+    nb_iteration = 2_000
 
 
-    x_shape = 10
+    x_shape = 21
     X = np.random.rand(x_shape, x_shape)
 
     if len(X.shape) == 2:
@@ -736,11 +737,12 @@ def main():
     #Kernel size, stride, padding, nb_kernel, type layer, function
     dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
                   "2" :(2, 2, 0, 1, "pooling", "max"),
-                  "3" :(2, 1, 0, 3, "kernel", "sigmoide")}
+                  "3" :(2, 1, 0, 4, "kernel", "relu"),
+                  "4" :(2, 2, 0, 1, "pooling", "max"),
+                  "5" :(2, 1, 0, 3, "kernel", "sigmoide")}
 
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)
-
     show_information(tuple_size_activation, dimensions)
 
 
@@ -750,7 +752,7 @@ def main():
         input_size = o_size
 
     y_shape = o_size
-    y = np.random.rand(6, y_shape, y_shape)
+    y = np.random.rand(24, y_shape, y_shape)
 
     """print("\nData\n",X)
     print("\nLabel\n",y)"""

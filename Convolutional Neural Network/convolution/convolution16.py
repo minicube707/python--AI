@@ -310,7 +310,7 @@ def deshape(X, k_size_sqrt, stride):
     step1 = input_size//stride
     step2 = k_size_sqrt
 
-    for i in range(0, X.shape[0], step1):
+    for i in range(0, X.shape[0]):
         for j in range(0, X.shape[1], step1):
             for k in range(0, X.shape[2], step2):
                 new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
@@ -345,7 +345,7 @@ def main():
     learning_rate = 0.001
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 20_000
+    nb_iteration = 2_000
 
 
     x_shape = 51
