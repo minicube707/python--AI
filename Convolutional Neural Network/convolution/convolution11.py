@@ -168,7 +168,7 @@ def back_propagation(activation, parametres, dimensions, y):
             dZ = deshape(result, dimensions[str(c)][0], dimensions[str(c)][1])
 
         elif parametres["l" + str(c)] == "kernel":
-            dK = np.zeros((activation["A" + str(c-1)].shape[1], 1))
+            dK = np.zeros(parametres["K" + str(c)].shape)
             for i in range(activation["A" + str(c-1)].shape[1]):
                 dK[i, 0] = np.dot(activation["A" + str(c-1)][:, i], dZ.flatten())
 

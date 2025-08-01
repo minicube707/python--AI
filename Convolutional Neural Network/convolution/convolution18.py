@@ -523,7 +523,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     nb_activation = activation["A" + str(c-1)].shape[0]
     nb_kernel = dimensions[str(c)][3]
     nb_weight = activation["A" + str(c-1)].shape[2]
-    dK = np.zeros((nb_activation * nb_kernel, nb_weight, 1))
+    dK = np.zeros(parametres["K" + str(c)].shape)
 
     for i in range(nb_activation):        #For each activation
         for j in range(nb_kernel):        #For each kernel of the channel

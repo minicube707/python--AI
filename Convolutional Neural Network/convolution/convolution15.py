@@ -237,7 +237,7 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
         elif parametres["l" + str(c)] == "kernel":
             
             #Create a table for each dx of the kernel
-            dK = np.zeros((activation["A" + str(c-1)].shape[1], 1))
+            dK = np.zeros(parametres["K" + str(c)].shape)
             for i in range(activation["A" + str(c-1)].shape[1]):
                 dK[i, 0] = np.dot(activation["A" + str(c-1)][:, i], dZ.flatten())
 

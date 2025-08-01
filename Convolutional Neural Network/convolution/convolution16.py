@@ -248,7 +248,7 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size):
         elif parametres["l" + str(c)] == "kernel":
             
             #Create a table for each dx of the kernel
-            dK = np.zeros((activation["A" + str(c-1)].shape[0], activation["A" + str(c-1)].shape[2], 1))
+            dK = np.zeros(parametres["K" + str(c)].shape)
 
             for i in range(activation["A" + str(c-1)].shape[0]):        #For each layer
                 for j in range(activation["A" + str(c-1)].shape[2]):    #For each weight
