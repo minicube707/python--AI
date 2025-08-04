@@ -70,48 +70,47 @@ numpy.array     X :     the activation matrice
 =========OUTPUT=========
 numpy.array     x :     array containe the next activation
 """
-def max(X):
+def max_pooling(X):
     a = np.int8(np.sqrt(X.shape[1]))
     return np.max(X, axis=2).reshape((X.shape[0], a, a))
 
 
+
 """
-correlate:
 =========DESCRIPTION=========
-Do the correlate of two arrays
+Perform a correlation between two arrays (activation and kernel).
 
 =========INPUT=========
-numpy.array     A :                 the activation matrice
-numpy.array     K :                 the kernel matrice           
-numpy.array     b :                 the biais matrice   
-int             x_size :            the size in row of the activation matrice  
+A (np.ndarray): Activation matrix (shape: [in_channels, ...])
+K (np.ndarray): Kernel matrix (shape: [out_channels, kernel_size])
+b (np.ndarray): Bias vector (shape: [out_channels])
+x_size (int): Size of the spatial dimension of the activation
 
 =========OUTPUT=========
-numpy.array     Z_concat :          array containe the next activation
+Z_concat (np.ndarray): Next activation array (shape: [out_channels, x_size, x_size])
 """
 def correlate(A, K, b, x_size):
 
     # Liste pour stocker chaque couche transformée
-    layers = []
-    nb_channel = K.shape[0] // A.shape[0]
+    L_A, NB_Dot_Product, K_Size =  A.shape
+    NB_K, L_K, K_Size, one = K.shape
 
-    #For each activation
-    for j in range(A.shape[0]):
+    Z = np.zeros((NB_K, NB_Dot_Product, one))
 
-        #Do the calcul for each kernel of the channel
-        for i in range(nb_channel): 
-            k = i + (j * nb_channel)
+    #For each kernel
+    for i in range(NB_K):
+        
+        #For each activation
+        for j in range(L_A):
+            
+            Z[i] = A[j].dot(K[i, j])
+            
+    Z += b    
+    Z = Z.reshape((NB_K, x_size, x_size))
+    Z = np.clip(Z, -88, 88)
 
-            Z = A[j].dot(K[k]) + b[k]
-            Z = Z.reshape((1, x_size, x_size))
-            layers.append(Z)
+    return Z
 
-    # Concaténation des couches le long de l'axe des canaux (ici axe 0)
-    Z_concat = np.concatenate(layers, axis=0)
-    # Clipping des valeurs
-    Z_concat = np.clip(Z_concat, -88, 88)
-
-    return Z_concat
 
 """
 convolution:
@@ -127,24 +126,35 @@ int             k_size_sqrt :   the size in row of the kernel
 numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
 def convolution(dZ, K, k_size_sqrt):
-
+     
     #new_dz is intput with a pas to do the the cross product with all value
     new_dZ = np.pad(dZ, pad_width=((0, 0), (k_size_sqrt - 1, k_size_sqrt - 1), (k_size_sqrt - 1, k_size_sqrt - 1)), mode='constant', constant_values=0)
 
     #next_dz is the output
-    next_dZ = np.zeros((dZ.shape[0], dZ.shape[1]+k_size_sqrt-1, dZ.shape[2]+k_size_sqrt-1))
+    next_dZ = np.zeros((K.shape[1], dZ.shape[1]+k_size_sqrt-1, dZ.shape[2]+k_size_sqrt-1))
+    
+    #For each kernel
+    for a in range(K.shape[0]):
+        
+        #Select the correct layer from the DZ & kernel
+        dZ_layer = new_dZ[a]
+        tensor_K = K[a]
+        
+        #Copy and concat the DZ to match the size of the kernel
+        dZ_layer = np.repeat(dZ_layer[np.newaxis, :, :], repeats=tensor_K.shape[0], axis=0)
 
-    #FOR EACH LAYER
-    for a in range(next_dZ.shape[0]):
+        #Do the convolution
+        #FOR EACH LAYER
+        for b in range(next_dZ.shape[0]):
 
-        #FOR SELCTION COLOMN
-        for b in range(next_dZ.shape[1]):
+            #FOR SELCTION COLOMN
+            for c in range(next_dZ.shape[1]):
 
-            #FOR SELCTION ROW
-            for c in range(next_dZ.shape[2]): 
+                #FOR SELCTION ROW
+                for d in range(next_dZ.shape[2]): 
 
-                #DO THE CONVOLUTION
-                next_dZ[a, b, c] = np.dot(new_dZ[a, b:b + k_size_sqrt, c:c + k_size_sqrt].flatten(), K[a][::-1].flatten())
+                    #DO THE CONVOLUTION
+                    next_dZ[b, c, d] += np.dot(dZ_layer[b, c:c + k_size_sqrt, d:d + k_size_sqrt].flatten(), tensor_K[b][::-1].flatten())
 
     return next_dZ
 
@@ -325,15 +335,19 @@ int     i :                 the stage of the CNN
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_kernel(parametres, parametres_grad, k_size, o_size, nb_kernel, type_layer, fonction, i):
+def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i):
 
-    parametres["K" + str(i)] = np.random.randn(nb_kernel, k_size**2, 1)
-    parametres["b" + str(i)] = np.random.randn(nb_kernel, o_size**2, 1)
+    nb_kernel = list_size_activation[i][0]
+    nb_layer =  list_size_activation[i-1][0]
+    o_size = list_size_activation[i][1]
+
+    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, k_size**2, 1).astype(np.float16) * 2 -1
+    parametres["b" + str(i)] = np.random.rand(nb_kernel, o_size**2, 1).astype(np.float16) * 2 - 1
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
-    parametres_grad["m" + str(i)] = np.zeros((nb_kernel, k_size**2, 1))
-    parametres_grad["v" + str(i)] = np.zeros((nb_kernel, k_size**2, 1))
+    parametres_grad["m" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
+    parametres_grad["v" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
 
     return parametres, parametres_grad
 
@@ -358,31 +372,29 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
     list_size_activaton.append((x_shape[0], x_shape[1]))
     input_size =  x_shape[1]
     previ_input_size = input_size
-
+    
     for i in range(1, len(dimensions)+1):
 
-        k_size, stride, padding, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
+        k_size, stride, padding, nb_channel, type_layer, fonction = initialisation_extraction(dimensions, i)
 
         #If the input doesn't match perfectly with the kernel and padding and is in mode auto-correction, the system correct the mistake and add the right padding
         if input_size % stride != 0 and padding_mode == "auto":
             padding = stride - input_size % stride
             list_size_activaton[-1] = (list_size_activaton[-1][0], input_size + padding)
-
+        
         if (dimensions[str(i)][4] == "kernel"):
-            #Modify the number of kernel depending on the number of activation
-            new_nb_kernel = nb_kernel * list_size_activaton[i - 1][0]
-
             #Add the modificaton to the dict
-            dimensions[str(i)] = k_size, stride, padding, nb_kernel, type_layer, fonction
+            dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
         
         else:
-            dimensions[str(i)] = k_size, stride, padding, 1, type_layer, fonction
+            nb_channel = list_size_activaton[-1][0]
+            dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
 
         o_size = ouput_shape(input_size, k_size, stride, padding)
         previ_input_size = input_size + padding
         input_size = o_size
 
-        list_size_activaton.append((new_nb_kernel, input_size))
+        list_size_activaton.append((nb_channel, input_size))
         error_initialisation(list_size_activaton, dimensions, input_size, previ_input_size, type_layer, fonction, stride)
 
     return dimensions, list_size_activaton
@@ -406,11 +418,9 @@ def initialisation_affectation(dimensions, list_size_activation):
     parametres_grad = {}
     for i in range(1, len(dimensions)+1):
         k_size, _, _, _, type_layer, fonction = initialisation_extraction(dimensions, i)
-        nb_kernel = list_size_activation[i][0]
-        o_size = list_size_activation[i][1]
 
         if type_layer == "kernel":
-            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, o_size, nb_kernel, type_layer, fonction, i)
+            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i)
 
         elif type_layer == "pooling":
             parametres = initialisation_pooling(parametres, k_size, type_layer, fonction, i)
@@ -454,7 +464,7 @@ numpy.array     A :                 the activation matrice
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
 def pooling_activation(A):
-    Z = max(A)
+    Z = max_pooling(A)
     return Z
 
 
@@ -583,7 +593,7 @@ int             c  :            which stage we are in backpropagatioin
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
 def back_propagation_pooling(activation, dimensions, dZ, c):
-
+    
     # Trouve les valeurs maximales et leurs indices le long de l'axe 2
     #Reshape dz to (A,BxC)
     max_dZ = dZ.reshape(dZ.shape[0], -1)
@@ -597,16 +607,6 @@ def back_propagation_pooling(activation, dimensions, dZ, c):
     # Utilise un indexage avancé pour placer les valeurs maximales
     batch_indices = np.arange(activation["A" + str(c-1)].shape[0])[:, None]
     row_indices = np.arange(activation["A" + str(c-1)].shape[1])[None, :]
-
-    #Merge the gradient for the pooling
-    #Get the number of kernel of the previous stage
-    nb_kernel  = dimensions[str(c+1)][3]
-
-    #The new ouput is the old one divided by the number of kernel
-    new_rows = max_dZ.shape[0] // nb_kernel
-    
-    #For each colomn get the max. The 3d array is merge to 2d array. We merge the array of the numbers the numbers of output
-    max_dZ = max_dZ.reshape(new_rows, nb_kernel, -1).max(axis=1)
 
     #Use a mask, everywhere is 0, exept where the max value while be take
     result[batch_indices, row_indices, max_indices] = max_dZ
@@ -637,23 +637,28 @@ numpy.array     DZ :            the derivated of this activation for the next st
 def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c):
         
     #Create a table for each dx of the kernel
-    nb_activation = activation["A" + str(c-1)].shape[0]
-    nb_kernel = dimensions[str(c)][3]
-    nb_weight = activation["A" + str(c-1)].shape[2]
+    L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
+    NB_K, L_K, K_Size, one  = parametres["K" + str(c)].shape
+
     dK = np.zeros(parametres["K" + str(c)].shape)
+    
+    
+    #For each kernel
+    for i in range(NB_K):
 
-    for i in range(nb_activation):        #For each activation
-        for j in range(nb_kernel):        #For each kernel of the channel
-            l = j + (i * nb_kernel)
+        #For each activation
+        for j in range(L_A):
+            
+            #For each weight
+            for k in range(K_Size):
+                
+                dK[i, j, k] = np.dot(activation["A" + str(c-1)][j, :, k], dZ[i].flatten())
 
-            for k in range(nb_weight):          #For each weight
-
-                dK[i, k, 0] = np.dot(activation["A" + str(c-1)][i, :, k], dZ[l].flatten())
 
     #Add the result in the dictionary
     gradients["dK" + str(c)] = dK
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
-    
+            
     if c > 1:
         dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
 
@@ -715,7 +720,7 @@ int             C :                 constante the number of stage in CNN
 dict            parametres :        containt all the information for the kernel operation
 """
 def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
-    
+        
     epsilon = 1e-8 #Pour empecher les log(0) = /0
     #Adam (Adaptativ Momentum)
     for c in range(1, C+1):
@@ -826,8 +831,8 @@ def mean_square_error(y_pred, y):
     return  1 / (2 * len(y)) * np.sum((y_pred - y)**2)
 
 def accuracy_score(y_pred, y_true):
-    y_true = np.round(y_true, 2)
-    y_pred = np.round(y_pred, 2)
+    y_true = np.round(y_true, 1)
+    y_pred = np.round(y_pred, 1)
     return np.count_nonzero(y_pred == y_true) / y_true.size
 
 def dx_mean_square_error(y_pred, y):
@@ -997,14 +1002,15 @@ def display_info_learning(l_array, a_array, d_array):
 
 def main():
     #Initialisation
-    learning_rate = 0.005
+    learning_rate = 0.001
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 10_000
+    nb_iteration = 20_000
 
 
     x_shape = 21
-    X = np.random.rand(x_shape, x_shape)
+    #X = np.random.rand(x_shape, x_shape)
+    X = np.arange(x_shape * x_shape).reshape(x_shape, x_shape)
 
     if len(X.shape) == 2:
         X = X.reshape(1, X.shape[0], X.shape[1])
@@ -1015,12 +1021,11 @@ def main():
                   "2" :(2, 2, 0, 1, "pooling", "max"),
                   "3" :(2, 1, 0, 4, "kernel", "relu"),
                   "4" :(2, 2, 0, 1, "pooling", "max"),
-                  "5" :(2, 1, 0, 3, "kernel", "sigmoide")}
-
+                  "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
+    
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)
     show_information(tuple_size_activation, dimensions)
-
 
     input_size = X.shape[1]
     for val in dimensions.values():
@@ -1028,10 +1033,14 @@ def main():
         input_size = o_size
 
     y_shape = o_size
-    y = np.random.rand(24, y_shape, y_shape)
+    y = np.random.rand(tuple_size_activation[-1][0], y_shape, y_shape)
 
-    X = add_padding(X, dimensions["2"][2])
-    X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], dimensions["2"][2])
+    if len(dimensions) > 1:
+        X = add_padding(X, dimensions["2"][2])
+        X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], dimensions["2"][2])
+
+    else:
+         X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], 0)
 
     l_array = np.array([])
     a_array = np.array([])
@@ -1043,7 +1052,6 @@ def main():
     #the kernel are vector to do cross product
     #the gradient are vector
 
-
     for _ in tqdm(range(nb_iteration)):
 
         activations = foward_propagation(X, parametres, tuple_size_activation, dimensions)
@@ -1054,12 +1062,13 @@ def main():
         a_array = np.append(a_array, accuracy_score(activations["A" + str(C)].flatten(), y.flatten()))
         d_array = np.append(d_array, dx_mean_square_error(activations["A" + str(C)], y))
 
+    print("Final accuracy ", a_array[-1])
 
     #Displau info of during the learing
     display_info_learning(l_array, a_array, d_array)
 
     #Display kernel & biais
-    display_kernel_and_biais(parametres)
+    #display_kernel_and_biais(parametres)
 
     #Display target vs prediction
     y_pred = activations["A" + str(C)]
