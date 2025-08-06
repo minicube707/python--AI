@@ -27,6 +27,8 @@ def sigmoide(np.ndarray[np.float64_t, ndim=3] X):
 
     return result
 
+
+
 def relu(np.ndarray[np.float64_t, ndim=3] X):
 
     cdef Py_ssize_t i, j, k
@@ -45,6 +47,8 @@ def relu(np.ndarray[np.float64_t, ndim=3] X):
                 res_view[i, j, k] = X_view[i, j, k] if X_view[i, j, k] > 0.0 else 0.0
 
     return result
+
+
 
 def max_pooling(np.ndarray[np.float64_t, ndim=3] X):
 
@@ -72,6 +76,7 @@ def max_pooling(np.ndarray[np.float64_t, ndim=3] X):
             res_view[b, i // h, i % h] = max_val
 
     return result
+
 
 
 def correlate(np.ndarray[np.float64_t, ndim=3] A,
@@ -122,6 +127,8 @@ def correlate(np.ndarray[np.float64_t, ndim=3] A,
 
     return Z_final
 
+
+
 def convolution(np.ndarray[np.float64_t, ndim=3] dZ,
                 np.ndarray[np.float64_t, ndim=4] K,
                 int k_size_sqrt):
@@ -169,6 +176,8 @@ def convolution(np.ndarray[np.float64_t, ndim=3] dZ,
                     next_dZ_view[b, h, w] += s
 
     return next_dZ
+
+
 
 def kernel_activation(np.ndarray[np.float64_t, ndim=3] A,
                       np.ndarray[np.float64_t, ndim=4] K,

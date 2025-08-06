@@ -299,13 +299,19 @@ int     i :             the stage of the CNN
 =========OUTPUT=========
 dict    parametres :    containt all the information for the pooling operation
 """
-def initialisation_pooling(parametres, k_size, type_layer, fonction, i):
+def initialisation_pooling(parametres, k_size, type_layer, function, i):
 
-    parametres["K" + str(i)] = k_size**2
-    parametres["b" + str(i)] = None
-    parametres["l" + str(i)] = type_layer
-    parametres["f" + str(i)] = fonction
-    
+    K = k_size**2
+    b = None
+
+    #Function
+    # relu 0
+    # max 1
+    # sigmoide 2
+    if function == "max":
+        f = 1
+
+    parametres.append([K, b, type_layer, f])
     return parametres
 
 
@@ -328,16 +334,25 @@ int     i :                 the stage of the CNN
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i):
+def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, function, i):
 
     nb_kernel = list_size_activation[i][0]
     nb_layer =  list_size_activation[i-1][0]
     o_size = list_size_activation[i][1]
 
-    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, k_size**2, 1).astype(np.float16) * 2 -1
-    parametres["b" + str(i)] = np.random.rand(nb_kernel, o_size**2, 1).astype(np.float16) * 2 - 1
-    parametres["l" + str(i)] = type_layer
-    parametres["f" + str(i)] = fonction
+    K = np.random.rand(nb_kernel, nb_layer, k_size**2, 1).astype(np.float16) * 2 -1
+    b = np.random.rand(nb_kernel, o_size**2, 1).astype(np.float16) * 2 - 1
+
+    #Function
+    # relu 0
+    # max 1
+    # sigmoide 2
+    if function == "relu":
+        f = 0
+    if function == "sigmoide":
+       f = 2
+    
+    parametres.append([K, b, type_layer, f])
 
     parametres_grad["m" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
     parametres_grad["v" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
@@ -375,7 +390,7 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
             padding = stride - input_size % stride
             list_size_activaton[-1] = (list_size_activaton[-1][0], input_size + padding)
         
-        if (dimensions[str(i)][4] == 0):
+        if (dimensions[str(i)][4] == "kernel"):
             #Add the modificaton to the dict
             dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
         
@@ -407,17 +422,20 @@ dict    parametres_grad :   containt all the information for the update operatio
 """
 def initialisation_affectation(dimensions, list_size_activation):
 
-    parametres = {}
+    parametres = []
     parametres_grad = {}
     for i in range(1, len(dimensions)+1):
         k_size, _, _, _, type_layer, fonction = initialisation_extraction(dimensions, i)
 
-        if type_layer == 0:
-            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i)
+        #TYPE LAYER
+        #kernel 0
+        #pooling 1
+        if type_layer == "kernel":
+            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, 0, fonction, i)
 
-        elif type_layer == 1:
-            parametres = initialisation_pooling(parametres, k_size, type_layer, fonction, i)
-
+        elif type_layer == "pooling":
+            parametres = initialisation_pooling(parametres, k_size, 1, fonction, i)
+    
     return parametres, parametres_grad
 
 
@@ -546,10 +564,11 @@ def foward_propagation(X, parametres, tuple_size_activation, dimensions):
     
     for c in range(1, C+1):
         A = activation["A" + str(c-1)]
-        K = parametres["K" + str(c)]
-        b = parametres["b" + str(c)]
-        mode = parametres["f" + str(c)]
-        type_layer = parametres["l" + str(c)]
+        K = parametres[c-1][0] 
+        b = parametres[c-1][1] 
+        type_layer = parametres[c-1][2] 
+        mode = parametres[c-1][3] 
+        
         x_size = tuple_size_activation[c][1]
 
         k_size = None
@@ -631,9 +650,9 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         
     #Create a table for each dx of the kernel
     L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
-    NB_K, L_K, K_Size, one  = parametres["K" + str(c)].shape
+    NB_K, L_K, K_Size, one  = parametres[c-1][0].shape
 
-    dK = np.zeros(parametres["K" + str(c)].shape)
+    dK = np.zeros(parametres[c-1][0].shape)
     
     
     #For each kernel
@@ -653,7 +672,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        dZ = convolution(dZ, parametres[c-1][0], dimensions[str(c)][0])
 
     return gradients, dZ
 
@@ -686,10 +705,10 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size_activatio
         #Activation are in square format        
         dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]
 
-        if parametres["l" + str(c)] == 1:
+        if parametres[c-1][2] == 1:
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
 
-        elif parametres["l" + str(c)] == 0:
+        elif parametres[c-1][2] == 0:
             gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c)
 
     return gradients
@@ -713,11 +732,12 @@ int             C :                 constante the number of stage in CNN
 dict            parametres :        containt all the information for the kernel operation
 """
 def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
-        
+    
+
     epsilon = 1e-8 #Pour empecher les log(0) = /0
     #Adam (Adaptativ Momentum)
     for c in range(1, C+1):
-        if parametres["l" + str(c)] == 0:
+        if parametres[c-1][2] == 0:
 
             #Update moment
             parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + (1 - beta1) * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
@@ -728,8 +748,8 @@ def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, 
             v_hat = parametres_grad["v" + str(c)] / (1 - beta2**(c+1))
 
             #Update weights
-            parametres["K" + str(c)] = parametres["K" + str(c)] - (learning_rate * m_hat) / (np.sqrt(v_hat) + epsilon)
-            parametres["b" + str(c)] = parametres["b" + str(c)] - learning_rate * gradients["db" + str(c)]
+            parametres[c-1][0] = parametres[c-1][0] - (learning_rate * m_hat) / (np.sqrt(v_hat) + epsilon)
+            parametres[c-1][1] = parametres[c-1][1]  - learning_rate * gradients["db" + str(c)]
 
     return parametres
 
@@ -1010,20 +1030,13 @@ def main():
 
     dimensions = {}
 
-    #TYPE LAYER
-    #kernel 0
-    #pooling 1
 
-    #Function
-    # relu 0
-    # max 1
-    # sigmoide 2
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(3, 1, 0, 2, 0, 0),
-                  "2" :(2, 2, 0, 1, 1, 1),
-                  "3" :(2, 1, 0, 4, 0, 0),
-                  "4" :(2, 2, 0, 1, 1, 1),
-                  "5" :(2, 1, 0, 10, 0, 2)}
+    dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
+                  "2" :(2, 2, 0, 1, "pooling", "max"),
+                  "3" :(2, 1, 0, 4, "kernel", "relu"),
+                  "4" :(2, 2, 0, 1, "pooling", "max"),
+                  "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)

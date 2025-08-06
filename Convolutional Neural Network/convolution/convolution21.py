@@ -840,6 +840,36 @@ def dx_mean_square_error(y_pred, y):
     return  -1 / (len(y)) * np.sum(y_pred - y)
 
 
+
+def display_kernel(array_4d, type, stage, max_par_fig=12):
+    if not isinstance(array_4d, np.ndarray) or array_4d.ndim != 4:
+        raise ValueError("Entrée invalide : un array NumPy à 4 dimensions est requis (nb_kernels, nb_layers, height, width).")
+
+    nb_kernels, nb_layers, h, w = array_4d.shape
+
+    for kernel_idx in range(nb_kernels):
+        total_layers = nb_layers
+
+        for start in range(0, total_layers, max_par_fig):
+            end = min(start + max_par_fig, total_layers)
+            batch = array_4d[kernel_idx, start:end]
+
+            n = batch.shape[0]
+            cols = min(4, n)
+            rows = (n + cols - 1) // cols
+
+            plt.figure(figsize=(cols * 4, rows * 3))
+            for i in range(n):
+                plt.subplot(rows, cols, i + 1)
+                plt.imshow(batch[i], cmap='gray')
+                plt.title(f'{type} K{kernel_idx} L{start + i}')
+                plt.axis('off')
+                plt.colorbar()
+
+            plt.suptitle(f'Stage {stage} | Kernel {kernel_idx} (Layers {start} à {end - 1})', fontsize=14)
+            plt.tight_layout(rect=[0, 0, 1, 0.95])
+            plt.show()
+
 """
 display_layer:
 =========DESCRIPTION=========
@@ -852,7 +882,7 @@ string          stage    :      string to inform the stage of the in CNN
 =========OUTPUT=========
 void
 """
-def display_layer(array_3d, type, stage, max_par_fig=12):
+def display_biais(array_3d, type, stage, max_par_fig=12):
 
     
     if not isinstance(array_3d, np.ndarray) or array_3d.ndim != 3:
@@ -895,13 +925,16 @@ def display_kernel_and_biais(parametres):
     for key, value in parametres.items():
         if isinstance(value, np.ndarray):
 
-            sqrt = np.int8(np.sqrt(value.shape[1]))
-            value = value.reshape(value.shape[0], sqrt, sqrt)
+
             if key.startswith('K'):
-                display_layer(value, "Kernel", key[-1])
+                sqrt = np.int8(np.sqrt(value.shape[2]))
+                K = value.reshape(value.shape[0], value.shape[1], sqrt, sqrt)
+                display_kernel(K, "Kernel", key[-1])
 
             elif key.startswith('b'):
-                display_layer(value, "Biais", key[-1])
+                sqrt = np.int8(np.sqrt(value.shape[1]))
+                B = value.reshape(value.shape[0], sqrt, sqrt)
+                display_biais(B, "Biais", key[-1])
 
 
 """
@@ -1002,10 +1035,10 @@ def display_info_learning(l_array, a_array, d_array):
 
 def main():
     #Initialisation
-    learning_rate = 0.001
+    learning_rate = 0.005
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 20_000
+    nb_iteration = 1_000
 
 
     x_shape = 21
@@ -1068,7 +1101,7 @@ def main():
     display_info_learning(l_array, a_array, d_array)
 
     #Display kernel & biais
-    #display_kernel_and_biais(parametres)
+    display_kernel_and_biais(parametres)
 
     #Display target vs prediction
     y_pred = activations["A" + str(C)]
