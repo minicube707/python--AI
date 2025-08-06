@@ -11,7 +11,7 @@ from File_Management import file_management, select_model, get_hidden_layers
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
-load = True
+load = False
 
 #Data_Digit
 with np.load("data/load_digits.npz") as f:

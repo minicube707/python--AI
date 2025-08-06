@@ -563,7 +563,6 @@ def foward_propagation(X, parametres, tuple_size_activation, dimensions):
         stride = 1
         padding = 0
 
-
         #This part is to get data for the reshape
         #There is no information for the last reshape
         if c < C:
@@ -1040,8 +1039,7 @@ def main():
     beta2 = 0.99
     nb_iteration = 1_000
 
-
-    x_shape = 21
+    x_shape = 8
     #X = np.random.rand(x_shape, x_shape)
     X = np.arange(x_shape * x_shape).reshape(x_shape, x_shape)
 
@@ -1050,11 +1048,9 @@ def main():
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(3, 1, 0, 2, "kernel", "relu"),
-                  "2" :(2, 2, 0, 1, "pooling", "max"),
-                  "3" :(2, 1, 0, 4, "kernel", "relu"),
-                  "4" :(2, 2, 0, 1, "pooling", "max"),
-                  "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
+    dimensions = {"1" :(2, 1, 0, 2, "kernel", "relu"),
+                    "2" :(2, 2, 0, 1, "pooling", "max"),
+                    "3" :(2, 1, 0, 10, "kernel", "sigmoide")}
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)

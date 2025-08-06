@@ -1,10 +1,9 @@
 import os
 import re
 
-def file_management(dimensions, test_accu):
-    str_dim = str(tuple(dimensions)).replace(" ", "")
+def file_management(test_accu):
     str_accu = f"{test_accu:.5f}".replace(".", ",")
-    name_model = f"DM{str_dim}({str_accu}).pickle"
+    name_model = f"DM({str_accu}).pickle"
 
     return name_model
 
@@ -27,12 +26,3 @@ def select_model():
 
     print(f"\nModel select is ", res_file[index-1])
     return res_file[index-1]
-
-def get_hidden_layers(name):
-
-    match = re.search(r"\(([^)]*)\)", name)
-    numbers = re.findall(r"\d+", match.group(1))  # Extraire uniquement les nombres
-    result = tuple(map(int, numbers))  # Convertir en tuple d'entiers
-
-    print("\nHidden layers:\n",result)  
-    return result 

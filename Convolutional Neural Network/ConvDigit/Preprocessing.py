@@ -7,7 +7,9 @@ from sklearn.ensemble import IsolationForest
 
 import matplotlib.pyplot as plt
 
-def preprocessing(X, y, test_size=0.1):
+from Convolution_Neuron_Network import add_padding, reshape
+
+def preprocessing(X, y, dimensions_CNN, test_size=0.1):
 
     #Affichage des 15 premières images
     plt.figure(figsize=(16,8))
@@ -28,8 +30,26 @@ def preprocessing(X, y, test_size=0.1):
     X = X[outlier]
     y = y[outlier]
 
-    print(X)
-    print(y)
+    #Ajout une dimmension pour chaque image fasse 1*n*n
+    X = X.reshape(-1, 8, 8)
+    X = X[:, np.newaxis, :, :]
+
+
+    new_X = []
+    if len(dimensions_CNN) > 1:
+        for i in range(X.shape[0]):
+            layer = add_padding(X[i], dimensions_CNN["2"][2])
+            tmp = reshape(layer, dimensions_CNN["1"][0], X.shape[2], dimensions_CNN["1"][1], dimensions_CNN["2"][2])
+            new_X.append(tmp)
+
+    else:
+        for i in range(X.shaep[0]):
+            tmp = reshape(X[i], dimensions_CNN["1"][0], X.shape[1], dimensions_CNN["1"][1], 0)
+            new_X.append(tmp)
+
+    X = np.concatenate(new_X)
+    X = X[:, np.newaxis, :, :]
+
     #______________________________________________________________#
     #Split the dataset for the training
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
@@ -55,11 +75,10 @@ def preprocessing(X, y, test_size=0.1):
     print("La dimension de y_test",y_test.shape)
     print(np.unique(y_test, return_counts=True))
   
-    New_X_train = X_train.T / X_train.max()
-    New_X_test = X_test.T / X_train.max()
+    New_X_train = X_train / X_train.max()
+    New_X_test = X_test / X_train.max()
 
-    y_test = y_test.T
-    y_train = y_train.T 
+    
 
     #Pour les X se sont les variables en premier (ici les pixels) puis le nombres d'échantillons 
     #Pour les y se sont les labels d'abord puis le nombre d'échantillons
