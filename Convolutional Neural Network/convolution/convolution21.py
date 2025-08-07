@@ -686,8 +686,10 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size_activatio
     dZ = activation["A" + str(C)] - y
     gradients = {}
 
+    print("")
     for c in reversed(range(1, C+1)):
 
+        print(dZ.shape)
         #Remove the padding
         #Activation are in square format        
         dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]

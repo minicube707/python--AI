@@ -3,33 +3,12 @@ import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 
-from Deep_Neuron_Network import initialisation_DNN, foward_propagation_DNN, back_propagation_DNN, update_DNN
-from Convolution_Neuron_Network import foward_propagation_CNN, back_propagation_CNN, update_CNN, show_information, output_shape
+from Deep_Neuron_Network import initialisation_DNN
+from Convolution_Neuron_Network import show_information, output_shape
 from Initialisation_CNN import initialisation_CNN
 from Evaluation_Metric import verification, dx_log_loss, learning_progression
 from Display_parametre_CNN import display_kernel_and_biais
-
-
-def foward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN):
-
-    activations_CNN = foward_propagation_CNN(X, parametres_CNN, tuple_size_activation, dimensions_CNN)
-    activation_DNN = foward_propagation_DNN(activations_CNN["A" + str(C_CNN)].flatten(), parametres_DNN)
-
-    return activations_CNN, activation_DNN
-
-def back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, C_DNN, y_train):
-    
-    gradients_DNN = back_propagation_DNN(activation_DNN, parametres_DNN, y_train)
-    gradients_CNN = back_propagation_CNN(activations_CNN, parametres_CNN, dimensions_CNN, activation_DNN["A" + str(C_DNN)], tuple_size_activation)
-
-    return gradients_DNN, gradients_CNN
-
-def update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN):
-
-    parametres_CNN = update_CNN(gradients_CNN, parametres_CNN, parametres_grad, learning_rate_CNN, beta1, beta2, C_CNN)
-    parametres_DNN = update_DNN(gradients_DNN, parametres_DNN, learning_rate_DNN)
-
-    return parametres_CNN, parametres_DNN
+from Propagation import forward_propagation, back_propagation, update
 
 def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
         , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape):
@@ -51,7 +30,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     dimensions_DNN.append(y_train.shape[1])
 
     parametres_DNN = initialisation_DNN(dimensions_DNN)
-
+    C_DNN = len(parametres_DNN) // 2
     show_information(tuple_size_activation, dimensions_CNN)    
 
     train_loss = np.array([])
@@ -59,8 +38,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     train_lear = np.array([])
     test_loss = np.array([])
     test_accu = np.array([])
-    C_CNN = len(dimensions_CNN.keys())
-    C_DNN = len(parametres_DNN) // 2
+    
 
     #Here 
     #the activation are in different shape, that allow the cross product for more efficy
@@ -70,21 +48,20 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     for i in tqdm(range(nb_iteration)):
         for j in range(X_train.shape[0]):
             
-            activations_CNN, activation_DNN = foward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+            activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
             gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, C_DNN, y_train[j])
             parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN)
 
 
-        if i % 100 == 0:
-
             #Train
-            train_loss, train_accu = verification(X_train, y_train, activation_DNN["A" + str(C_DNN)], parametres, train_loss, train_accu)
-            h = dx_log_loss(y_train, learning_progression(X_train, parametres))
+            train_loss, train_accu = verification(X_train[j], y_train[j], activation_DNN["A" + str(C_DNN)], train_loss, train_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+            h = dx_log_loss(y_train[j], learning_progression(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN))
             train_lear = np.append(train_lear, h)
 
             #Test
-            test_activation = foward_propagation_DNN(X_test, parametres)
-            test_loss, test_accu = verification(X_test, y_test, test_activation["A" + str(C_DNN)], parametres, test_loss, test_accu)
+            nb_rand = np.random.randint(1, 176)
+            _, test_activation = forward_propagation(X_test[nb_rand], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+            test_loss, test_accu = verification(X_test[nb_rand], y_test[nb_rand], test_activation["A" + str(C_DNN)], test_loss, test_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
 
 
 
@@ -113,6 +90,6 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     plt.show()
 
     #Display kernel & biais
-    display_kernel_and_biais(parametres)
+    #display_kernel_and_biais(parametres_CNN)
 
-    return parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu[-1]
+    return parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu[-1], tuple_size_activation

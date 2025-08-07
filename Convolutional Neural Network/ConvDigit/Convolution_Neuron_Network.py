@@ -1,7 +1,5 @@
 
 import  numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
 
 from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate
 
@@ -376,17 +374,18 @@ tuple           list_size_activation:           tuple of all activation shape wi
 =========OUTPUT=========
 dict           gradients :     containt all the gradient need for the update
 """
-def back_propagation_CNN(activation, parametres, dimensions, y, tuple_size_activation):
+def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_activation):
 
     #Here the derivative activation are in shape nxn, then they are modify to work effectively with code
     C = len(dimensions.keys())
-    dZ = activation["A" + str(C)] - y
     gradients = {}
 
+    dZ = dZ.reshape(activation["A" + str(C)].shape)
+    
     for c in reversed(range(1, C+1)):
 
         #Remove the padding
-        #Activation are in square format        
+        #Activation are in square format   
         dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]
 
         if parametres["l" + str(c)] == "pooling":

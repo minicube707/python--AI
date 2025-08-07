@@ -8,10 +8,9 @@ from Preprocessing import preprocessing
 from Mathematical_function import softmax
 from File_Management import file_management, select_model
 from Deep_Learning import convolution_neuron_network
-from Deep_Learning import foward_propagation
 from Initialisation_CNN import initialisation_CNN
-from Convolution_Neuron_Network import show_information
-
+from Propagation import forward_propagation
+from Convolution_Neuron_Network import deshape
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -23,7 +22,7 @@ with np.load("data/load_digits.npz") as f:
         X, y = f["data"], f["target"]
 
 #Initialisation CNN
-learning_rate_CNN = 0.005
+learning_rate_CNN = 0.001
 beta1 = 0.9
 beta2 = 0.99
 
@@ -54,7 +53,7 @@ if load:
         parametres = pickle.load(file)
 
 else:   
-     parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
+    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
         , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape)
 
 if not load:
@@ -63,29 +62,28 @@ if not load:
     name_model = file_management(test_accu)
     print(name_model)
     with open("Model/" + name_model, 'wb') as file:
-        pickle.dump(parametres, file)
+        pickle.dump((parametres_CNN, parametres_DNN), file)
 
 
 #______________________________________________________________#
-X_final = X_test.T
-y_final = y_test.T
-y_final = transformer.inverse_transform(y_final)
 
-C = len(parametres) // 2
-activation = foward_propagation(X_final.T, parametres)
+C_CNN = len(parametres_DNN) // 2
 
+print(X_test[0].shape)
+print(deshape(X_test[0], dimensions_CNN["1"][0], dimensions_CNN["1"][1]).shape)
 
 #Affichage des 15 premières images
 plt.figure(figsize=(16,8))
 for i in range(1,16):
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation["A" + str(C)].T)[i,:]
+    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    probabilities = softmax(activation_DNN["A" + str(C_CNN)].T)[i,:]
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow(X_final.reshape((X_final.shape[0], 8, 8))[i], cmap="gray")
-    plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
+    plt.imshow((deshape(X_test[i], dimensions_CNN["1"][0], dimensions_CNN["1"][1])), cmap="gray")
+    plt.title(f"Value:{y_test[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
 plt.show()  
@@ -93,12 +91,13 @@ plt.show()
 nb_test = 10
 print("")
 for i in range(nb_test):
-    index = int(input(f"Please enter a number between 1 and {X_final.shape[0]}: "))
+    index = int(input(f"Please enter a number between 1 and {X_test.shape[0]}: "))
     if index == index < 0:
         break
     
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation["A" + str(C)].T)[index,:]
+    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    probabilities = softmax(activation_DNN["A" + str(C_CNN)].T)[index,:]
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
@@ -106,8 +105,8 @@ for i in range(nb_test):
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
 
     # Affichage de l'image
-    axs[0].imshow(X_final.reshape((X_final.shape[0], 8, 8))[index], cmap="gray")
-    axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
+    axs[0].imshow((deshape(X_test[i], dimensions_CNN["1"][0], dimensions_CNN["1"][1])), cmap="gray")
+    axs[0].set_title(f"Value:{y_test[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
     # Affichage de l'histogramme des probabilités

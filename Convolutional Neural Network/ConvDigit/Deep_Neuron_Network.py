@@ -27,8 +27,7 @@ def initialisation_DNN(dimension):
     return parametres
 
 def foward_propagation_DNN(X, parametres):
-
-    activation = {"A0" : X}
+    activation = {"A0" : np.repeat(X[:, np.newaxis], parametres["W" + str(1)].shape[0], axis=1)}
     C = len(parametres) // 2
     for c in range(1, C+1):
         Z = parametres["W" + str(c)].dot(activation["A" + str(c-1)]) + parametres["b" + str(c)]
@@ -39,23 +38,21 @@ def foward_propagation_DNN(X, parametres):
 
 def back_propagation_DNN(activation, parametres, y_train):
 
-    m = y_train.shape
+    m = y_train.shape[0]
     C = len(parametres) // 2
-
-    dZ =  softmax(activation["A" + str(C)]).sum(axis=1) - y_train    
+    
+    dZ =  activation["A" + str(C)] - y_train.reshape(y_train.shape[0], 1)
     gradients = {}  
 
     for c in reversed(range(1, C+1)):
-        print("")
-        print(dZ.shape)
-        print(activation["A" + str(c-1)].T.shape)
+
         gradients["dW" + str(c)] = 1/m * np.dot(dZ, activation["A" + str(c-1)].T)
         gradients["db" + str(c)] = 1/m * np.sum(dZ, axis=1, keepdims=True)
-        
-        if c > 1:
-            dZ = np.dot(parametres["W" + str(c)].T, dZ) * activation["A" + str(c-1)] * (1 - activation["A" + str(c-1)])
 
-    return gradients   
+        dZ = np.dot(parametres["W" + str(c)].T, dZ) * activation["A" + str(c-1)] * (1 - activation["A" + str(c-1)])
+    
+    dZ = np.mean(dZ, axis=1)
+    return gradients, dZ
 
 
 def update_DNN(gradients, parametres, learning_rate):
