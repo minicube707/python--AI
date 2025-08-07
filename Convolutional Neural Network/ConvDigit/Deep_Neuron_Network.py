@@ -27,7 +27,7 @@ def initialisation_DNN(dimension):
     return parametres
 
 def foward_propagation_DNN(X, parametres):
-    activation = {"A0" : np.repeat(X[:, np.newaxis], parametres["W" + str(1)].shape[0], axis=1)}
+    activation = {"A0" : X}
     C = len(parametres) // 2
     for c in range(1, C+1):
         Z = parametres["W" + str(c)].dot(activation["A" + str(c-1)]) + parametres["b" + str(c)]
@@ -38,10 +38,11 @@ def foward_propagation_DNN(X, parametres):
 
 def back_propagation_DNN(activation, parametres, y_train):
 
-    m = y_train.shape[0]
+    m = y_train.size
     C = len(parametres) // 2
-    
-    dZ =  activation["A" + str(C)] - y_train.reshape(y_train.shape[0], 1)
+    A = softmax(activation["A" + str(C)].T)
+    dZ = A.T - y_train.reshape(y_train.shape[0], 1)
+
     gradients = {}  
 
     for c in reversed(range(1, C+1)):
@@ -51,7 +52,6 @@ def back_propagation_DNN(activation, parametres, y_train):
 
         dZ = np.dot(parametres["W" + str(c)].T, dZ) * activation["A" + str(c-1)] * (1 - activation["A" + str(c-1)])
     
-    dZ = np.mean(dZ, axis=1)
     return gradients, dZ
 
 

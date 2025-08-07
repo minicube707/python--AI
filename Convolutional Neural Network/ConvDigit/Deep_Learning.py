@@ -48,20 +48,22 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     for i in tqdm(range(nb_iteration)):
         for j in range(X_train.shape[0]):
             
+
             activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
             gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, C_DNN, y_train[j])
             parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN)
 
 
             #Train
-            train_loss, train_accu = verification(X_train[j], y_train[j], activation_DNN["A" + str(C_DNN)], train_loss, train_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-            h = dx_log_loss(y_train[j], learning_progression(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN))
+            nb_rand = np.random.randint(1, X_train.shape[0])
+            train_loss, train_accu = verification(X_train[nb_rand], y_train[nb_rand], activation_DNN["A" + str(C_DNN)], train_loss, train_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+            h = dx_log_loss(y_train[nb_rand], learning_progression(X_train[nb_rand], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN))
             train_lear = np.append(train_lear, h)
 
             #Test
-            nb_rand = np.random.randint(1, 176)
+            nb_rand = np.random.randint(1, X_test.shape[0])
             _, test_activation = forward_propagation(X_test[nb_rand], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-            test_loss, test_accu = verification(X_test[nb_rand], y_test[nb_rand], test_activation["A" + str(C_DNN)], test_loss, test_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+            test_loss, test_accu = verification(X_test[nb_rand], y_test[nb_rand], test_activation["A" + str(C_DNN)], test_loss, test_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
 
 
@@ -84,7 +86,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
 
     plt.subplot(1, 3, 3)
     plt.plot(train_lear, label="Variation de l'apprentisage")
-    plt.title("L'acccuracy en fonction des itérations")
+    plt.title("La derive de la fonction cout")
     plt.legend()
 
     plt.show()

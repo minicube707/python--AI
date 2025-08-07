@@ -2,12 +2,28 @@
 import  numpy as np
 
 from Deep_Neuron_Network import foward_propagation_DNN, back_propagation_DNN, update_DNN
-from Convolution_Neuron_Network import foward_propagation_CNN, back_propagation_CNN, update_CNN
+from Convolution_Neuron_Network import foward_propagation_CNN, back_propagation_CNN, update_CNN, add_padding, reshape
 
 def forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN):
+    
+     #Ajout une dimmension pour chaque image fasse 1*n*n
+    X = X.reshape(1, 8, 8)
+
+    new_X = []
+    if len(dimensions_CNN) > 1:
+            layer = add_padding(X, dimensions_CNN["2"][2])
+            tmp = reshape(layer, dimensions_CNN["1"][0], X.shape[2], dimensions_CNN["1"][1], dimensions_CNN["2"][2])
+            new_X.append(tmp)
+
+    else:
+        tmp = reshape(X, dimensions_CNN["1"][0], X.shape[1], dimensions_CNN["1"][1], 0)
+        new_X.append(tmp)
+
+    X = np.concatenate(new_X)
 
     activations_CNN = foward_propagation_CNN(X, parametres_CNN, tuple_size_activation, dimensions_CNN)
-    activation_DNN = foward_propagation_DNN(activations_CNN["A" + str(C_CNN)].flatten(), parametres_DNN)
+    A = activations_CNN["A" + str(C_CNN)].reshape(activations_CNN["A" + str(C_CNN)].size, 1)
+    activation_DNN = foward_propagation_DNN(A, parametres_DNN)
 
     return activations_CNN, activation_DNN
 

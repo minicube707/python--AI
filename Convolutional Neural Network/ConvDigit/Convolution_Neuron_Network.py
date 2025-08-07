@@ -379,15 +379,14 @@ def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_acti
     #Here the derivative activation are in shape nxn, then they are modify to work effectively with code
     C = len(dimensions.keys())
     gradients = {}
-
-    dZ = dZ.reshape(activation["A" + str(C)].shape)
+    dZ = dZ.reshape(activation["A" +str(C)].shape)
     
     for c in reversed(range(1, C+1)):
 
         #Remove the padding
-        #Activation are in square format   
+        #Activation are in square format
         dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]
-
+        
         if parametres["l" + str(c)] == "pooling":
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
 

@@ -60,6 +60,7 @@ activation = foward_propagation(X_final.T, parametres)
 plt.figure(figsize=(16,8))
 for i in range(1,16):
     # Prédiction des probabilités avec softmax
+    print(softmax(activation["A" + str(C)].T))
     probabilities = softmax(activation["A" + str(C)].T)[i,:]
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)

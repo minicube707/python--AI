@@ -11,6 +11,7 @@ from Deep_Learning import convolution_neuron_network
 from Initialisation_CNN import initialisation_CNN
 from Propagation import forward_propagation
 from Convolution_Neuron_Network import deshape
+from Display_parametre_CNN import display_kernel_and_biais
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -27,14 +28,14 @@ beta1 = 0.9
 beta2 = 0.99
 
 #Initialisation DNN
-hidden_layer = (16,16)
-learning_rate_DNN = 0.05
+hidden_layer = (32,32)
+learning_rate_DNN = 0.001
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
-dimensions_CNN = {  "1" :(2, 1, 0, 2, "kernel", "relu"),
-                    "2" :(2, 2, 0, 1, "pooling", "max"),
-                    "3" :(2, 1, 0, 10, "kernel", "sigmoide")}
+dimensions_CNN = {  "1" :(4, 1, 0, 10, "kernel", "relu"),
+                    "2" :(2, 1, 0, 2, "pooling", "max"), 
+                    "3" :(4, 1, 0, 10, "kernel", "sigmoide")}
 
 nb_iteration = 10
 
@@ -65,25 +66,28 @@ if not load:
         pickle.dump((parametres_CNN, parametres_DNN), file)
 
 
+#display_kernel_and_biais(parametres_CNN)
+
 #______________________________________________________________#
 
-C_CNN = len(parametres_DNN) // 2
+C_CNN = len(dimensions_CNN.keys())
+C_DNN = len(parametres_DNN) // 2
 
-print(X_test[0].shape)
-print(deshape(X_test[0], dimensions_CNN["1"][0], dimensions_CNN["1"][1]).shape)
+y_final = transformer.inverse_transform(y_test)
 
 #Affichage des 15 premières images
 plt.figure(figsize=(16,8))
 for i in range(1,16):
+
     # Prédiction des probabilités avec softmax
     _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-    probabilities = softmax(activation_DNN["A" + str(C_CNN)].T)[i,:]
+    probabilities = softmax(activation_DNN["A" + str(C_DNN)].T)
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow((deshape(X_test[i], dimensions_CNN["1"][0], dimensions_CNN["1"][1])), cmap="gray")
-    plt.title(f"Value:{y_test[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
+    plt.imshow(X_test[i].reshape(8, 8), cmap="gray")
+    plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
 plt.show()  
@@ -97,7 +101,7 @@ for i in range(nb_test):
     
     # Prédiction des probabilités avec softmax
     _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-    probabilities = softmax(activation_DNN["A" + str(C_CNN)].T)[index,:]
+    probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
@@ -105,8 +109,8 @@ for i in range(nb_test):
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
 
     # Affichage de l'image
-    axs[0].imshow((deshape(X_test[i], dimensions_CNN["1"][0], dimensions_CNN["1"][1])), cmap="gray")
-    axs[0].set_title(f"Value:{y_test[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
+    axs[0].imshow(X_test[index].reshape(8, 8), cmap="gray")
+    axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
     # Affichage de l'histogramme des probabilités
