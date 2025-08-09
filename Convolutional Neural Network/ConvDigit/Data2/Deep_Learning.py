@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from Deep_Neuron_Network import initialisation_DNN
 from Convolution_Neuron_Network import show_information, output_shape
 from Initialisation_CNN import initialisation_CNN
-from Evaluation_Metric import verification, dx_log_loss, learning_progression
+from Evaluation_Metric import learning_progression, log_loss, accuracy_score, dx_log_loss
 from Display_parametre_CNN import display_kernel_and_biais
 from Propagation import forward_propagation, back_propagation, update
 
@@ -50,22 +50,48 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
             
 
             activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-            gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, C_DNN, y_train[j])
-            parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN)
+            gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
+                                                            C_DNN, y_train[j])
+            parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, 
+                                                    learning_rate_DNN, beta1, beta2, C_CNN)
 
 
-            #Train
-            nb_rand = np.random.randint(1, X_train.shape[0])
-            train_loss, train_accu = verification(X_train[nb_rand], y_train[nb_rand], activation_DNN["A" + str(C_DNN)], train_loss, train_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
-            h = dx_log_loss(y_train[nb_rand], learning_progression(X_train[nb_rand], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN))
-            train_lear = np.append(train_lear, h)
+            if ((i+j) % 50 == 0):
+                # --- Évaluation après chaque epoch ---
+                # On évalue sur un petit sous-ensemble fixe pour limiter le bruit
+                rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
+                rand_idx_test  = np.random.choice(X_test.shape[0],  50, replace=False)
 
-            #Test
-            nb_rand = np.random.randint(1, X_test.shape[0])
-            _, test_activation = forward_propagation(X_test[nb_rand], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-            test_loss, test_accu = verification(X_test[nb_rand], y_test[nb_rand], test_activation["A" + str(C_DNN)], test_loss, test_accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                # Train metrics
+                train_loss_epoch = 0
+                train_dx_l_epoch = 0
+                train_accu_epoch = 0
+                for idx in rand_idx_train:
+                    pred = learning_progression(
+                    X_train[idx], parametres_CNN, parametres_DNN,
+                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
+                    train_loss_epoch += log_loss(y_train[idx], pred)
+                    train_dx_l_epoch += dx_log_loss(y_train[idx], pred)
+                    train_accu_epoch += accuracy_score(y_train[idx].flatten(), (pred >= 0.5).flatten())
 
+                train_loss = np.append(train_loss, train_loss_epoch / len(rand_idx_train))
+                train_lear = np.append(train_lear, train_dx_l_epoch / len(rand_idx_train))
+                train_accu = np.append(train_accu, train_accu_epoch / len(rand_idx_train))
+
+                # Test metrics
+                test_loss_epoch = 0
+                test_accu_epoch = 0
+                for idx in rand_idx_test:
+                    pred = learning_progression(
+                    X_test[idx], parametres_CNN, parametres_DNN,
+                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                    
+                    test_loss_epoch += log_loss(y_test[idx], pred)
+                    test_accu_epoch += accuracy_score(y_test[idx].flatten(), (pred >= 0.5).flatten())
+
+                test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
+                test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
 
     print(f"L'accuracy final du train_set est de {train_accu[-1]:.5f}")
     print(f"L'accuracy final du test_set est de {test_accu[-1]:.5f}")

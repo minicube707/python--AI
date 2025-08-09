@@ -99,7 +99,7 @@ def correlate(A, K, b, x_size):
         #For each activation
         for j in range(L_A):
             
-            Z[i] = A[j].dot(K[i, j])
+            Z[i] += A[j].dot(K[i, j])
             
     Z += b    
     Z = Z.reshape((NB_K, x_size, x_size))

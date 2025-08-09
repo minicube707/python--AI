@@ -103,7 +103,7 @@ def correlate(A, K, b, x_size):
         #For each activation
         for j in range(L_A):
             
-            Z[i] = A[j].dot(K[i, j])
+            Z[i] += A[j].dot(K[i, j])
             
     Z += b    
     Z = Z.reshape((NB_K, x_size, x_size))
@@ -686,10 +686,8 @@ def back_propagation(activation, parametres, dimensions, y, tuple_size_activatio
     dZ = activation["A" + str(C)] - y
     gradients = {}
 
-    print("")
     for c in reversed(range(1, C+1)):
 
-        print(dZ.shape)
         #Remove the padding
         #Activation are in square format        
         dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]
@@ -1039,7 +1037,7 @@ def main():
     learning_rate = 0.005
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 1_000
+    nb_iteration = 10_000
 
     x_shape = 8
     #X = np.random.rand(x_shape, x_shape)

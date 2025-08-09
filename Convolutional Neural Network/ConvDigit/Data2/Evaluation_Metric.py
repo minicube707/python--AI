@@ -23,14 +23,14 @@ def predict(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions
     Af = activation_DNN["A" + str(C_DNN)]
     return Af >= 0.5
 
-def log_loss(A, y):
+def log_loss(y_true, y_pred):
 
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return  1/y.size * np.sum( -y * np.log(A + epsilon) - (1-y)*np.log(1-A + epsilon))
+    return  (1/y_true.size) * np.sum( -y_true * np.log(y_pred + epsilon) - (1-y_true)*np.log(1-y_pred + epsilon))
 
 def verification(X, y, activation, loss, accu, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN):
 
-    loss = np.append(loss, log_loss(activation, y))
+    loss = np.append(loss, log_loss(y, activation))
     y_pred = predict(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
     current_accuracy = accuracy_score(y.flatten(), y_pred.flatten()) 
     accu = np.append(accu, current_accuracy)
