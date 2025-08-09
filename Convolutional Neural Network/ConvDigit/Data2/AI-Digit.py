@@ -53,7 +53,7 @@ if load:
     #Load the model
     model = select_model()
     with open("Model/" + str(model), 'rb') as file:
-        parametres = pickle.load(file)
+        parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = pickle.load(file)
 
 else:   
     parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
@@ -65,7 +65,7 @@ if not load:
     name_model = file_management(test_accu)
     print(name_model)
     with open("Model/" + name_model, 'wb') as file:
-        pickle.dump((parametres_CNN, parametres_DNN), file)
+        pickle.dump((parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN), file)
 
 
 #display_kernel_and_biais(parametres_CNN)
@@ -88,7 +88,7 @@ for i in range(1,16):
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow(X_test[i].reshape(8, 8), cmap="gray")
+    plt.imshow(X_test[i].reshape(28, 28), cmap="gray")
     plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
@@ -111,7 +111,7 @@ for i in range(nb_test):
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
 
     # Affichage de l'image
-    axs[0].imshow(X_test[index].reshape(8, 8), cmap="gray")
+    axs[0].imshow(X_test[index].reshape(28, 28), cmap="gray")
     axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
