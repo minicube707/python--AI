@@ -56,7 +56,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                                                     learning_rate_DNN, beta1, beta2, C_CNN)
 
 
-            if ((i+j) % 50 == 0):
+            if ((i+j) % 0== 0):
                 # --- Évaluation après chaque epoch ---
                 # On évalue sur un petit sous-ensemble fixe pour limiter le bruit
                 rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
@@ -67,6 +67,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                 train_dx_l_epoch = 0
                 train_accu_epoch = 0
                 for idx in rand_idx_train:
+                    print(idx)
                     pred = learning_progression(
                     X_train[idx], parametres_CNN, parametres_DNN,
                     tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)

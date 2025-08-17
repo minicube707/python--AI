@@ -1,5 +1,6 @@
 
 import numpy as np
+from scipy.signal import correlate2d
 
 """
 ============================
@@ -86,23 +87,41 @@ x_size (int): Size of the spatial dimension of the activation
 Z_concat (np.ndarray): Next activation array (shape: [out_channels, x_size, x_size])
 """
 def correlate(A, K, b, x_size):
+    """
+    A: (L_A, NB_Dot_Product, K_Size)
+    K: (NB_K, L_A, K_Size, one)
+    b: (NB_K,)
+    x_size: int, dimension spatiale finale
+    """
 
-    # Liste pour stocker chaque couche transformée
-    L_A, NB_Dot_Product, K_Size =  A.shape
-    NB_K, L_K, K_Size, one = K.shape
+    # On étend A pour avoir forme compatible
+    # A : (1, L_A, NB_Dot_Product, K_Size)
+    A_expanded = A[np.newaxis, :, :, :]  # ajout axe filtre NB_K
 
-    Z = np.zeros((NB_K, NB_Dot_Product, one))
+    # K : (NB_K, L_A, K_Size, one)
+    # On veut multiplier A_expanded et K le long de K_Size
 
-    #For each kernel
-    for i in range(NB_K):
-        
-        #For each activation
-        for j in range(L_A):
-            
-            Z[i] += A[j].dot(K[i, j])
-            
-    Z += b    
-    Z = Z.reshape((NB_K, x_size, x_size))
+    # Pour la multiplication matricielle batch on peut utiliser einsum:
+    # on veut multiplier pour chaque filtre i et chaque canal j :
+    # A_expanded shape: (1, L_A, NB_Dot_Product, K_Size)
+    # K shape:          (NB_K, L_A, K_Size, one)
+    #
+    # Produit sur K_Size: pour chaque (i, j), calculer (NB_Dot_Product, K_Size) dot (K_Size, one)
+    # Résultat: (NB_K, L_A, NB_Dot_Product, one)
+    
+    prod = np.einsum('nadk,nako->nado', A_expanded, K)
+    # prod shape: (NB_K, L_A, NB_Dot_Product, one)
+
+    # Somme sur les canaux (L_A)
+    Z = np.sum(prod, axis=1)  # shape (NB_K, NB_Dot_Product, one)
+
+    # Ajout biais, reshape pour broadcasting
+    Z += b
+
+    # reshape en output spatiale
+    Z = Z.reshape((Z.shape[0], x_size, x_size))
+
+    # Clipping pour stabilité numérique
     Z = np.clip(Z, -88, 88)
 
     return Z
@@ -123,33 +142,14 @@ numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
 def convolution(dZ, K, k_size_sqrt):
      
-    #new_dz is intput with a pas to do the the cross product with all value
-    new_dZ = np.pad(dZ, pad_width=((0, 0), (k_size_sqrt - 1, k_size_sqrt - 1), (k_size_sqrt - 1, k_size_sqrt - 1)), mode='constant', constant_values=0)
+    # Sortie (nb_layers, 4, 4)
+    root = np.int8(np.sqrt(K.shape[2] ))
+    K = K.reshape(K.shape[0], K.shape[1], root, root)
+    output = np.zeros((K.shape[1], dZ.shape[1] + K.shape[2] - 1, dZ.shape[2] + K.shape[3] - 1))
 
-    #next_dz is the output
-    next_dZ = np.zeros((K.shape[1], dZ.shape[1]+k_size_sqrt-1, dZ.shape[2]+k_size_sqrt-1))
-    
-    #For each kernel
-    for a in range(K.shape[0]):
-        
-        #Select the correct layer from the DZ & kernel
-        dZ_layer = new_dZ[a]
-        tensor_K = K[a]
-        
-        #Copy and concat the DZ to match the size of the kernel
-        dZ_layer = np.repeat(dZ_layer[np.newaxis, :, :], repeats=tensor_K.shape[0], axis=0)
+    # Convolution pleine pour chaque filtre et chaque canal
+    for i in range(K.shape[0]):  # nb_filters
+        for c in range(K.shape[1]):  # nb_layers (canaux de sortie)
+            output[c] += correlate2d(dZ[i], K[i, c], mode='full')
 
-        #Do the convolution
-        #FOR EACH LAYER
-        for b in range(next_dZ.shape[0]):
-
-            #FOR SELCTION COLOMN
-            for c in range(next_dZ.shape[1]):
-
-                #FOR SELCTION ROW
-                for d in range(next_dZ.shape[2]): 
-
-                    #DO THE CONVOLUTION
-                    next_dZ[b, c, d] += np.dot(dZ_layer[b, c:c + k_size_sqrt, d:d + k_size_sqrt].flatten(), tensor_K[b][::-1].flatten())
-
-    return next_dZ
+    return (output)

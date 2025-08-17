@@ -53,7 +53,11 @@ if load:
     #Load the model
     model = select_model()
     with open("Model/" + str(model), 'rb') as file:
+<<<<<<< HEAD
         parametres_CNN, parametres_DNN = pickle.load(file)
+=======
+        parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = pickle.load(file)
+>>>>>>> refs/remotes/origin/main
 
 else:   
     parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
@@ -65,7 +69,7 @@ if not load:
     name_model = file_management(test_accu)
     print(name_model)
     with open("Model/" + name_model, 'wb') as file:
-        pickle.dump((parametres_CNN, parametres_DNN), file)
+        pickle.dump((parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN), file)
 
 
 #display_kernel_and_biais(parametres_CNN)
