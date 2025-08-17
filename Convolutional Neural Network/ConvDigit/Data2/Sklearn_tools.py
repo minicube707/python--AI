@@ -2,7 +2,9 @@
 import numpy as np
 
 def accuracy_score(y_true, y_pred):
-    return np.count_nonzero(y_true == y_pred) / y_true.size
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return np.argmax(y_true) == np.argmax(y_pred)
 
 def train_test_split(X, y, test_size):
     # Calculer la taille du test
