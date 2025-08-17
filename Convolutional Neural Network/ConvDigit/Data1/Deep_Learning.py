@@ -48,7 +48,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     for i in tqdm(range(nb_iteration)):
         for j in range(X_train.shape[0]):
             
-
+            
             activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
             gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
                                                             C_DNN, y_train[j])
@@ -73,7 +73,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
 
                     train_loss_epoch += log_loss(y_train[idx], pred)
                     train_dx_l_epoch += dx_log_loss(y_train[idx], pred)
-                    train_accu_epoch += accuracy_score(y_train[idx].flatten(), (pred >= 0.5).flatten())
+                    train_accu_epoch += accuracy_score(y_train[idx].flatten(), pred.flatten())
 
                 train_loss = np.append(train_loss, train_loss_epoch / len(rand_idx_train))
                 train_lear = np.append(train_lear, train_dx_l_epoch / len(rand_idx_train))
@@ -88,7 +88,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                     tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
                     
                     test_loss_epoch += log_loss(y_test[idx], pred)
-                    test_accu_epoch += accuracy_score(y_test[idx].flatten(), (pred >= 0.5).flatten())
+                    test_accu_epoch += accuracy_score(y_test[idx].flatten(), pred.flatten())
 
                 test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
                 test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))

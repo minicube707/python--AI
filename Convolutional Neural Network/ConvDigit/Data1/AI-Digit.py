@@ -1,12 +1,12 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
+
 import os
 
 from Preprocessing import preprocessing
 from Mathematical_function import softmax
-from File_Management import file_management, select_model
+from File_Management import file_management, select_model, save_model, load_model
 from Deep_Learning import convolution_neuron_network
 from Initialisation_CNN import initialisation_CNN
 from Propagation import forward_propagation
@@ -16,14 +16,14 @@ from Display_parametre_CNN import display_kernel_and_biais
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
-load = False
+load = True
 
 #Data_Digit
 with np.load("data/load_digits.npz") as f:
         X, y = f["data"], f["target"]
 
 #Initialisation CNN
-learning_rate_CNN = 0.0001
+learning_rate_CNN = 0.0005
 beta1 = 0.9
 beta2 = 0.99
 
@@ -33,39 +33,39 @@ learning_rate_DNN = 0.001
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
-dimensions_CNN = {  "1" :(3, 1, 0, 16, "kernel", "relu"),
+dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
                     "3" :(3, 1, 0, 32, "kernel", "relu"),
-                    "4" :(2, 2, 0, 1, "pooling", "max"),}
+                    "4" :(2, 2, 0, 1, "pooling", "max"),
+                    "5" :(1, 1, 0, 64, "kernel", "sigmoide")}
 
-nb_iteration = 20
+nb_iteration = 10
 
 #Number of channel by picture
 input_shape = (1, 8, 8)
 
 padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
-  
+
+
 X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, dimensions_CNN)
 
-if load:    
+if load:  
+    
     #Load the model
     model = select_model()
-    with open("Model/" + str(model), 'rb') as file:
-        parametres = pickle.load(file)
+    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model) 
 
 else:   
     parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
         , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape)
 
 if not load:
-
+    
     #Save the best model
     name_model = file_management(test_accu)
     print(name_model)
-    with open("Model/" + name_model, 'wb') as file:
-        pickle.dump((parametres_CNN, parametres_DNN), file)
-
+    save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 
 #display_kernel_and_biais(parametres_CNN)
 

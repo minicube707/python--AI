@@ -41,7 +41,6 @@ def back_propagation_DNN(activation, parametres, y_train):
     m = y_train.size
     C = len(parametres) // 2
     dZ = activation["A" + str(C)] - y_train.reshape(y_train.shape[0], 1)
-
     gradients = {}  
 
     for c in reversed(range(1, C+1)):

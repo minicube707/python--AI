@@ -21,7 +21,8 @@ def learning_progression(X, parametres_CNN, parametres_DNN, tuple_size_activatio
 def predict(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN):
     _, activation_DNN = forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
     Af = activation_DNN["A" + str(C_DNN)]
-    return Af >= 0.5
+    print(Af)
+    return Af
 
 def log_loss(y_true, y_pred):
 

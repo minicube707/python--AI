@@ -1,5 +1,14 @@
 import os
 import re
+import pickle
+
+def load_model(model_name):
+    with open("Model/" + str(model_name), 'rb') as file:
+        return pickle.load(file)
+
+def save_model(filename, data):
+    with open("Model/" + filename, 'wb') as file:
+        pickle.dump(data, file)
 
 def file_management(test_accu):
     str_accu = f"{test_accu:.5f}".replace(".", ",")
