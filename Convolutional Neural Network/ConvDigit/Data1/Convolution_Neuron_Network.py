@@ -1,7 +1,7 @@
 
 import  numpy as np
 
-from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoïde
+from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoide
 
 
 #Allow to show all tab with numpy
@@ -362,7 +362,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         if activation_fonction == "relu":
             dA = dx_relu(A)
         elif activation_fonction == "sigmoide":
-            dA = dx_sigmoïde(A)
+            dA = dx_sigmoide(A)
 
         dA = deshape(dA, dim[0], dim[1])
         dZ *= dA

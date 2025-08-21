@@ -6,17 +6,16 @@ import os
 
 from Preprocessing import preprocessing
 from Mathematical_function import softmax
-from File_Management import file_management, select_model
+from File_Management import file_management, select_model, load_model, save_model
 from Deep_Learning import convolution_neuron_network
 from Initialisation_CNN import initialisation_CNN
 from Propagation import forward_propagation
-from Convolution_Neuron_Network import deshape
 from Display_parametre_CNN import display_kernel_and_biais
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
-load = True
+load = False
 
 #Data_Digit
 with np.load("data/mnist.npz") as f:
@@ -39,7 +38,7 @@ dimensions_CNN = {  "1" :(3, 1, 0, 32, "kernel", "relu"),
                     "4" :(2, 2, 0, 1, "pooling", "max"),
                     "5" :(2, 1, 0, 64, "kernel", "sigmoide")}
 
-nb_iteration = 25
+nb_iteration = 1
 
 #Number of channel by picture
 input_shape = (1, 28, 28)
@@ -52,12 +51,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000]
 if load:    
     #Load the model
     model = select_model()
-    with open("Model/" + str(model), 'rb') as file:
-<<<<<<< HEAD
-        parametres_CNN, parametres_DNN = pickle.load(file)
-=======
-        parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = pickle.load(file)
->>>>>>> refs/remotes/origin/main
+    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
 
 else:   
     parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
@@ -68,8 +62,7 @@ if not load:
     #Save the best model
     name_model = file_management(test_accu)
     print(name_model)
-    with open("Model/" + name_model, 'wb') as file:
-        pickle.dump((parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN), file)
+    save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 
 
 #display_kernel_and_biais(parametres_CNN)

@@ -1,5 +1,4 @@
 import os
-import re
 import pickle
 
 def load_model(model_name):
