@@ -1,7 +1,7 @@
 
 import  numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+from    tqdm import tqdm
+import  matplotlib.pyplot as plt
 
 #Fonction
 def sigmoïde(X):

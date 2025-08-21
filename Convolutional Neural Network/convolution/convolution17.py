@@ -1,7 +1,7 @@
 
 import  numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+from    tqdm import tqdm
+import  matplotlib.pyplot as plt
 
 #Allow to show all tab with numpy
 np.set_printoptions(linewidth=200, threshold=np.inf)
@@ -503,8 +503,6 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
 
         # Apply convolution
         dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
-
-    return gradients, dZ
 
     return gradients, dZ
 

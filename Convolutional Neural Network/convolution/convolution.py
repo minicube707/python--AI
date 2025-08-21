@@ -4,18 +4,18 @@ import  numpy as np
 
 #Fonction
 def sigmoïde(X):
-    return 1/(1 + np.exp(-X))
+    return 1 / (1 + np.exp(-X))
 
 def relu(X):
     return np.where(X < 0, 0, X)
 
-def ouput_shape(input_size, k_ize, padding, stride):
-    return np.int8((input_size - k_ize + 2*padding)/stride +1)
+def ouput_shape(input_size, k_size, padding, stride):
+    return np.int8((input_size - k_size + 2*padding)/stride +1)
 
-def initialisation(i_size, k_ize, padding, stride):
-    o_size = ouput_shape(i_size.shape[0], k_ize, padding, stride)
+def initialisation(i_size, k_size, padding, stride):
+    o_size = ouput_shape(i_size.shape[0], k_size, padding, stride)
 
-    K = np.random.randn(k_ize, k_ize)
+    K = np.random.randn(k_size, k_size)
     b = np.random.randn(o_size, o_size)
 
     return K, b

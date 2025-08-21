@@ -1,7 +1,7 @@
 
 import  numpy as np
-from tqdm import tqdm
-import matplotlib.pyplot as plt
+from    tqdm import tqdm
+import  matplotlib.pyplot as plt
 
 #Allow to show all tab with numpy
 np.set_printoptions(linewidth=200, threshold=np.inf)
