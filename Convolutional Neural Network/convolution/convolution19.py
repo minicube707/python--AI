@@ -60,6 +60,34 @@ def relu(X):
     return np.where(X < 0, 0, X)
 
 """
+dx_sigmoïde:
+=========DESCRIPTION=========
+Apply the derivate sigmoide function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_sigmoïde(X):
+    A = sigmoïde(X)
+    return A * (1 - A)
+
+"""
+dx_relu:
+=========DESCRIPTION=========
+Apply the derivative relu function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
+
+"""
 max:
 =========DESCRIPTION=========
 Return the max of each row of the activation function
@@ -655,7 +683,21 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
     
     if c > 1:
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        activation_fonction = parametres["f" + str(c)]
+        A = activation["A" + str(c)]
+        dim = dimensions[str(c)]
+
+        # Chose the correct derivative
+        if activation_fonction == "relu":
+            dA = dx_relu(A)
+        elif activation_fonction == "sigmoide":
+            dA = dx_sigmoïde(A)
+
+        dA = deshape(dA, dim[0], dim[1])
+        dZ *= dA
+
+        # Apply convolution
+        dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients, dZ
 

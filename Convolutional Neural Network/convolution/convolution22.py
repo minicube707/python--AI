@@ -60,6 +60,35 @@ numpy.array     x :     array containe the next activation
 def relu(X):
     return np.where(X < 0, 0, X)
 
+
+"""
+dx_sigmoïde:
+=========DESCRIPTION=========
+Apply the derivate sigmoide function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_sigmoïde(X):
+    A = sigmoïde(X)
+    return A * (1 - A)
+
+"""
+dx_relu:
+=========DESCRIPTION=========
+Apply the derivative relu function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
+
 """
 max:
 =========DESCRIPTION=========
@@ -625,7 +654,7 @@ Evalaute the difference between the target and the resultat got for the layer ke
 =========INPUT=========
 dict            activation :    containt all the activation during the foreward propagation
 dict            parametres :    containt all the information for the kernel operation
-dict            parametres :    containt all the information for the kernel operation
+dict            dimensions :    all the information on how is built the CNN
 dict            gradients  :    containt all the information for the update
 numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
 int             c  :            which stage we are in backpropagatioin 
@@ -660,7 +689,21 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        activation_fonction = parametres["f" + str(c)]
+        A = activation["A" + str(c)]
+        dim = dimensions[str(c)]
+
+        # Chose the correct derivative
+        if activation_fonction == "relu":
+            dA = dx_relu(A)
+        elif activation_fonction == "sigmoide":
+            dA = dx_sigmoïde(A)
+
+        dA = deshape(dA, dim[0], dim[1])
+        dZ *= dA
+
+        # Apply convolution
+        dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients, dZ
 
@@ -1040,7 +1083,7 @@ def main():
     beta2 = 0.99
     nb_iteration = 10_000
 
-    x_shape = 8
+    x_shape = 28
     #X = np.random.rand(x_shape, x_shape)
     X = np.arange(x_shape * x_shape).reshape(x_shape, x_shape)
 
@@ -1049,9 +1092,11 @@ def main():
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(2, 1, 0, 2, "kernel", "relu"),
+    dimensions = {  "1" :(2, 1, 0, 2, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"),
-                    "3" :(2, 1, 0, 10, "kernel", "sigmoide")}
+                    "3" :(2, 1, 0, 2, "kernel", "relu"),
+                    "4" :(2, 2, 0, 1, "pooling", "max"),
+                    "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)
@@ -1098,7 +1143,7 @@ def main():
     display_info_learning(l_array, a_array, d_array)
 
     #Display kernel & biais
-    display_kernel_and_biais(parametres)
+    #display_kernel_and_biais(parametres)
 
     #Display target vs prediction
     y_pred = activations["A" + str(C)]

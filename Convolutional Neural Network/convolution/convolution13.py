@@ -10,6 +10,13 @@ def sigmoïde(X):
 def relu(X):
     return np.where(X < 0, 0, X)
 
+def dx_sigmoïde(X):
+    A = sigmoïde(X)
+    return A * (1 - A)
+
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
 def max(X):
     a = np.int8(np.sqrt(X.shape[0]))
     return np.max(X, axis=1).reshape((a, a))
@@ -178,7 +185,21 @@ def back_propagation(activation, parametres, dimensions, y):
             gradients["db" + str(c)] = dZ.reshape((dZ.size, -1))
 
             if c > 1:
-                dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+                activation_fonction = parametres["f" + str(c)]
+                A = activation["A" + str(c)]
+                dim = dimensions[str(c)]
+
+                # Chose the correct derivative
+                if activation_fonction == "relu":
+                    dA = dx_relu(A)
+                elif activation_fonction == "sigmoide":
+                    dA = dx_sigmoïde(A)
+
+                dA = deshape(dA, dim[0], dim[1])
+                dZ *= dA
+
+                # Apply convolution
+                dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients
 
@@ -252,7 +273,7 @@ def dx_mean_square_error(A, y):
 
 
 #Initialisation
-learning_rate = 0.001
+learning_rate = 0.005
 beta1 = 0.9
 beta2 = 0.99
 nb_iteration = 20_000

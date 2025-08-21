@@ -38,6 +38,34 @@ def relu(X):
 
 
 """
+dx_sigmoïde:
+=========DESCRIPTION=========
+Apply the derivate sigmoide function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_sigmoide(X):
+    A = sigmoide(X)
+    return A * (1 - A)
+
+"""
+dx_relu:
+=========DESCRIPTION=========
+Apply the derivative relu function at the activation function
+=========INPUT=========
+numpy.array     X :     the activation matrice
+
+=========OUTPUT=========
+numpy.array     x :     array containe the next activation
+"""
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
+
+"""
 max_pooling:
 =========DESCRIPTION=========
 Return the max of each row of the activation function

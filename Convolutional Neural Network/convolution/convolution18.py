@@ -38,6 +38,13 @@ def sigmoïde(X):
 def relu(X):
     return np.where(X < 0, 0, X)
 
+def dx_sigmoïde(X):
+    A = sigmoïde(X)
+    return A * (1 - A)
+
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
 def max(X):
     a = np.int8(np.sqrt(X.shape[1]))
     return np.max(X, axis=2).reshape((X.shape[0], a, a))
@@ -538,7 +545,21 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        activation_fonction = parametres["f" + str(c)]
+        A = activation["A" + str(c)]
+        dim = dimensions[str(c)]
+
+        # Chose the correct derivative
+        if activation_fonction == "relu":
+            dA = dx_relu(A)
+        elif activation_fonction == "sigmoide":
+            dA = dx_sigmoïde(A)
+
+        dA = deshape(dA, dim[0], dim[1])
+        dZ *= dA
+
+        # Apply convolution
+        dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients, dZ
 
@@ -811,7 +832,7 @@ def afficher_couches_comparaison(y, y_pred, max_par_fig=12):
 
 def main():
     #Initialisation
-    learning_rate = 0.001
+    learning_rate = 0.005
     beta1 = 0.9
     beta2 = 0.99
     nb_iteration = 20_000

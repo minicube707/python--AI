@@ -1,7 +1,7 @@
 
 import  numpy as np
 
-from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate
+from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoïde
 
 
 #Allow to show all tab with numpy
@@ -354,7 +354,21 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        activation_fonction = parametres["f" + str(c)]
+        A = activation["A" + str(c)]
+        dim = dimensions[str(c)]
+
+        # Chose the correct derivative
+        if activation_fonction == "relu":
+            dA = dx_relu(A)
+        elif activation_fonction == "sigmoide":
+            dA = dx_sigmoïde(A)
+
+        dA = deshape(dA, dim[0], dim[1])
+        dZ *= dA
+
+        # Apply convolution
+        dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients, dZ
 

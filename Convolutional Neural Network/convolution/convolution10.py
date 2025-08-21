@@ -10,6 +10,13 @@ def sigmoïde(X):
 def relu(X):
     return np.where(X < 0, 0, X)
 
+def dx_sigmoïde(X):
+    A = sigmoïde(X)
+    return A * (1 - A)
+
+def dx_relu(X):
+    return np.where(X < 0, 0, 1)
+
 def max(X):
     a = np.int8(np.sqrt(X.shape[0]))
     return np.max(X, axis=1).reshape((a, a))
@@ -160,7 +167,21 @@ def back_propagation(activation, parametres, dimensions, y):
             gradients["db" + str(c)] = dZ.reshape((dZ.size, -1))
 
             if c > 1:
-                dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+                activation_fonction = parametres["f" + str(c)]
+                A = activation["A" + str(c)]
+                dim = dimensions[str(c)]
+
+                # Chose the correct derivative
+                if activation_fonction == "relu":
+                    dA = dx_relu(A)
+                elif activation_fonction == "sigmoide":
+                    dA = dx_sigmoïde(A)
+
+                dA = deshape(dA, dim[0], dim[1])
+                dZ *= dA
+
+                # Apply convolution
+                dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
 
     return gradients
 
@@ -196,6 +217,20 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride):
     o_size = ouput_shape(x_size_sqrt, k_size_sqrt, 0, stride)
     return new_X.reshape((o_size)**2, k_size)
 
+#Is the inverse function of reshape. Allow to pass axb to nxn
+def deshape(X, k_size_sqrt, stride):
+
+    input_size = np.int8(np.sqrt(X.size))
+    new_X = np.array([])
+    
+    step1 = input_size//stride
+    step2 = k_size_sqrt
+    for i in range(0, X.shape[0], step1):
+        for j in range(0, X.shape[1], step2):
+            new_X = np.append(new_X, X[i:i + step1, j:j + step2])
+
+    return new_X.reshape((input_size,input_size))
+
 def accuracy_score(y_pred, y_true):
     y_true = np.round(y_true, 3)
     y_pred = np.round(y_pred, 3)
@@ -206,8 +241,8 @@ def dx_log_loss(y_pred, y_true):
 
 
 #Initialisation
-learning_rate = 0.01
-nb_iteration = 10000
+learning_rate = 0.05
+nb_iteration = 10_000
 
 
 x_shape = 28
