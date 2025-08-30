@@ -101,7 +101,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                     test_conf_epoch += confidence_score(pred)
 
                 test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
-                test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_train))
+                test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_test))
                 test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
                 test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
 

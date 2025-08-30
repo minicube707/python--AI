@@ -23,13 +23,13 @@ with np.load("data/load_digits.npz") as f:
         X, y = f["data"], f["target"]
 
 #Initialisation CNN
-learning_rate_CNN = 0.0005
+learning_rate_CNN = 0.005
 beta1 = 0.9
 beta2 = 0.99
 
 #Initialisation DNN
 hidden_layer = (64,64)
-learning_rate_DNN = 0.0005
+learning_rate_DNN = 0.005
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
@@ -37,7 +37,7 @@ dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
                     "3" :(3, 1, 0, 64, "kernel", "relu"),
                     "4" :(2, 2, 0, 1, "pooling", "max"),
-                    "5" :(1, 1, 0, 64, "kernel", "sigmoide")}
+                    "5" :(1, 1, 0, 32, "kernel", "sigmoide")}
 
 nb_iteration = 20
 
