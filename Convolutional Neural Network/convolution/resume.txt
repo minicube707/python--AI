@@ -33,7 +33,7 @@ convolution11.py
 	Ajout de la fonction "show_information"
 
 convolution12.py
-	Changement d'optimizer, on passe de la de la descent de gradiant à adam, changement de fonction d'évaluation, on passe de log_loss à mean_squarre_error
+	Changement d'optimizer, on passe de la de la descent de gradiant à adam
 
 convolution13.py
 	Pareil que convolution12
