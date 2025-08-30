@@ -70,8 +70,7 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def dx_sigmoïde(X):
-    A = sigmoïde(X)
-    return A * (1 - A)
+    return X * (1 - X)
 
 """
 dx_relu:
@@ -868,18 +867,20 @@ def add_padding(X, padding):
 Evaluation Metrics Function
 ============================
 """
-def mean_square_error(y_pred, y):
-    y_pred = y_pred.reshape(y.shape)
-    return  1 / (2 * len(y)) * np.sum((y_pred - y)**2)
+def dx_log_loss(y_pred, y_true):
+    epsilon = 1e-15
+    return -1 / y_true.size * np.sum((y_true / y_pred + epsilon) - (1 - y_true) / (1 - y_pred + epsilon))
+
+def log_loss(y_pred, y_true):
+
+    epsilon = 1e-15 #Pour empecher les log(0) = -inf
+    return  (1/y_true.size) * np.sum( -y_true * np.log(y_pred + epsilon) - (1 - y_true) * np.log(1 - y_pred + epsilon))
 
 def accuracy_score(y_pred, y_true):
     y_true = np.round(y_true, 1)
     y_pred = np.round(y_pred, 1)
     return np.count_nonzero(y_pred == y_true) / y_true.size
 
-def dx_mean_square_error(y_pred, y):
-    y_pred = y_pred.reshape(y.shape)
-    return  -1 / (len(y)) * np.sum(y_pred - y)
 
 
 
@@ -1080,9 +1081,9 @@ def main():
     learning_rate = 0.005
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 10_000
+    nb_iteration = 30_000
 
-    x_shape = 8
+    x_shape = 28
     #X = np.random.rand(x_shape, x_shape)
     X = np.arange(x_shape * x_shape).reshape(x_shape, x_shape)
 
@@ -1091,9 +1092,11 @@ def main():
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {"1" :(2, 1, 0, 2, "kernel", "relu"),
+    dimensions = {  "1" :(2, 1, 0, 2, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"),
-                    "3" :(2, 1, 0, 10, "kernel", "sigmoide")}
+                    "3" :(2, 1, 0, 2, "kernel", "relu"),
+                    "4" :(2, 2, 0, 1, "pooling", "max"),
+                    "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)
@@ -1130,9 +1133,9 @@ def main():
         gradients = back_propagation(activations, parametres, dimensions, y, tuple_size_activation)
         parametres = update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C)
 
-        l_array = np.append(l_array, mean_square_error(activations["A" + str(C)], y))
+        l_array = np.append(l_array, log_loss(activations["A" + str(C)], y))
         a_array = np.append(a_array, accuracy_score(activations["A" + str(C)].flatten(), y.flatten()))
-        d_array = np.append(d_array, dx_mean_square_error(activations["A" + str(C)], y))
+        d_array = np.append(d_array, dx_log_loss(activations["A" + str(C)], y))
 
     print("Final accuracy ", a_array[-1])
 

@@ -39,8 +39,7 @@ def relu(X):
     return np.where(X < 0, 0, X)
 
 def dx_sigmoïde(X):
-    A = sigmoïde(X)
-    return A * (1 - A)
+    return X * (1 - X)
 
 def dx_relu(X):
     return np.where(X < 0, 0, 1)
@@ -669,18 +668,19 @@ def add_padding(X, padding):
 Evaluation Metrics Function
 ============================
 """
-def mean_square_error(A, y):
-    A = A.reshape(y.shape)
-    return  1/(2*len(y))*np.sum((A-y)**2)
+def dx_log_loss(y_pred, y_true):
+    epsilon = 1e-15
+    return -1 / y_true.size * np.sum((y_true / y_pred + epsilon) - (1 - y_true) / (1 - y_pred + epsilon))
+
+def log_loss(y_pred, y_true):
+
+    epsilon = 1e-15 #Pour empecher les log(0) = -inf
+    return  (1/y_true.size) * np.sum( -y_true * np.log(y_pred + epsilon) - (1 - y_true) * np.log(1 - y_pred + epsilon))
 
 def accuracy_score(y_pred, y_true):
     y_true = np.round(y_true, 2)
     y_pred = np.round(y_pred, 2)
     return np.count_nonzero(y_pred == y_true) / y_true.size
-
-def dx_mean_square_error(A, y):
-    A = A.reshape(y.shape)
-    return  -1/(len(y))*np.sum(A-y)
 
 
 
@@ -747,9 +747,9 @@ def main():
         gradients = back_propagation(activations, parametres, dimensions, y, tuple_size)
         parametres = update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C)
 
-        l_array = np.append(l_array, mean_square_error(activations["A" + str(C)], y))
+        l_array = np.append(l_array, log_loss(activations["A" + str(C)], y))
         a_array = np.append(a_array, accuracy_score(activations["A" + str(C)].flatten(), y.flatten()))
-        b_array = np.append(b_array, dx_mean_square_error(activations["A" + str(C)], y))
+        b_array = np.append(b_array, dx_log_loss(activations["A" + str(C)], y))
 
 
     """print("\nFinal activation\n",activations["A" + str(C)])
