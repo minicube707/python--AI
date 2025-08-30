@@ -47,8 +47,7 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def dx_sigmoide(X):
-    A = sigmoide(X)
-    return A * (1 - A)
+    return X * (1 - X)
 
 """
 dx_relu:

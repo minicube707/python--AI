@@ -37,8 +37,10 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     train_accu = np.array([])
     train_lear = np.array([])
     train_conf = np.array([])
+
     test_loss = np.array([])
     test_accu = np.array([])
+    test_lear = np.array([])
     test_conf = np.array([])
     
 
@@ -86,6 +88,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
 
                 # Test metrics
                 test_loss_epoch = 0
+                test_dx_l_epoch = 0
                 test_accu_epoch = 0
                 test_conf_epoch = 0
                 for idx in rand_idx_test:
@@ -94,10 +97,12 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                     tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
                     
                     test_loss_epoch += log_loss(y_test[idx], pred)
+                    test_dx_l_epoch += dx_log_loss(y_test[idx], pred)
                     test_accu_epoch += accuracy_score(y_test[idx].flatten(), (pred >= 0.5).flatten())
                     test_conf_epoch += confidence_score(pred)
 
                 test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
+                test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_train))
                 test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
                 test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
 
