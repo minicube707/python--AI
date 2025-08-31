@@ -11,8 +11,9 @@ convolution04.py
 	Essaie avec une activation plus grande
 
 convolution05.py
-	Ajout des variables "dimension" pour stocker les infos de construction du CNN, de la variable "paramétre" pour stocker les kernel, les biais et la fonction d'activation et de la variable "activation" pour stocker les activation au fur est a meusure.
-Creation du CNN avec plusieur couche
+	Ajout des variables "dimension" pour stocker les infos de construction du CNN, de la variable "paramétre" pour stocker les kernel, 
+	les biais et la fonction d'activation et de la variable "activation" pour stocker les activation au fur est a meusure.
+	Creation du CNN avec plusieur couche
 	
 convolation06.py
 	Essaie avec une activation plus grande et une CNN avec plus de fonction
@@ -27,7 +28,8 @@ convolution09.py
 	Ajout de la liste, tuple_size et l'exteriosation de l'affichage
 	
 convolution10.py
-	Ajout de la deriver de sigmoide et relu, pour completer l'équation de la backpropagation, ajout de la fonction pooling, ajout du stride. Découpage de la fonction foreword_propagation
+	Ajout de la deriver de sigmoide et relu, pour completer l'équation de la backpropagation, ajout de la fonction pooling, ajout du stride.
+	Découpage de la fonction foreword_propagation
 
 convolution11.py
 	Ajout de la fonction "show_information"
@@ -48,6 +50,22 @@ convolution16.py
 	Ajout d'une dimension supplémentaire pour représenter l'existence : (1, hauteur, largeur)
 	
 convolution17.py
-	Ajout de documentation complete sur les fonctions, découpage de la fonction back_propagatoin (back_propagation_pooling, back_propagation_kernel). Création de plusieur kernel sur une stage
+	Ajout de documentation complete sur les fonctions, découpage de la fonction back_propagatoin (back_propagation_pooling, back_propagation_kernel).
+	Création de plusieur kernel sur une stage
 	
+convolation18.py
+	Chaque kernels multiplient chaques activatoins par son nombres de couches
+	Ajout de fonction pour montrer les couches du CNN
 
+convolation19.py
+	Ajout de la doc pour toutes les fonctions
+	Ajout d'autre fonction pour afficher les couches
+
+convolation20.py
+	Ajout d'optimisation de calcul via Chat
+
+convolation21.py
+	Creation de kernel de 3 dimensions permettant de faire une vrai CNN 
+
+convolation22.py
+	Utilisation de scipy et numpy pour optimiser la correlqtionn et la convolution
