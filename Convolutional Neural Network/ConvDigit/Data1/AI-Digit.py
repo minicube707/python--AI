@@ -33,13 +33,11 @@ learning_rate_DNN = 0.005
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
-dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
+dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
-                    "3" :(3, 1, 0, 64, "kernel", "relu"),
-                    "4" :(2, 2, 0, 1, "pooling", "max"),
-                    "5" :(1, 1, 0, 32, "kernel", "sigmoide")}
+                    "3" :(2, 1, 0, 16, "kernel", "sigmoide")}
 
-nb_iteration = 20
+nb_iteration = 1
 
 #Number of channel by picture
 input_shape = (1, 8, 8)

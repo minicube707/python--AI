@@ -48,93 +48,109 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     #the kernel are vector to do cross product
     #the gradient are vector
 
-    for i in tqdm(range(nb_iteration)):
-        for j in range(X_train.shape[0]):
+    k = 0
+    pred = np.zeros(y_train[0].shape)
+    for _ in range(nb_iteration):
+        for j in tqdm(range(X_train.shape[0])):
             
             
-            activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-            gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
-                                                            C_DNN, y_train[j])
-            parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, 
-                                                    learning_rate_DNN, beta1, beta2, C_CNN)
+            while (accuracy_score(y_train[j].flatten(), pred.flatten()) == 0 or confidence_score(pred) < 0.15):
+                activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+                gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
+                                                                C_DNN, y_train[j])
+                parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, 
+                                                        learning_rate_DNN, beta1, beta2, C_CNN)
+                
+                pred = activation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
+                k += 1
+                if (k % 100 == 0):
+                    # --- Évaluation après chaque epoch ---
+                    # On évalue sur un petit sous-ensemble fixe pour limiter le bruit
+                    rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
+                    rand_idx_test  = np.random.choice(X_test.shape[0],  50, replace=False)
 
-            if (j % 50 == 0):
-                # --- Évaluation après chaque epoch ---
-                # On évalue sur un petit sous-ensemble fixe pour limiter le bruit
-                rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
-                rand_idx_test  = np.random.choice(X_test.shape[0],  50, replace=False)
+                    # Train metrics
+                    train_loss_epoch = 0
+                    train_dx_l_epoch = 0
+                    train_accu_epoch = 0
+                    train_conf_epoch = 0
 
-                # Train metrics
-                train_loss_epoch = 0
-                train_dx_l_epoch = 0
-                train_accu_epoch = 0
-                train_conf_epoch = 0
-                for idx in rand_idx_train:
-                    pred = activation(
-                    X_train[idx], parametres_CNN, parametres_DNN,
-                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                    for idx in rand_idx_train:
+                        pred = activation(
+                        X_train[idx], parametres_CNN, parametres_DNN,
+                        tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
-                    train_loss_epoch += log_loss(y_train[idx], pred)
-                    train_dx_l_epoch += dx_log_loss(y_train[idx], pred)
-                    train_accu_epoch += accuracy_score(y_train[idx].flatten(), pred.flatten())
-                    train_conf_epoch += confidence_score(pred)
+                        train_loss_epoch += log_loss(y_train[idx], pred)
+                        train_dx_l_epoch += dx_log_loss(y_train[idx], pred)
+                        train_accu_epoch += accuracy_score(y_train[idx].flatten(), pred.flatten())
+                        train_conf_epoch += confidence_score(pred)
 
-                train_loss = np.append(train_loss, train_loss_epoch / len(rand_idx_train))
-                train_lear = np.append(train_lear, train_dx_l_epoch / len(rand_idx_train))
-                train_accu = np.append(train_accu, train_accu_epoch / len(rand_idx_train))
-                train_conf = np.append(train_conf, train_conf_epoch / len(rand_idx_train))
+                    train_loss = np.append(train_loss, train_loss_epoch / len(rand_idx_train))
+                    train_lear = np.append(train_lear, train_dx_l_epoch / len(rand_idx_train))
+                    train_accu = np.append(train_accu, train_accu_epoch / len(rand_idx_train))
+                    train_conf = np.append(train_conf, train_conf_epoch / len(rand_idx_train))
 
-                # Test metrics
-                test_loss_epoch = 0
-                test_dx_l_epoch = 0
-                test_accu_epoch = 0
-                test_conf_epoch = 0
-                for idx in rand_idx_test:
-                    pred = activation(
-                    X_test[idx], parametres_CNN, parametres_DNN,
-                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
                     
-                    test_loss_epoch += log_loss(y_test[idx], pred)
-                    test_dx_l_epoch += dx_log_loss(y_test[idx], pred)
-                    test_accu_epoch += accuracy_score(y_test[idx].flatten(), pred.flatten())
-                    test_conf_epoch += confidence_score(pred)
+                    # Test metrics
+                    test_loss_epoch = 0
+                    test_dx_l_epoch = 0
+                    test_accu_epoch = 0
+                    test_conf_epoch = 0
 
-                test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
-                test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_test))
-                test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
-                test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
+                    for idx in rand_idx_test:
+                        pred = activation(
+                        X_test[idx], parametres_CNN, parametres_DNN,
+                        tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                        
+                        test_loss_epoch += log_loss(y_test[idx], pred)
+                        test_dx_l_epoch += dx_log_loss(y_test[idx], pred)
+                        test_accu_epoch += accuracy_score(y_test[idx].flatten(), pred.flatten())
+                        test_conf_epoch += confidence_score(pred)
 
+                    test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
+                    test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_test))
+                    test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
+                    test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
+                
+
+    print(accuracy_score(y_train[j].flatten(), pred.flatten()) == 0)
+    print(confidence_score(pred) < 0.15)
+    
     print(f"L'accuracy final du train_set est de {train_accu[-1]:.5f}")
     print(f"L'accuracy final du test_set est de {test_accu[-1]:.5f}")
     print(f"Le confidence socre final du test_set est de {test_conf[-1]:.5f}")
 
-    #Displau info of during the learing
-    plt.figure(figsize=(16,4))
-    plt.subplot(1, 4, 1)
-    plt.plot(train_loss, label="Cost function du train_set")
-    plt.plot(test_loss, label="Cost function du test_set")
-    plt.title("Fonction Cout en fonction des itérations")
-    plt.legend()
+    # Display info during learning
+    fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
 
-    plt.subplot(1, 4, 2)
-    plt.plot(train_lear, label="Variation de l'apprentisage")
-    plt.title("La derive de la fonction cout")
-    plt.legend()
+    # 1. Fonction de coût
+    axs[0].plot(train_loss, label="Cost function du train_set")
+    axs[0].plot(test_loss, label="Cost function du test_set")
+    axs[0].set_title("Fonction Cout en fonction des itérations")
+    axs[0].legend()
 
-    plt.subplot(1, 4, 3)
-    plt.plot(train_accu, label="Accuracy du train_set")
-    plt.plot(test_accu, label="Accuracy du test_set")
-    plt.title("L'acccuracy en fonction des itérations")
-    plt.legend()
+    # 2. Dérivée de la fonction coût
+    axs[1].plot(train_lear, label="Variation de l'apprentisage du train_set")
+    axs[1].plot(test_lear, label="Variation de l'apprentisage du test_set")
+    axs[1].set_title("La dérive de la fonction coût")
+    axs[1].legend()
 
-    plt.subplot(1, 4, 4)
-    plt.plot(train_conf, label="Confidence score du train_set")
-    plt.plot(test_conf, label="Confidence score du test_set")
-    plt.title("Le confidence score en fonction des itérations")
-    plt.legend()
+    # 3. Accuracy
+    axs[2].plot(train_accu, label="Accuracy du train_set")
+    axs[2].plot(test_accu, label="Accuracy du test_set")
+    axs[2].set_title("L'accuracy en fonction des itérations")
+    axs[2].legend()
 
+    # 4. Score de confiance
+    axs[3].plot(train_conf, label="Confidence score du train_set")
+    axs[3].plot(test_conf, label="Confidence score du test_set")
+    axs[3].set_title("Le confidence score en fonction des itérations")
+    axs[3].legend()
+
+    plt.tight_layout()
     plt.show()
+
 
     #Display kernel & biais
     #display_kernel_and_biais(parametres_CNN)
