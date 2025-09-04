@@ -29,15 +29,15 @@ beta2 = 0.99
 
 #Initialisation DNN
 hidden_layer = (64,64)
-learning_rate_DNN = 0.005
+learning_rate_DNN = 0.001
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
 dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
-                    "3" :(2, 1, 0, 16, "kernel", "sigmoide")}
+                    "3" :(2, 1, 0, 64, "kernel", "sigmoide")}
 
-nb_iteration = 1
+nb_iteration = 2
 
 #Number of channel by picture
 input_shape = (1, 8, 8)

@@ -26,7 +26,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
         input_size = o_size
 
     dimensions_DNN = list(hidden_layer)
-    dimensions_DNN.insert(0, o_size**2 * dimensions_CNN[str(C_CNN)][3])
+    dimensions_DNN.insert(0, np.int16(o_size**2) * dimensions_CNN[str(C_CNN)][3])
     dimensions_DNN.append(y_train.shape[1])
 
     parametres_DNN = initialisation_DNN(dimensions_DNN)
@@ -54,7 +54,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
         for j in tqdm(range(X_train.shape[0])):
             
             
-            while (accuracy_score(y_train[j].flatten(), pred.flatten()) == 0 or confidence_score(pred) < 0.15):
+            while (accuracy_score(y_train[j].flatten(), pred.flatten()) == 0 or confidence_score(pred) < 0.2):
                 activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
                 gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
                                                                 C_DNN, y_train[j])
