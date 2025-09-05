@@ -1,7 +1,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
 import os
 
 from Preprocessing import preprocessing
@@ -10,7 +9,6 @@ from File_Management import file_management, select_model, load_model, save_mode
 from Deep_Learning import convolution_neuron_network
 from Initialisation_CNN import initialisation_CNN
 from Propagation import forward_propagation
-from Display_parametre_CNN import display_kernel_and_biais
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -46,7 +44,7 @@ input_shape = (1, 28, 28)
 padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], dimensions_CNN)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000])
 
 if load:    
     #Load the model
@@ -54,13 +52,13 @@ if load:
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
 
 else:   
-    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
+    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, test_conf, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
         , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape)
 
 if not load:
 
     #Save the best model
-    name_model = file_management(test_accu)
+    name_model = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
     save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 

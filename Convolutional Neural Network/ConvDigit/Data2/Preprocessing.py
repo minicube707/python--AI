@@ -9,26 +9,28 @@ import matplotlib.pyplot as plt
 
 from Convolution_Neuron_Network import add_padding, reshape
 
-def preprocessing(X, y, dimensions_CNN, test_size=0.1):
+def preprocessing(X, y, test_size=0.1):
 
     #Affichage des 15 premières images
     plt.figure(figsize=(16,8))
+    plt.suptitle("Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(X.reshape((X.shape[0], 28, 28))[i], cmap="gray")
-        plt.title(y[i])
-        plt.tight_layout()
+        plt.title(y[i]) 
         plt.axis("off")
+    plt.tight_layout()    
     plt.show()  
 
 
     #______________________________________________________________#
     #Remove the bad data
-    #model=IsolationForest(contamination=0.02)
-    #model.fit(X)
-    #outlier = model.predict(X) == 1
-    #X = X[outlier]
-    #y = y[outlier]
+    X_reshape = X.reshape(X.shape[0], -1)
+    model=IsolationForest(contamination=0.2)
+    model.fit(X_reshape)
+    outlier = model.predict(X_reshape) == 1
+    X = X[outlier]
+    y = y[outlier]
 
 
     #______________________________________________________________#
@@ -67,5 +69,27 @@ def preprocessing(X, y, dimensions_CNN, test_size=0.1):
     print("New_X_test.shape:", New_X_test.shape)
     print("y_test.shape:", y_test.shape)
     print("y_train.shape:", y_train.shape)
+
+    #Affichage des 15 premières images du dataset
+    plt.figure(figsize=(16,8))
+    plt.suptitle("Train Dataset")
+    for i in range(1,16):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_train.reshape((New_X_train.shape[0], 28, 28))[i], cmap="gray")
+        plt.title(y_train[i])
+        plt.axis("off")
+    plt.tight_layout()    
+    plt.show() 
+
+    #Affichage des 15 premières images
+    plt.figure(figsize=(16,8))
+    plt.suptitle("Test Dataset")
+    for i in range(1,16):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_test.reshape((New_X_test.shape[0], 28, 28))[i], cmap="gray")
+        plt.title(y_test[i])
+        plt.axis("off")
+    plt.tight_layout()    
+    plt.show() 
 
     return New_X_train, y_train, New_X_test, y_test, transformer
