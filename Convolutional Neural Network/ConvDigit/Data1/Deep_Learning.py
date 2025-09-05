@@ -114,9 +114,6 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                     test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
                 
 
-    print(accuracy_score(y_train[j].flatten(), pred.flatten()) == 0)
-    print(confidence_score(pred) < 0.15)
-    
     print(f"L'accuracy final du train_set est de {train_accu[-1]:.5f}")
     print(f"L'accuracy final du test_set est de {test_accu[-1]:.5f}")
     print(f"Le confidence socre final du test_set est de {test_conf[-1]:.5f}")

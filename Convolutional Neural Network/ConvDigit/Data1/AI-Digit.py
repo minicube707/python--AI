@@ -1,7 +1,6 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-
 import os
 
 from Preprocessing import preprocessing
@@ -10,8 +9,7 @@ from File_Management import file_management, select_model, save_model, load_mode
 from Deep_Learning import convolution_neuron_network
 from Initialisation_CNN import initialisation_CNN
 from Propagation import forward_propagation
-from Convolution_Neuron_Network import deshape
-from Display_parametre_CNN import display_kernel_and_biais
+
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -46,7 +44,7 @@ padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, dimensions_CNN)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y)
 
 if load:  
     
