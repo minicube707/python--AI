@@ -23,21 +23,21 @@ with np.load("data/load_digits.npz") as f:
         X, y = f["data"], f["target"]
 
 #Initialisation CNN
-learning_rate_CNN = 0.005
+learning_rate_CNN = 0.0005
 beta1 = 0.9
 beta2 = 0.99
 
 #Initialisation DNN
 hidden_layer = (64,64)
-learning_rate_DNN = 0.001
+learning_rate_DNN = 0.0001
 
 dimensions_CNN = {}
 #Kernel size, stride, padding, nb_kernel, type layer, function
-dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
+dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
                     "3" :(2, 1, 0, 64, "kernel", "sigmoide")}
 
-nb_iteration = 2
+nb_iteration = 1
 
 #Number of channel by picture
 input_shape = (1, 8, 8)
@@ -55,13 +55,13 @@ if load:
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model) 
 
 else:   
-    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
+    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, test_conf, tuple_size_activation = convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
         , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape)
 
 if not load:
     
     #Save the best model
-    name_model = file_management(test_accu)
+    name_model = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
     save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 

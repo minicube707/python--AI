@@ -155,4 +155,4 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     #Display kernel & biais
     #display_kernel_and_biais(parametres_CNN)
 
-    return parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu[-1], tuple_size_activation
+    return parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu[-1], test_conf[-1], tuple_size_activation

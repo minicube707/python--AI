@@ -24,7 +24,7 @@ def preprocessing(X, y, dimensions_CNN, test_size=0.1):
 
     #______________________________________________________________#
     #Remove the bad data
-    model=IsolationForest(contamination=0.02)
+    model=IsolationForest(contamination=0.2)
     model.fit(X)
     outlier = model.predict(X) == 1
     X = X[outlier]
@@ -67,5 +67,25 @@ def preprocessing(X, y, dimensions_CNN, test_size=0.1):
     print("New_X_test.shape:", New_X_test.shape)
     print("y_test.shape:", y_test.shape)
     print("y_train.shape:", y_train.shape)
+
+    #Affichage des 15 premières images du dataset
+    plt.figure(figsize=(16,8))
+    for i in range(1,16):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_train.reshape((New_X_train.shape[0], 8, 8))[i], cmap="gray")
+        plt.title(y_train[i])
+        plt.tight_layout()
+        plt.axis("off")
+    plt.show() 
+
+    #Affichage des 15 premières images
+    plt.figure(figsize=(16,8))
+    for i in range(1,16):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_test.reshape((New_X_test.shape[0], 8, 8))[i], cmap="gray")
+        plt.title(y_test[i])
+        plt.tight_layout()
+        plt.axis("off")
+    plt.show() 
 
     return New_X_train, y_train, New_X_test, y_test, transformer

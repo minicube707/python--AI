@@ -9,9 +9,12 @@ def save_model(filename, data):
     with open("Model/" + filename, 'wb') as file:
         pickle.dump(data, file)
 
-def file_management(test_accu):
+def file_management(test_accu, test_conf, dimensions_CNN):
+    str_model = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
     str_accu = f"{test_accu:.5f}".replace(".", ",")
-    name_model = f"DM({str_accu}).pickle"
+    str_conf = f"{test_conf:.5f}".replace(".", ",")
+
+    name_model = f"DM({str_accu})({str_conf})({str_model}).pickle"
 
     return name_model
 
