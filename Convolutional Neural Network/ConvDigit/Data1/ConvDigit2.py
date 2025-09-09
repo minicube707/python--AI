@@ -34,7 +34,7 @@ def draw (win, rows, width, grid):
     gap = width // rows
 
     coordinates = np.where(grid == 1)
-    coordinates = np.vstack((coordinates[0], coordinates[1])).T
+    coordinates = np.vstack((coordinates[1], coordinates[0])).T
     for coord in coordinates:
         pygame.draw.rect(win, WHITE, (coord[0]*gap, coord[1]*gap,  gap, gap))
 
@@ -46,8 +46,8 @@ def get_clicked_pos (pos, rows, width):
 
     x, y = pos
     gap = width // rows
-    row = x // gap
-    col = y // gap
+    col = x // gap
+    row = y // gap
 
     return row, col
 
@@ -95,7 +95,6 @@ def pooling(grid, kernel_size):
 
 def research(grid, parametres, kernel_size):
 
-    grid = grid.T
     grid = pooling(grid, kernel_size=kernel_size)
     grid = grid.reshape((1, 64))
 

@@ -34,7 +34,7 @@ def draw (win, rows, width, grid):
     gap = width // rows
 
     coordinates = np.where(grid == 1)
-    coordinates = np.vstack((coordinates[0], coordinates[1])).T
+    coordinates = np.vstack((coordinates[1], coordinates[0])).T
     for coord in coordinates:
         pygame.draw.rect(win, WHITE, (coord[0]*gap, coord[1]*gap,  gap, gap))
 
@@ -46,8 +46,8 @@ def get_clicked_pos (pos, rows, width):
 
     x, y = pos
     gap = width // rows
-    row = x // gap
-    col = y // gap
+    col = x // gap
+    row = y // gap
 
     return row, col
 
@@ -79,7 +79,6 @@ def delete_node (width, rows, grid):
 
 def research(grid, parametres):
 
-    grid = grid.T
     grid = grid.reshape((1, 64))
 
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = parametres
