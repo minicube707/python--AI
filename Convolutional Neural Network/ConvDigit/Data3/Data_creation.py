@@ -100,7 +100,7 @@ def display_data(data, target, max_par_fig=12):
         for i in range(n):
             plt.subplot(rows, cols, i + 1)
             plt.imshow(batch[i], cmap='gray')
-            plt.title(target[start + i])
+            plt.title(f"Y={target[start + i]} Idx={start + i}")
             plt.axis('off')
 
         plt.tight_layout(rect=[0, 0, 1, 0.95])  # Laisser de l’espace pour le suptitle
@@ -130,6 +130,73 @@ def supprimer_grilles_dupliquees(data, target):
     return new_data, new_target
 
 
+def histogramme_chiffres(array):
+    # Initialiser un compteur de chiffres
+    compteur = {i: 0 for i in range(11)}
+    total_nombres = 0
+
+    # Parcourir chaque nombre dans l'array
+    for nombre in array:
+        entier = int(nombre)
+        if entier in compteur:
+            compteur[entier] += 1
+            total_nombres += 1
+
+    for key, value in compteur.items():
+        print(f"Le Nombre {key} apparait {value}")
+
+    if (total_nombres == 0):
+        print("Le dataset est vide")
+        return
+    
+    # Calcul des proportions
+    proportions = {chiffre: count / total_nombres for chiffre, count in compteur.items()}
+
+    # Préparer les données pour l'affichage
+    chiffres = list(proportions.keys())
+    valeurs = list(proportions.values())
+    
+    # Création de l'histogramme
+    plt.bar(chiffres, valeurs, color='salmon', edgecolor='black')
+    plt.title('Proportion de chaque chiffre (0-11)')
+    plt.xlabel('Chiffres')
+    plt.ylabel('Proportion')
+    plt.ylim(0, 1)  # Les proportions vont de 0 à 1
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.show()
+
+def delete_mode(data, target):
+    data = data.reshape(-1, 8, 8)  # Assume images are 8x8
+
+    while True:
+        try:
+            num = int(input(f"Quelle image voulez-vous supprimer ? (1 à {len(data)}), 0 pour quitter : "))
+        except ValueError:
+            print("Entrée invalide. Entrez un nombre.")
+            continue
+
+        if num == 0:
+            print("Fin du mode suppression.")
+            break
+
+        if num < 1 or num > len(data):
+            print("Index invalide. Réessayez.")
+            continue
+
+        print(f"Vous avez sélectionné l'image N°{num}")
+        view_data(data[num - 1])
+
+        answer = input("Voulez-vous la supprimer ? (oui/non) : ").lower()
+
+        if answer == "oui":
+            data = np.delete(data, num - 1, axis=0)
+            target = np.delete(target, num - 1, axis=0)
+            print("Image supprimée.")
+        else:
+            print("Image non supprimée.")
+
+    return data, target
+
 #Main algorithm
 def main (win , width):
 
@@ -137,8 +204,8 @@ def main (win , width):
     grid = np.zeros((rows, rows))
     
     run = True
-    if os.path.exists("digit_data.npz"):
-        donnees = np.load("digit_data.npz")
+    if os.path.exists("data/digit_data.npz"):
+        donnees = np.load("data/digit_data.npz")
         data_feature = donnees['data']
         data_target = donnees['targuet']
         print("Données chargées.")
@@ -173,15 +240,18 @@ def main (win , width):
                 if  event.key == pygame.K_s:
                     data_feature, data_target = supprimer_grilles_dupliquees(data_feature, data_target)
                     display_data(data_feature, data_target)
+                    histogramme_chiffres(data_target)
 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
 
+                if event.key == pygame.K_d:
+                    data_feature, data_target = delete_mode(data_feature, data_target)
         grid = add_node (width, rows, grid)
         grid = delete_node (width, rows, grid)
         draw(win, rows, width, grid)
     
-    np.savez("digit_data.npz", data=data_feature, targuet=data_target)
+    np.savez("data/digit_data.npz", data=data_feature, targuet=data_target)
 
 
 main(WIN, WIDTH)
