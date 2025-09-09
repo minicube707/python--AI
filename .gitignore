@@ -1,0 +1,23 @@
+# Ignorer tous les fichiers .pyc
+*.pyc
+
+# Ignorer les dossiers __pycache__ (créés automatiquement par Python)
+__pycache__/
+
+# Ignorer les fichiers temporaires d'éditeurs courants
+*.swp
+*.swo
+*~
+
+# Ignorer les fichiers de logs
+*.log
+
+# Ignorer les environnements virtuels (ex: venv, env)
+venv/
+env/
+
+# Ignorer les fichiers de configuration spécifiques à VS Code (si utilisé)
+.vscode/
+
+# Ignorer les fichiers Jupyter Notebook checkpoints (si tu utilises des .ipynb)
+.ipynb_checkpoints/
