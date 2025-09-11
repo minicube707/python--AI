@@ -44,7 +44,7 @@ input_shape = (1, 28, 28)
 padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000])
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape)
 
 if load:    
     #Load the model
@@ -83,7 +83,7 @@ for i in range(1,16):
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow(X_test[i].reshape(28, 28), cmap="gray")
+    plt.imshow(X_test[i].reshape(input_shape[1], input_shape[2]), cmap="gray")
     plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
@@ -106,7 +106,7 @@ for i in range(nb_test):
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
 
     # Affichage de l'image
-    axs[0].imshow(X_test[index].reshape(28, 28), cmap="gray")
+    axs[0].imshow(X_test[index].reshape(input_shape[1], input_shape[2]), cmap="gray")
     axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 

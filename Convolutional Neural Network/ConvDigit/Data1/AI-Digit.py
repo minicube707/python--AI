@@ -44,7 +44,7 @@ padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 
 if load:  
     

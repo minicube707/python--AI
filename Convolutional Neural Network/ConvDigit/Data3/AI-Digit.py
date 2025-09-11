@@ -17,7 +17,7 @@ os.chdir(module_dir)
 load = False
 
 #Data_Digit
-with np.load("data/load_digits.npz") as f:
+with np.load("data/digit_data.npz") as f:
         X, y = f["data"], f["target"]
 
 #Initialisation CNN
@@ -44,7 +44,7 @@ padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 
 if load:  
     

@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 
 from Convolution_Neuron_Network import add_padding, reshape
 
-def preprocessing(X, y, test_size=0.1):
+def preprocessing(X, y, input_shape, test_size=0.1):
 
     #Affichage des 15 premières images
     plt.figure(figsize=(16,8))
     plt.suptitle("Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
-        plt.imshow(X.reshape((X.shape[0], 28, 28))[i], cmap="gray")
+        plt.imshow(X.reshape((X.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
         plt.title(y[i]) 
         plt.axis("off")
     plt.tight_layout()    
@@ -75,7 +75,7 @@ def preprocessing(X, y, test_size=0.1):
     plt.suptitle("Train Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_train.reshape((New_X_train.shape[0], 28, 28))[i], cmap="gray")
+        plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
         plt.title(y_train[i])
         plt.axis("off")
     plt.tight_layout()    
@@ -86,7 +86,7 @@ def preprocessing(X, y, test_size=0.1):
     plt.suptitle("Test Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_test.reshape((New_X_test.shape[0], 28, 28))[i], cmap="gray")
+        plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
         plt.title(y_test[i])
         plt.axis("off")
     plt.tight_layout()    

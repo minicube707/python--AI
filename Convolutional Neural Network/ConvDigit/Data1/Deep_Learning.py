@@ -2,6 +2,7 @@
 import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 from Deep_Neuron_Network import initialisation_DNN
 from Convolution_Neuron_Network import show_information, output_shape
@@ -10,146 +11,161 @@ from Evaluation_Metric import log_loss, accuracy_score, activation, dx_log_loss,
 from Display_parametre_CNN import display_kernel_and_biais
 from Propagation import forward_propagation, back_propagation, update
 
-def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer, dimensions_CNN \
-        , learning_rate_CNN, learning_rate_DNN, beta1, beta2, input_shape):
+def initialize_networks(input_shape, dimensions_CNN, hidden_layer, y_output_shape, padding_mode="auto"):
+    parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN(
+        input_shape, dimensions_CNN, padding_mode
+    )
 
-    dimensions_DNN = {}
-
-    padding_mode = "auto"
-    parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
-
-    input_size = 8
-    C_CNN = len(dimensions_CNN.keys())
-
+    input_size = input_shape[1]
     for val in dimensions_CNN.values():
-        o_size = output_shape(input_size, val[0], val[1], val[2])
-        input_size = o_size
+        input_size = output_shape(input_size, val[0], val[1], val[2])
 
-    dimensions_DNN = list(hidden_layer)
-    dimensions_DNN.insert(0, np.int16(o_size**2) * dimensions_CNN[str(C_CNN)][3])
-    dimensions_DNN.append(y_train.shape[1])
+    last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
+    flattened_size = int(input_size**2 * last_CNN_layer[3])
+    dimensions_DNN = [flattened_size] + list(hidden_layer) + [y_output_shape]
 
     parametres_DNN = initialisation_DNN(dimensions_DNN)
-    C_DNN = len(parametres_DNN) // 2
-    show_information(tuple_size_activation, dimensions_CNN)    
 
-    train_loss = np.array([])
-    train_accu = np.array([])
-    train_lear = np.array([])
-    train_conf = np.array([])
+    return parametres_CNN, parametres_DNN, parametres_grad, dimensions_CNN, dimensions_DNN, tuple_size_activation
 
-    test_loss = np.array([])
-    test_accu = np.array([])
-    test_lear = np.array([])
-    test_conf = np.array([])  
 
-    #Here 
-    #the activation are in different shape, that allow the cross product for more efficy
-    #the kernel are vector to do cross product
-    #the gradient are vector
+def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
+                     dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
+                     learning_rate_CNN, learning_rate_DNN, beta1, beta2,
+                     max_attempts=10):
 
-    k = 0
-    pred = np.zeros(y_train[0].shape)
-    for _ in range(nb_iteration):
-        for j in tqdm(range(X_train.shape[0])):
-            
-            
-            while (accuracy_score(y_train[j].flatten(), pred.flatten()) == 0 or confidence_score(pred) < 0.2):
-                activations_CNN, activation_DNN = forward_propagation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
-                gradients_DNN, gradients_CNN = back_propagation(activation_DNN, activations_CNN, parametres_DNN, parametres_CNN, dimensions_CNN, tuple_size_activation, 
-                                                                C_DNN, y_train[j])
-                parametres_CNN, parametres_DNN = update(gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN, parametres_grad, learning_rate_CNN, 
-                                                        learning_rate_DNN, beta1, beta2, C_CNN)
-                
-                pred = activation(X_train[j], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+    for _ in range(max_attempts):
+        # Forward
+        activations_CNN, activations_DNN = forward_propagation(
+            X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
 
-                k += 1
-                if (k % 100 == 0):
-                    # --- Évaluation après chaque epoch ---
-                    # On évalue sur un petit sous-ensemble fixe pour limiter le bruit
-                    rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
-                    rand_idx_test  = np.random.choice(X_test.shape[0],  50, replace=False)
+        # Backward
+        gradients_DNN, gradients_CNN = back_propagation(
+            activations_DNN, activations_CNN, parametres_DNN, parametres_CNN,
+            dimensions_CNN, tuple_size_activation, C_DNN, y)
 
-                    # Train metrics
-                    train_loss_epoch = 0
-                    train_dx_l_epoch = 0
-                    train_accu_epoch = 0
-                    train_conf_epoch = 0
+        # Update
+        parametres_CNN, parametres_DNN = update(
+            gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN,
+            parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN)
 
-                    for idx in rand_idx_train:
-                        pred = activation(
-                        X_train[idx], parametres_CNN, parametres_DNN,
-                        tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+        # Prediction
+        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
-                        train_loss_epoch += log_loss(y_train[idx], pred)
-                        train_dx_l_epoch += dx_log_loss(y_train[idx], pred)
-                        train_accu_epoch += accuracy_score(y_train[idx].flatten(), pred.flatten())
-                        train_conf_epoch += confidence_score(pred)
+        if accuracy_score(y.flatten(), pred.flatten()) > 0 or confidence_score(pred) >= 0.2:
+            break
 
-                    train_loss = np.append(train_loss, train_loss_epoch / len(rand_idx_train))
-                    train_lear = np.append(train_lear, train_dx_l_epoch / len(rand_idx_train))
-                    train_accu = np.append(train_accu, train_accu_epoch / len(rand_idx_train))
-                    train_conf = np.append(train_conf, train_conf_epoch / len(rand_idx_train))
+    return parametres_CNN, parametres_DNN
 
-                    
-                    # Test metrics
-                    test_loss_epoch = 0
-                    test_dx_l_epoch = 0
-                    test_accu_epoch = 0
-                    test_conf_epoch = 0
 
-                    for idx in rand_idx_test:
-                        pred = activation(
-                        X_test[idx], parametres_CNN, parametres_DNN,
-                        tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
-                        
-                        test_loss_epoch += log_loss(y_test[idx], pred)
-                        test_dx_l_epoch += dx_log_loss(y_test[idx], pred)
-                        test_accu_epoch += accuracy_score(y_test[idx].flatten(), pred.flatten())
-                        test_conf_epoch += confidence_score(pred)
+def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
+                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN):
+    loss = 0
+    dx_l = 0
+    accu = 0
+    conf = 0
+    for idx in indices:
+        pred = activation(X[idx], parametres_CNN, parametres_DNN,
+                          tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+        loss += log_loss(y[idx], pred)
+        dx_l += dx_log_loss(y[idx], pred)
+        accu += accuracy_score(y[idx].flatten(), pred.flatten())
+        conf += confidence_score(pred)
 
-                    test_loss = np.append(test_loss, test_loss_epoch / len(rand_idx_test))
-                    test_lear = np.append(test_lear, test_dx_l_epoch / len(rand_idx_test))
-                    test_accu = np.append(test_accu, test_accu_epoch / len(rand_idx_test))
-                    test_conf = np.append(test_conf, test_conf_epoch / len(rand_idx_test))
-                
+    n = len(indices)
+    return loss / n, dx_l / n, accu / n, conf / n
 
-    print(f"L'accuracy final du train_set est de {train_accu[-1]:.5f}")
-    print(f"L'accuracy final du test_set est de {test_accu[-1]:.5f}")
-    print(f"Le confidence socre final du test_set est de {test_conf[-1]:.5f}")
 
-    # Display info during learning
+
+def plot_metrics(train_loss, test_loss, train_lear, test_lear,
+                 train_accu, test_accu, train_conf, test_conf):
     fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
 
-    # 1. Fonction de coût
-    axs[0].plot(train_loss, label="Cost function du train_set")
-    axs[0].plot(test_loss, label="Cost function du test_set")
-    axs[0].set_title("Fonction Cout en fonction des itérations")
+    axs[0].plot(train_loss, label="Train")
+    axs[0].plot(test_loss, label="Test")
+    axs[0].set_title("Fonction de coût")
     axs[0].legend()
 
-    # 2. Dérivée de la fonction coût
-    axs[1].plot(train_lear, label="Variation de l'apprentisage du train_set")
-    axs[1].plot(test_lear, label="Variation de l'apprentisage du test_set")
-    axs[1].set_title("La dérive de la fonction coût")
+    axs[1].plot(train_lear, label="Train")
+    axs[1].plot(test_lear, label="Test")
+    axs[1].set_title("Dérivée coût")
     axs[1].legend()
 
-    # 3. Accuracy
-    axs[2].plot(train_accu, label="Accuracy du train_set")
-    axs[2].plot(test_accu, label="Accuracy du test_set")
-    axs[2].set_title("L'accuracy en fonction des itérations")
+    axs[2].plot(train_accu, label="Train")
+    axs[2].plot(test_accu, label="Test")
+    axs[2].set_title("Accuracy")
     axs[2].legend()
 
-    # 4. Score de confiance
-    axs[3].plot(train_conf, label="Confidence score du train_set")
-    axs[3].plot(test_conf, label="Confidence score du test_set")
-    axs[3].set_title("Le confidence score en fonction des itérations")
+    axs[3].plot(train_conf, label="Train")
+    axs[3].plot(test_conf, label="Test")
+    axs[3].set_title("Confidence")
     axs[3].legend()
 
     plt.tight_layout()
     plt.show()
 
 
-    #Display kernel & biais
-    #display_kernel_and_biais(parametres_CNN)
 
-    return parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu[-1], test_conf[-1], tuple_size_activation
+def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer,
+                                dimensions_CNN, learning_rate_CNN, learning_rate_DNN,
+                                beta1, beta2, input_shape):
+
+    parametres_CNN, parametres_DNN, parametres_grad, dimensions_CNN, dimensions_DNN, tuple_size_activation = initialize_networks(
+        input_shape, dimensions_CNN, hidden_layer, y_train.shape[1]
+    )
+
+    C_CNN = len(dimensions_CNN)
+    C_DNN = len(parametres_DNN) // 2
+
+    show_information(tuple_size_activation, dimensions_CNN)
+
+    # Suivi des métriques
+    train_loss, train_accu, train_lear, train_conf = [], [], [], []
+    test_loss, test_accu, test_lear, test_conf = [], [], [], []
+
+    best_accu = 0
+    best_model = {"CNN": None, "DNN": None}
+
+    for epoch in range(nb_iteration):
+        for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
+            parametres_CNN, parametres_DNN = train_one_sample(
+                X_train[j], y_train[j], parametres_CNN, parametres_DNN, parametres_grad,
+                dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
+                learning_rate_CNN, learning_rate_DNN, beta1, beta2
+            )
+
+        # Évaluation partielle
+        rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
+        rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
+
+        tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
+                                          parametres_CNN, parametres_DNN,
+                                          tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+
+        vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
+                                          parametres_CNN, parametres_DNN,
+                                          tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+
+        train_loss.append(tl)
+        train_lear.append(tdx)
+        train_accu.append(ta)
+        train_conf.append(tc)
+
+        test_loss.append(vl)
+        test_lear.append(vdx)
+        test_accu.append(va)
+        test_conf.append(vc)
+
+        if va > best_accu:
+            best_accu = va
+            best_model["CNN"] = deepcopy(parametres_CNN)
+            best_model["DNN"] = deepcopy(parametres_DNN)
+
+    # Résultats finaux
+    print(f"\n🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test  : {test_accu[-1]:.5f}")
+    print(f"🔎 Confidence score - Test : {test_conf[-1]:.5f}")
+
+    plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
+
+    return best_model["CNN"], best_model["DNN"], dimensions_CNN, dimensions_DNN, test_accu[-1], test_conf[-1], tuple_size_activation
