@@ -10,11 +10,12 @@ def save_model(filename, data):
         pickle.dump(data, file)
 
 def file_management(test_accu, test_conf, dimensions_CNN):
-    str_model = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+    str_nb_kernel = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+    str_size = ','.join(str(v[0]) for v in dimensions_CNN.values() if v[4] == 'kernel')
     str_accu = f"{test_accu:.5f}".replace(".", ",")
     str_conf = f"{test_conf:.5f}".replace(".", ",")
 
-    name_model = f"DM({str_accu})({str_conf})({str_model}).pickle"
+    name_model = f"DM({str_accu})({str_conf})({str_size})({str_nb_kernel}).pickle"
 
     return name_model
 
