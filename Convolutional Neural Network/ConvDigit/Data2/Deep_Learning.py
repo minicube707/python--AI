@@ -33,7 +33,7 @@ def initialize_networks(input_shape, dimensions_CNN, hidden_layer, y_output_shap
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
                      dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
                      learning_rate_CNN, learning_rate_DNN, beta1, beta2,
-                     max_attempts=10):
+                     max_attempts=100):
 
     for _ in range(max_attempts):
         # Forward
@@ -127,6 +127,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     best_accu = 0
     best_model = {"CNN": None, "DNN": None}
 
+    k = 0
     for epoch in range(nb_iteration):
         for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
             parametres_CNN, parametres_DNN = train_one_sample(
@@ -135,32 +136,35 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
                 learning_rate_CNN, learning_rate_DNN, beta1, beta2
             )
 
-        # Évaluation partielle
-        rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
-        rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
+            k += 1
+            if (k % 100 == 0):
+                # Évaluation partielle
+                rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
+                rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
 
-        tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
-                                          parametres_CNN, parametres_DNN,
-                                          tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
+                                                parametres_CNN, parametres_DNN,
+                                                tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
-        vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
-                                          parametres_CNN, parametres_DNN,
-                                          tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+                vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
+                                                parametres_CNN, parametres_DNN,
+                                                tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
-        train_loss.append(tl)
-        train_lear.append(tdx)
-        train_accu.append(ta)
-        train_conf.append(tc)
+                train_loss.append(tl)
+                train_lear.append(tdx)
+                train_accu.append(ta)
+                train_conf.append(tc)
 
-        test_loss.append(vl)
-        test_lear.append(vdx)
-        test_accu.append(va)
-        test_conf.append(vc)
+                test_loss.append(vl)
+                test_lear.append(vdx)
+                test_accu.append(va)
+                test_conf.append(vc)
 
-        if va > best_accu:
-            best_accu = va
-            best_model["CNN"] = deepcopy(parametres_CNN)
-            best_model["DNN"] = deepcopy(parametres_DNN)
+                if va > best_accu:
+                    best_accu = va
+                    print(f"New accuracy: {train_accu[-1]}")
+                    best_model["CNN"] = deepcopy(parametres_CNN)
+                    best_model["DNN"] = deepcopy(parametres_DNN)
 
     # Résultats finaux
     print(f"\n🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")

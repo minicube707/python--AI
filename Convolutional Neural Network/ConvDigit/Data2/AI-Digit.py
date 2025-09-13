@@ -25,7 +25,7 @@ beta1 = 0.9
 beta2 = 0.999
 
 #Initialisation DNN
-hidden_layer = (128, 128)
+hidden_layer = (64, 64)
 learning_rate_DNN = 0.0001
 
 dimensions_CNN = {}
@@ -34,7 +34,7 @@ dimensions_CNN = {  "1" :(3, 1, 0, 32, "kernel", "relu"),
                     "2" :(2, 2, 0, 1, "pooling", "max"), 
                     "3" :(3, 1, 0, 64, "kernel", "relu"),
                     "4" :(2, 2, 0, 1, "pooling", "max"),
-                    "5" :(2, 1, 0, 64, "kernel", "sigmoide")}
+                    "5" :(3, 1, 0, 64, "kernel", "sigmoide")}
 
 nb_iteration = 1
 
@@ -44,7 +44,7 @@ input_shape = (1, 28, 28)
 padding_mode = "auto"
 _, _, dimensions_CNN, _ = initialisation_CNN(input_shape, dimensions_CNN, padding_mode)
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000], input_shape)
 
 if load:    
     #Load the model
