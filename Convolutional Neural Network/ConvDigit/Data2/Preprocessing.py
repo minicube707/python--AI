@@ -76,7 +76,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(y_train[i])
+        plt.title(str(np.argmax(y_train[i])))
         plt.axis("off")
     plt.tight_layout()    
     plt.show() 
@@ -87,7 +87,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(y_test[i])
+        plt.title(str(np.argmax(y_test[i])))
         plt.axis("off")
     plt.tight_layout()    
     plt.show() 
