@@ -4,30 +4,10 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-from Deep_Neuron_Network import initialisation_DNN
-from Convolution_Neuron_Network import show_information, output_shape
-from Initialisation_CNN import initialisation_CNN
+from Convolution_Neuron_Network import show_information
 from Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
 from Display_parametre_CNN import display_kernel_and_biais
 from Propagation import forward_propagation, back_propagation, update
-
-
-def initialize_networks(input_shape, dimensions_CNN, hidden_layer, y_output_shape, padding_mode="auto"):
-    parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN(
-        input_shape, dimensions_CNN, padding_mode
-    )
-
-    input_size = input_shape[1]
-    for val in dimensions_CNN.values():
-        input_size = output_shape(input_size, val[0], val[1], val[2])
-
-    last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
-    flattened_size = int(input_size**2 * last_CNN_layer[3])
-    dimensions_DNN = [flattened_size] + list(hidden_layer) + [y_output_shape]
-
-    parametres_DNN = initialisation_DNN(dimensions_DNN)
-
-    return parametres_CNN, parametres_DNN, parametres_grad, dimensions_CNN, dimensions_DNN, tuple_size_activation
 
 
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
@@ -107,13 +87,14 @@ def plot_metrics(train_loss, test_loss, train_lear, test_lear,
 
 
 
-def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, hidden_layer,
-                                dimensions_CNN, learning_rate_CNN, learning_rate_DNN,
-                                beta1, beta2, input_shape):
-
-    parametres_CNN, parametres_DNN, parametres_grad, dimensions_CNN, dimensions_DNN, tuple_size_activation = initialize_networks(
-        input_shape, dimensions_CNN, hidden_layer, y_train.shape[1]
-    )
+def convolution_neuron_network(
+        X_train, y_train, X_test, y_test,
+        nb_iteration,
+        parametres_CNN, parametres_grad, parametres_DNN,
+        dimensions_CNN,
+        tuple_size_activation,
+        learning_rate_CNN, beta1, beta2, learning_rate_DNN
+    ):
 
     C_CNN = len(dimensions_CNN)
     C_DNN = len(parametres_DNN) // 2
@@ -130,6 +111,7 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
     k = 0
     for epoch in range(nb_iteration):
         for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
+            
             parametres_CNN, parametres_DNN = train_one_sample(
                 X_train[j], y_train[j], parametres_CNN, parametres_DNN, parametres_grad,
                 dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
@@ -173,4 +155,4 @@ def convolution_neuron_network(X_train, y_train, X_test, y_test, nb_iteration, h
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 
-    return best_model["CNN"], best_model["DNN"], dimensions_CNN, dimensions_DNN, test_accu[-1], test_conf[-1], tuple_size_activation
+    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1]

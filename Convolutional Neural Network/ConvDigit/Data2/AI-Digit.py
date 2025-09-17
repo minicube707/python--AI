@@ -7,7 +7,7 @@ from Preprocessing import preprocessing
 from Mathematical_function import softmax
 from File_Management import file_management, select_model, load_model, save_model
 from Deep_Learning import convolution_neuron_network
-from Initialisation_CNN import initialisation_CNN
+from Initialisation_CNN import initialisation_AI, initialisation_affectation
 from Propagation import forward_propagation
 from Set_mode import set_mode
 
@@ -19,13 +19,19 @@ os.chdir(module_dir)
 with np.load("data/mnist.npz") as f:
         X, y = f["x_train"], f["y_train"]
 
+# Forme d'entrée (canaux, hauteur, largeur)
+input_shape = (1, 28, 28)
+
+# ============================
+#     PRÉTRAITEMENT DONNÉES
+# ============================
+X_train, y_train, X_test, y_test, transformer = preprocessing(
+    X[:2000], y[:2000], input_shape
+)
 
 # ============================
 #         PARAMÈTRES
 # ============================
-
-# Forme d'entrée (canaux, hauteur, largeur)
-input_shape = (1, 28, 28)
 
 # Nombre d'itérations
 nb_iteration = 1
@@ -41,64 +47,69 @@ beta2 = 0.999
 
 # DNN
 learning_rate_DNN = 0.001
-hidden_layer = (64, 64)
 
-# Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
-dimensions_CNN = {
-    "1": (3, 1, 0, 32, "kernel", "relu"),
-    "2": (2, 2, 0, 1, "pooling", "max"),
-    "3": (3, 1, 0, 64, "kernel", "relu"),
-    "4": (2, 2, 0, 1, "pooling", "max"),
-    "5": (3, 1, 0, 64, "kernel", "sigmoide")
-}
+if mode in {1}:
 
-# Mode de padding : 'auto' = calcul automatique
-padding_mode = "auto"
+    # ============================
+    #     INITIALISATION CNN
+    # ============================
 
-# ============================
-#     INITIALISATION CNN
-# ============================
+    # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
+    dimensions_CNN = {
+        "1": (3, 1, 0, 32, "kernel", "relu"),
+        "2": (2, 2, 0, 1, "pooling", "max"),
+        "3": (3, 1, 0, 64, "kernel", "relu"),
+        "4": (2, 2, 0, 1, "pooling", "max"),
+        "5": (3, 1, 0, 64, "kernel", "sigmoide")
+    }
 
-_, _, dimensions_CNN, _ = initialisation_CNN(
-    input_shape, dimensions_CNN, padding_mode
-)
+    # Structure DNN : (hidden layer) 
+    hidden_layer = (64, 64)
 
-# ============================
-#     PRÉTRAITEMENT DONNÉES
-# ============================
+    # Mode de padding : 'auto' = calcul automatique
+    padding_mode = "auto"
 
-X_train, y_train, X_test, y_test, transformer = preprocessing(
-    X[:2000], y[:2000], input_shape
-)
-
-# ============================
-#   CHARGEMENT OU TRAINING
-# ============================
-
-if mode in {2, 3}:
-    # Chargement du modèle existant
-    model = select_model()
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
-
-if mode in {1, 2}:
-    # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, dimensions_CNN, dimensions_DNN, test_accu, test_conf, tuple_size_activation = convolution_neuron_network(
-        X_train, y_train, X_test, y_test,
-        nb_iteration, hidden_layer, dimensions_CNN,
-        learning_rate_CNN, learning_rate_DNN,
-        beta1, beta2, input_shape
+    #Initialisation
+    parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation = initialisation_AI (
+        input_shape, dimensions_CNN, padding_mode, hidden_layer, y_train.shape
     )
 
-# ============================
-#       SAUVEGARDE
-# ============================
+
+else:
+    # ============================
+    #       SELECT A MODEL
+    # ============================
+
+    # Chargement du modele existant
+    model = select_model()
+    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
+
+
 
 if mode in {1, 2}:
+    # ============================
+    #       TRAINNING
+    # ============================
+
+    # Entraînement d'un nouveau modèle
+    parametres_CNN, parametres_DNN, dimensions_CNN, test_accu, test_conf = convolution_neuron_network (
+        X_train, y_train, X_test, y_test,
+        nb_iteration,
+        parametres_CNN, parametres_grad, parametres_DNN,
+        dimensions_CNN,
+        tuple_size_activation,
+        learning_rate_CNN, beta1, beta2, learning_rate_DNN
+    )
+
+    # ============================
+    #          SAVE
+    # ============================
+
     # Sauvegarde du meilleur modèle entraîné ou chargé
     name_model = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
     save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
-
 
 
 #display_kernel_and_biais(parametres_CNN)

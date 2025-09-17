@@ -1,6 +1,7 @@
 
 import numpy as np
-from Convolution_Neuron_Network import output_shape, error_initialisation
+from Convolution_Neuron_Network import calcul_output_shape, error_initialisation
+from Deep_Neuron_Network import initialisation_DNN
 """
 initialisation_extraction:
 =========DESCRIPTION=========
@@ -130,7 +131,7 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
             nb_channel = list_size_activaton[-1][0]
             dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
 
-        o_size = output_shape(input_size, k_size, stride, padding)
+        o_size = calcul_output_shape(input_size, k_size, stride, padding)
         previ_input_size = input_size + padding
         input_size = o_size
         
@@ -170,7 +171,7 @@ def initialisation_affectation(dimensions, list_size_activation):
 
 
 """
-initialisation:
+initialisation_CNN:
 =========DESCRIPTION=========
 Set all the value to built the CNN
 
@@ -191,3 +192,40 @@ def initialisation_CNN(x_shape, dimensions, padding_mode):
     parametres, parametres_grad = initialisation_affectation(dimensions, list_size_activation)
 
     return parametres, parametres_grad, dimensions, tuple(list_size_activation)
+
+
+"""
+initialisation_AI:
+=========DESCRIPTION=========
+Set all the value to built the AI
+
+=========INPUT=========
+tuple   input_shape :   tuple contain the dimension of the input
+dict    dimensions_CNN :    all the information on how is built the CNN
+string  padding_mode :  string to know if the auto-padding is active
+tuple   hidden_layer :  tuple contain the information of the hidden layer
+tuple   output_shape :  tuple contain the dimension of the output
+
+=========OUTPUT=========
+dict    parametres_CNN :    containt all the parametre of the CNN
+dict    parametres_grad :   containt all the information for the update operation
+dict    parametres_DNN :    containt all the parametre of the DNN
+tuple   list_size_activation:   tuple of all activation shape with number of activation and padding
+"""
+def initialisation_AI(input_shape, dimensions_CNN, padding_mode, hidden_layer, output_shape): 
+        
+    parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN (
+    input_shape, dimensions_CNN, padding_mode
+    )
+
+    input_size = input_shape[1]
+    for val in dimensions_CNN.values():
+        input_size = calcul_output_shape(input_size, val[0], val[1], val[2])
+
+    last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
+    flattened_size = int(input_size**2 * last_CNN_layer[3])
+    dimensions_DNN = [flattened_size] + list(hidden_layer) + [output_shape[1]]
+
+    parametres_DNN = initialisation_DNN (dimensions_DNN)
+
+    return parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation

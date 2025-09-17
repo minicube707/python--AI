@@ -27,7 +27,7 @@ y : label
 """
 
 """
-ouput_shape:
+calcul_output_shape:
 =========DESCRIPTION=========
 Calcul the ouput of a given array
 
@@ -40,7 +40,7 @@ int             padding :       how many pixel we add to the border of the activ
 =========OUTPUT=========
 int             the number of pixel in row for the ouput
 """
-def output_shape(input_size, k_size, stride, padding):
+def calcul_output_shape(input_size, k_size, stride, padding):
     return np.int8((input_size - k_size + padding) / stride +1)
 
 
@@ -479,7 +479,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
             for j in range(0, X.shape[2]-k_size_sqrt+1, stride):
                 new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
 
-    o_size = output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
+    o_size = calcul_output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
     return new_X.reshape(X.shape[0], (o_size)**2, k_size)
 
 
