@@ -1,16 +1,18 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
 
-from Sklearn_tools import train_test_split, Label_binarizer
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.ensemble import IsolationForest
 
-import matplotlib.pyplot as plt
-
-from Convolution_Neuron_Network import add_padding, reshape
+from .Sklearn_tools import train_test_split, Label_binarizer
+from .Convolution_Neuron_Network import add_padding, reshape
 
 def preprocessing(X, y, input_shape, test_size=0.1):
-    X = X.reshape(-1, 8, 8)
+    
+    print("Data shape")
+    print("X:",X.shape)
+    print("Y:",y.shape)
 
     #Affichage des 15 premières images
     plt.figure(figsize=(16,8))
@@ -23,13 +25,11 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     plt.tight_layout()    
     plt.show()  
 
-
     #______________________________________________________________#
     #Remove the bad data
-    X_reshape = X.reshape(X.shape[0], -1)
     model=IsolationForest(contamination=0.2)
-    model.fit(X_reshape)
-    outlier = model.predict(X_reshape) == 1
+    model.fit(X)
+    outlier = model.predict(X) == 1
     X = X[outlier]
     y = y[outlier]
 
@@ -61,6 +61,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
   
     New_X_train = X_train / X_train.max()
     New_X_test = X_test / X_train.max()
+
     
 
     #Pour les X se sont les variables en premier (ici les pixels) puis le nombres d'échantillons 

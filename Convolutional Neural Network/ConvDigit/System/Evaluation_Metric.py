@@ -1,7 +1,8 @@
 
 import  numpy as np
-from Mathematical_function import softmax
-from Propagation import forward_propagation
+
+from .Mathematical_function import softmax
+from .Propagation import forward_propagation
 
 """
 ============================

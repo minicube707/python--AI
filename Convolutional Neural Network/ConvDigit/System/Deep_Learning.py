@@ -3,11 +3,12 @@ import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from copy import deepcopy
+import time
 
-from Convolution_Neuron_Network import show_information
-from Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
-from Display_parametre_CNN import display_kernel_and_biais
-from Propagation import forward_propagation, back_propagation, update
+from .Convolution_Neuron_Network import show_information
+from .Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
+from .Display_parametre_CNN import display_kernel_and_biais
+from .Propagation import forward_propagation, back_propagation, update
 
 
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
@@ -108,6 +109,9 @@ def convolution_neuron_network(
     best_accu = 0
     best_model = {"CNN": None, "DNN": None}
 
+    # Démarrer le chronomètre
+    start_time = time.time()
+    
     k = 0
     for epoch in range(nb_iteration):
         for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
@@ -144,9 +148,15 @@ def convolution_neuron_network(
 
                 if va > best_accu:
                     best_accu = va
-                    print(f"New accuracy: {train_accu[-1]}")
+                    print(f"\nNew accuracy: {train_accu[-1]}")
                     best_model["CNN"] = deepcopy(parametres_CNN)
                     best_model["DNN"] = deepcopy(parametres_DNN)
+
+    # Arrêter le chronomètre
+    end_time = time.time()
+
+    # Calcul du temps en minutes
+    elapsed_time_minutes = (end_time - start_time) / 60
 
     # Résultats finaux
     print(f"\n🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")
@@ -155,4 +165,4 @@ def convolution_neuron_network(
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 
-    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1]
+    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1], elapsed_time_minutes

@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from Mathematical_function import sigmoide, softmax
+from .Mathematical_function import sigmoide, softmax
 
 def initialisation_DNN(dimension):
 
@@ -13,8 +13,8 @@ def initialisation_DNN(dimension):
 
     for c in range(1, C):
         #The weight of the parametre is between -1 and 1
-        parametres["W" + str(c)] = (np.random.rand(np.int16(dimension[c]), np.int16(dimension[c-1]))*2 -1)
-        parametres["b" + str(c)] = (np.random.rand(np.int16(dimension[c]), 1)*2 -1)
+        parametres["W" + str(c)] = (np.random.rand(dimension[c], dimension[c-1])*2 -1)
+        parametres["b" + str(c)] = (np.random.rand(dimension[c], 1)*2 -1)
         print("W" + str(c), ":", parametres["W" + str(c)].shape)
         print("b" + str(c), ":", parametres["b" + str(c)].shape)
 
@@ -41,7 +41,6 @@ def back_propagation_DNN(activation, parametres, y_train):
     m = y_train.size
     C = len(parametres) // 2
     dZ = activation["A" + str(C)] - y_train.reshape(y_train.shape[0], 1)
-
     gradients = {}  
 
     for c in reversed(range(1, C+1)):

@@ -1,15 +1,22 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import sys
 
-from Preprocessing import preprocessing
-from Mathematical_function import softmax
-from File_Management import file_management, select_model, load_model, save_model
-from Deep_Learning import convolution_neuron_network
-from Initialisation_CNN import initialisation_AI, initialisation_affectation
-from Propagation import forward_propagation
-from Set_mode import set_mode
+from datetime import datetime
+from pathlib import Path
+
+# Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from System.Preprocessing import preprocessing
+from System.Mathematical_function import softmax
+from System.File_Management import file_management, select_model, load_model, save_model
+from System.Deep_Learning import convolution_neuron_network
+from System.Initialisation_CNN import initialisation_AI, initialisation_affectation
+from System.Propagation import forward_propagation
+from System.Set_mode import set_mode
+from System.Manage_logbook import fill_information, add_model
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -19,15 +26,15 @@ os.chdir(module_dir)
 with np.load("data/mnist.npz") as f:
         X, y = f["x_train"], f["y_train"]
 
+X = X.reshape(X.shape[0], -1)
+
 # Forme d'entrée (canaux, hauteur, largeur)
 input_shape = (1, 28, 28)
 
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(
-    X[:2000], y[:2000], input_shape
-)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000], input_shape)
 
 # ============================
 #         PARAMÈTRES
@@ -81,7 +88,7 @@ else:
     # ============================
 
     # Chargement du modele existant
-    model = select_model()
+    model = select_model(module_dir, "model_logbook.csv")
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
     _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
 
@@ -93,7 +100,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, dimensions_CNN, test_accu, test_conf = convolution_neuron_network (
+    parametres_CNN, parametres_DNN, dimensions_CNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,
@@ -107,9 +114,35 @@ if mode in {1, 2}:
     # ============================
 
     # Sauvegarde du meilleur modèle entraîné ou chargé
-    name_model = file_management(test_accu, test_conf, dimensions_CNN)
+    name_model, model_info = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
     save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
+
+    date = datetime.today()
+    date = date.strftime('%d/%m/%Y')
+    str_size = ','.join(str(v[0]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+    str_nb_kernel = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+
+    if mode in {1}:
+        nb_epoch = nb_iteration
+        training_time = elapsed_time_minutes
+        baseline_mode = "nan"
+        nb_fine_tunning = 0
+
+    else:
+        nb_epoch = float(model_info["nb_epoch"]) + nb_iteration
+        training_time = float(model_info["training_time_(min)"].replace(',', '.')) + elapsed_time_minutes
+        baseline_mode = model_info["name"]
+        nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
+
+    new_log =  fill_information(name_model, date, nb_epoch, training_time, 
+                                test_accu, test_conf, 
+                                str_size, str_nb_kernel, 
+                                learning_rate_CNN, learning_rate_DNN, beta1, beta2, 
+                                len(y_train), len(y_test), 
+                                baseline_mode, nb_fine_tunning)
+    
+    add_model(new_log, "LogBook", "model_logbook.csv")
 
 
 #display_kernel_and_biais(parametres_CNN)

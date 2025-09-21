@@ -3,10 +3,16 @@ import numpy as np
 import pygame
 import matplotlib.pyplot as plt
 import os
+import sys
 
-from Mathematical_function import softmax
-from Propagation import forward_propagation
-from File_Management import select_model,load_model
+from pathlib import Path
+
+# Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from System.Mathematical_function import softmax
+from System.Propagation import forward_propagation
+from System.File_Management import select_model, load_model
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -135,7 +141,7 @@ def main (win , width):
     kernel_size = 2
     grid = np.zeros((rows, rows))
 
-    model = select_model()
+    model, _ = select_model(module_dir, "model_logbook.csv")
     parametres = load_model(model)
     
     run = True

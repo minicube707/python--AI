@@ -1,7 +1,9 @@
 
 import numpy as np
-from Convolution_Neuron_Network import calcul_output_shape, error_initialisation
-from Deep_Neuron_Network import initialisation_DNN
+
+from .Convolution_Neuron_Network import calcul_output_shape, error_initialisation
+from .Deep_Neuron_Network import initialisation_DNN
+
 """
 initialisation_extraction:
 =========DESCRIPTION=========

@@ -1,7 +1,7 @@
 
 import  numpy as np
 
-from Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoide
+from .Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoide
 
 
 #Allow to show all tab with numpy

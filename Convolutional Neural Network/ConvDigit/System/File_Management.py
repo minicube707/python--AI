@@ -1,0 +1,81 @@
+import os
+import pickle
+import pandas as pd
+from datetime import datetime
+
+from .Manage_logbook import show_info_main
+
+def load_model(model_name):
+    with open("Model/" + str(model_name), 'rb') as file:
+        return pickle.load(file)
+
+def save_model(filename, data):
+    with open("Model/" + filename, 'wb') as file:
+        pickle.dump(data, file)
+
+def file_management(test_accu, test_conf, dimensions_CNN):
+    str_accu = f"{test_accu:.5f}".replace(".", ",")
+    str_conf = f"{test_conf:.5f}".replace(".", ",")
+
+     # Obtenir la date du jour au format JJ-MM-AAAA
+    date_str = datetime.now().strftime("%d-%m-%Y")
+
+    name_model = f"DM({str_accu})({str_conf})({date_str}).pickle"
+
+    return name_model
+
+
+def select_model(path, csv_file):
+
+    # Étape 2 : Lire le fichier CSV dans le dossier logbook
+    logbook_path = os.path.join(path, "LogBook", csv_file)
+    
+    if not os.path.exists(logbook_path):
+        chemin_absolu = os.path.abspath(logbook_path)
+        print(f"[ERREUR] Fichier '{csv_file}' non trouvé.")
+        print(f"Chemin testé (absolu) : {chemin_absolu}\n")
+        exit(1)
+
+    df = pd.read_csv(logbook_path, sep=';')
+
+    # Étape 3 : Afficher les lignes disponibles dans le logbook
+    print("\nModèles disponibles dans le logbook:")
+    show_info_main("LogBook", csv_file)
+
+    # Étape 4 : Demander à l'utilisateur de choisir un modèle
+    index = 0
+    while index < 1 or index > len(df):
+        try:
+            index = int(input(f"\nQuel modèle souhaitez-vous charger ? (1 à {len(df)})(0 exit)\n ") )
+        except ValueError:
+            continue
+        if index == 0:
+            exit(1)
+        if index < 1 or index > len(df):
+            print(f"Veuillez entrer un nombre entre 1 et {len(df)}")
+
+    # Étape 5 : Récupérer la ligne choisie (index - 1 car affichage commence à 1)
+    selected_row = df.iloc[index - 1]
+
+    # Convertir toute la ligne en dictionnaire
+    model_info_dict = selected_row.to_dict()
+
+    # Extraire le nom du modèle à partir du dictionnaire
+    selected_model_name = model_info_dict['name']
+
+    print(f"\nModèle sélectionné : {selected_model_name}")
+
+    # Étape 6 : Chercher le fichier dans le dossier Model/
+    model_dir = os.path.join(path, "Model")
+    model_path = os.path.join(model_dir, selected_model_name)
+
+    if not os.path.exists(model_path):
+        chemin_absolu = os.path.abspath(model_path)
+        print(f"[ERREUR] Fichier '{csv_file}' non trouvé.")
+        print(f"Chemin testé (absolu) : {chemin_absolu}\n")
+        exit(1)
+
+    print(f"\n✅ Modèle sélectionné : {selected_model_name}")
+    print(f"📂 Chemin : {model_path}")
+
+    return selected_model_name, model_info_dict
