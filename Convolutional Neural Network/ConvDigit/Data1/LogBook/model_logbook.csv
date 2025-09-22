@@ -1,1 +1,2 @@
 name;date;nb_epoch;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning
+DM(0,88000)(0,15349)(22-09-2025).pickle;22/09/2025;1;17.4203631083171;0.88;0.153493031441968;(3, 2);(64, 64);0.005;0.001;0.9;0.999;1294;143;X;0
