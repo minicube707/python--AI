@@ -40,7 +40,9 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 2
+max_attempts = 100
+min_confidence_score = 0.2
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -61,9 +63,9 @@ if mode in {1}:
     # ============================
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
-    dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
-                    "2" :(2, 2, 0, 1, "pooling", "max"), 
-                    "3" :(2, 1, 0, 64, "kernel", "sigmoide")
+    dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
+                        "2" :(2, 2, 0, 1, "pooling", "max"), 
+                        "3" :(2, 1, 0, 64, "kernel", "sigmoide")
     }
     
     # Structure DNN : (hidden layer) 
@@ -85,7 +87,7 @@ else:
 
     # Chargement du modele existant
     model, model_info = select_model(module_dir, "model_logbook.csv")
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
+    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(module_dir, model)
     _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
 
 
@@ -102,7 +104,8 @@ if mode in {1, 2}:
         parametres_CNN, parametres_grad, parametres_DNN,
         dimensions_CNN,
         tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, learning_rate_DNN
+        learning_rate_CNN, beta1, beta2, learning_rate_DNN,
+        max_attempts, min_confidence_score
     )
 
     # ============================
@@ -112,7 +115,7 @@ if mode in {1, 2}:
     # Sauvegarde du meilleur modèle entraîné ou chargé
     name_model = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
-    save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
+    save_model(module_dir, name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 
     date = datetime.today()
     date = date.strftime('%d/%m/%Y')
@@ -122,7 +125,7 @@ if mode in {1, 2}:
     if mode in {1}:
         nb_epoch = nb_iteration
         training_time = elapsed_time_minutes
-        baseline_mode = "nan"
+        baseline_mode = "X"
         nb_fine_tunning = 0
 
     else:

@@ -42,6 +42,8 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000]
 
 # Nombre d'itérations
 nb_iteration = 1
+max_attempts = 100
+min_confidence_score = 0.2
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -89,7 +91,7 @@ else:
 
     # Chargement du modele existant
     model = select_model(module_dir, "model_logbook.csv")
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(model)
+    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(module_dir, model)
     _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
 
 
@@ -106,7 +108,8 @@ if mode in {1, 2}:
         parametres_CNN, parametres_grad, parametres_DNN,
         dimensions_CNN,
         tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, learning_rate_DNN
+        learning_rate_CNN, beta1, beta2, learning_rate_DNN,
+        max_attempts, min_confidence_score
     )
 
     # ============================
@@ -116,7 +119,7 @@ if mode in {1, 2}:
     # Sauvegarde du meilleur modèle entraîné ou chargé
     name_model, model_info = file_management(test_accu, test_conf, dimensions_CNN)
     print(name_model)
-    save_model(name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
+    save_model(module_dir,name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 
     date = datetime.today()
     date = date.strftime('%d/%m/%Y')
@@ -126,7 +129,7 @@ if mode in {1, 2}:
     if mode in {1}:
         nb_epoch = nb_iteration
         training_time = elapsed_time_minutes
-        baseline_mode = "nan"
+        baseline_mode = "X"
         nb_fine_tunning = 0
 
     else:

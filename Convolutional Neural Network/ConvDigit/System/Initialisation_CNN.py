@@ -225,7 +225,7 @@ def initialisation_AI(input_shape, dimensions_CNN, padding_mode, hidden_layer, o
         input_size = calcul_output_shape(input_size, val[0], val[1], val[2])
 
     last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
-    flattened_size = int(input_size**2 * last_CNN_layer[3])
+    flattened_size = np.int32((np.int32(input_size)**2 * last_CNN_layer[3]))
     dimensions_DNN = [flattened_size] + list(hidden_layer) + [output_shape[1]]
 
     parametres_DNN = initialisation_DNN (dimensions_DNN)

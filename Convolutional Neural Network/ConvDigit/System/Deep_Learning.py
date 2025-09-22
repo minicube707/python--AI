@@ -14,7 +14,7 @@ from .Propagation import forward_propagation, back_propagation, update
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
                      dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
                      learning_rate_CNN, learning_rate_DNN, beta1, beta2,
-                     max_attempts=10):
+                     max_attempts, min_confidence_score):
 
     for _ in range(max_attempts):
         # Forward
@@ -34,7 +34,7 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
         # Prediction
         pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
 
-        if accuracy_score(y.flatten(), pred.flatten()) > 0 and confidence_score(pred) >= 0.2:
+        if accuracy_score(y.flatten(), pred.flatten()) > 0 and confidence_score(pred) >= min_confidence_score:
             break
 
     return parametres_CNN, parametres_DNN
@@ -94,7 +94,8 @@ def convolution_neuron_network(
         parametres_CNN, parametres_grad, parametres_DNN,
         dimensions_CNN,
         tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, learning_rate_DNN
+        learning_rate_CNN, beta1, beta2, learning_rate_DNN,
+        max_attempts, min_confidence_score 
     ):
 
     C_CNN = len(dimensions_CNN)
@@ -119,7 +120,8 @@ def convolution_neuron_network(
             parametres_CNN, parametres_DNN = train_one_sample(
                 X_train[j], y_train[j], parametres_CNN, parametres_DNN, parametres_grad,
                 dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
-                learning_rate_CNN, learning_rate_DNN, beta1, beta2
+                learning_rate_CNN, learning_rate_DNN, beta1, beta2,
+                max_attempts, min_confidence_score
             )
 
             k += 1

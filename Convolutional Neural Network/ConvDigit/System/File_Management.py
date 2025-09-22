@@ -5,13 +5,44 @@ from datetime import datetime
 
 from .Manage_logbook import show_info_main
 
-def load_model(model_name):
-    with open("Model/" + str(model_name), 'rb') as file:
+def load_model(path, model_name):
+    model_dir = os.path.join(path, "Model")
+    model_path = os.path.join(model_dir, model_name)
+    
+    if not os.path.exists(model_path):
+        chemin_absolu = os.path.abspath(model_path)
+        print(f"[ERREUR] Fichier '{model_name}' non trouvé.")
+        print(f"Chemin testé (absolu) : {chemin_absolu}\n")
+
+        # Liste les fichiers disponibles pour aider au debug
+        if os.path.exists(model_dir):
+            print("📂 Fichiers disponibles dans le dossier Model :")
+            for f in os.listdir(model_dir):
+                print(" -", f)
+        else:
+            print("❌ Le dossier 'Model' n'existe pas.")
+
+        exit(1)
+
+    with open(model_path, 'rb') as file:
         return pickle.load(file)
 
-def save_model(filename, data):
-    with open("Model/" + filename, 'wb') as file:
+
+
+def save_model(path, model_name, data):
+
+    model_path = os.path.join(path, "Model")
+    
+    if not os.path.exists(model_path):
+        chemin_absolu = os.path.abspath(model_path)
+        print(f"[ERREUR] Dossier 'Model' non trouvé.")
+        print(f"Chemin testé (absolu) : {chemin_absolu}\n")
+        exit(1)
+
+    model_path = os.path.join(model_path, model_name)
+    with open(model_path, 'wb') as file:
         pickle.dump(data, file)
+
 
 def file_management(test_accu, test_conf, dimensions_CNN):
     str_accu = f"{test_accu:.5f}".replace(".", ",")
@@ -67,15 +98,14 @@ def select_model(path, csv_file):
 
     # Étape 6 : Chercher le fichier dans le dossier Model/
     model_dir = os.path.join(path, "Model")
-    model_path = os.path.join(model_dir, selected_model_name)
 
-    if not os.path.exists(model_path):
-        chemin_absolu = os.path.abspath(model_path)
-        print(f"[ERREUR] Fichier '{csv_file}' non trouvé.")
+    if not os.path.exists(model_dir):
+        chemin_absolu = os.path.abspath(model_dir)
+        print(f"[ERREUR] Dossier '{model_dir}' non trouvé.")
         print(f"Chemin testé (absolu) : {chemin_absolu}\n")
         exit(1)
 
     print(f"\n✅ Modèle sélectionné : {selected_model_name}")
-    print(f"📂 Chemin : {model_path}")
+    print(f"📂 Chemin : {model_dir}")
 
     return selected_model_name, model_info_dict
