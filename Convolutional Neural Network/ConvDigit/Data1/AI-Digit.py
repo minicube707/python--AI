@@ -130,7 +130,7 @@ if mode in {1, 2}:
 
     else:
         nb_epoch = float(model_info["nb_epoch"]) + nb_iteration
-        training_time = float(model_info["training_time_(min)"].replace(',', '.')) + elapsed_time_minutes
+        training_time = float(model_info["training_time_(min)"]) + elapsed_time_minutes
         baseline_mode = model_info["name"]
         nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
 

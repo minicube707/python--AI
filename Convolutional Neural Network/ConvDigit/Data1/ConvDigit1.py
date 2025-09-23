@@ -124,7 +124,7 @@ def main (win , width):
     grid = np.zeros((rows, rows))
 
     model, _ = select_model(module_dir, "model_logbook.csv")
-    parametres = load_model(model)
+    parametres = load_model(module_dir, model)
     
     run = True
     while run:
