@@ -40,21 +40,21 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 5
 max_attempts = 100
-min_confidence_score = 0
+min_confidence_score = 0.25
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.005
+learning_rate_CNN = 0.0005
 beta1 = 0.9
 beta2 = 0.999
 
 # DNN
-learning_rate_DNN = 0.001
+learning_rate_DNN = 0.0001
 
 
 print("\nInfo Training")
