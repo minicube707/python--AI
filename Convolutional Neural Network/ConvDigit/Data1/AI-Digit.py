@@ -40,9 +40,9 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 2
+nb_iteration = 1
 max_attempts = 100
-min_confidence_score = 0.2
+min_confidence_score = 0
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -56,6 +56,20 @@ beta2 = 0.999
 # DNN
 learning_rate_DNN = 0.001
 
+
+print("\nInfo Training")
+print("Nombre d'iteration: ", nb_iteration);
+print("Max attempts: ", max_attempts)
+print("Min confidence score: ", min_confidence_score)
+
+print("\nInfo CNN")
+print("Learning rate: ", learning_rate_CNN)
+print("Beta1: ", beta1)
+print("Beta2: ", beta2)
+
+print("\nInfo DNN")
+print("Learning rate: ", learning_rate_DNN)
+
 if mode in {1}:
 
     # ============================
@@ -63,7 +77,7 @@ if mode in {1}:
     # ============================
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
-    dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
+    dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
                         "2" :(2, 2, 0, 1, "pooling", "max"), 
                         "3" :(2, 1, 0, 64, "kernel", "sigmoide")
     }
@@ -134,7 +148,9 @@ if mode in {1, 2}:
         baseline_mode = model_info["name"]
         nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
 
-    new_log =  fill_information(name_model, date, nb_epoch, training_time, 
+    new_log =  fill_information(name_model, date,
+                                nb_epoch, max_attempts, min_confidence_score,
+                                training_time, 
                                 test_accu, test_conf, 
                                 str_size, str_nb_kernel, 
                                 learning_rate_CNN, learning_rate_DNN, beta1, beta2, 

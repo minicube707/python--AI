@@ -57,6 +57,20 @@ beta2 = 0.999
 # DNN
 learning_rate_DNN = 0.001
 
+
+print("\nInfo Training")
+print("Nombre d'iteration: ", nb_iteration);
+print("Max attempts: ", max_attempts)
+print("Min confidence score: ", min_confidence_score)
+
+print("\nInfo CNN")
+print("Learning rate: ", learning_rate_CNN)
+print("Beta1: ", beta1)
+print("Beta2: ", beta2)
+
+print("\nInfo DNN")
+print("Learning rate: ", learning_rate_DNN)
+
 if mode in {1}:
 
     # ============================
@@ -135,7 +149,9 @@ if mode in {1, 2}:
         baseline_mode = model_info["name"]
         nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
 
-    new_log =  fill_information(name_model, date, nb_epoch, training_time, 
+    new_log =  fill_information(name_model, date,
+                                nb_epoch, max_attempts, min_confidence_score,
+                                training_time,
                                 test_accu, test_conf, 
                                 str_size, str_nb_kernel, 
                                 learning_rate_CNN, learning_rate_DNN, beta1, beta2, 

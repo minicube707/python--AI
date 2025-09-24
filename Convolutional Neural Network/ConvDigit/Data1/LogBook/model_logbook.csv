@@ -1,3 +1,3 @@
-name;date;nb_epoch;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning
-DM(0,88000)(0,15349)(22-09-2025).pickle;22/09/2025;1.0;17.4203631083171;0.88;0.153493031441968;(3, 2);(64, 64);0.005;0.001;0.9;0.999;1294;143;X;0.0
-DM(0,92000)(0,18161)(23-09-2025).pickle;23/09/2025;3.0;52.01715561151509;0.92;0.18160655180991866;3,2;64,64;0.005;0.001;0.9;0.999;1294;143;DM(0,88000)(0,15349)(22-09-2025).pickle;1.0
+name;date;nb_epoch;max_attempts;min_confidence_score;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning
+DM(0,88000)(0,15349)(22-09-2025).pickle;22/09/2025;1;100;0;17.4203631083171;0.88;0.153493031441968;(3, 2);(64, 64);0.005;0.001;0.9;0.999;1294;143;X;0
+DM(0,92000)(0,18161)(23-09-2025).pickle;23/09/2025;3;100;0.2;52.0171556115151;0.92;0.181606551809919;3,2;64,64;0.005;0.001;0.9;0.999;1294;143;DM(0,88000)(0,15349)(22-09-2025).pickle;1
