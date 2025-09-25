@@ -113,7 +113,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, dimensions_CNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
+    parametres_CNN, parametres_DNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,

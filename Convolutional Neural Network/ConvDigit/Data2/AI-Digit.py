@@ -42,8 +42,8 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000]
 
 # Nombre d'itérations
 nb_iteration = 1
-max_attempts = 100
-min_confidence_score = 0.2
+max_attempts = 50
+min_confidence_score = 0
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -117,7 +117,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, dimensions_CNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
+    parametres_CNN, parametres_DNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,
