@@ -41,7 +41,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000]
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 0
 max_attempts = 50
 min_confidence_score = 0
 
@@ -117,7 +117,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
+    parametres_CNN, parametres_DNN, test_accu, test_conf, test_loss, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,
@@ -149,14 +149,14 @@ if mode in {1, 2}:
 
     else:
         nb_epoch = float(model_info["nb_epoch"]) + nb_iteration
-        training_time = float(model_info["training_time_(min)"].replace(',', '.')) + elapsed_time_minutes
+        training_time = float(model_info["training_time_(min)"]) + elapsed_time_minutes
         baseline_mode = model_info["name"]
         nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
 
     new_log =  fill_information(name_model, date,
                                 nb_epoch, max_attempts, min_confidence_score,
                                 training_time, 
-                                test_accu, test_conf, 
+                                test_accu, test_conf,  test_loss,
                                 str_size, str_nb_kernel, 
                                 learning_rate_CNN, learning_rate_DNN, beta1, beta2, 
                                 len(y_train), len(y_test), 

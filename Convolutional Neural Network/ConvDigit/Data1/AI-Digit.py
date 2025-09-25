@@ -10,7 +10,7 @@ from pathlib import Path
 # Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from System.Preprocessing import preprocessing
+from System.Preprocessing import preprocessing, handle_key
 from System.Mathematical_function import softmax
 from System.File_Management import file_management, select_model, load_model, save_model
 from System.Deep_Learning import convolution_neuron_network
@@ -40,7 +40,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 5
+nb_iteration = 0
 max_attempts = 100
 min_confidence_score = 0.25
 
@@ -112,7 +112,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
-    parametres_CNN, parametres_DNN, test_accu, test_conf, elapsed_time_minutes = convolution_neuron_network (
+    parametres_CNN, parametres_DNN, test_accu, test_conf, test_loss, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,
@@ -151,7 +151,7 @@ if mode in {1, 2}:
     new_log =  fill_information(name_model, date,
                                 nb_epoch, max_attempts, min_confidence_score,
                                 training_time, 
-                                test_accu, test_conf, 
+                                test_accu, test_conf, test_loss,
                                 str_size, str_nb_kernel, 
                                 learning_rate_CNN, learning_rate_DNN, beta1, beta2, 
                                 len(y_train), len(y_test), 
@@ -169,7 +169,8 @@ C_DNN = len(parametres_DNN) // 2
 y_final = transformer.inverse_transform(y_test)
 
 #Affichage des 15 premières images
-plt.figure(figsize=(16,8))
+fig = plt.figure(figsize=(16,8))
+fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
 for i in range(1,16):
 
     # Prédiction des probabilités avec softmax
@@ -200,7 +201,8 @@ for i in range(nb_test):
 
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
-
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
+    
     # Affichage de l'image
     axs[0].imshow(X_test[index].reshape(8, 8), cmap="gray")
     axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")

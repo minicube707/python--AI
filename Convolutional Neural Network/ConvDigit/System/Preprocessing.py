@@ -8,6 +8,10 @@ from sklearn.ensemble import IsolationForest
 from .Sklearn_tools import train_test_split, Label_binarizer
 from .Convolution_Neuron_Network import add_padding, reshape
 
+def handle_key(event):
+    if event.key == ' ':
+        plt.close(event.canvas.figure)  # Ferme la fenêtre associée
+
 def preprocessing(X, y, input_shape, test_size=0.1):
     
     print("Data shape")
@@ -15,8 +19,9 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     print("Y:",y.shape)
 
     #Affichage des 15 premières images
-    plt.figure(figsize=(16,8))
-    plt.suptitle("Dataset")
+    fig = plt.figure(figsize=(16, 8))
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    fig.suptitle("Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(X.reshape((X.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
@@ -72,8 +77,9 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     print("y_train.shape:", y_train.shape)
 
     #Affichage des 15 premières images du dataset
-    plt.figure(figsize=(16,8))
-    plt.suptitle("Train Dataset")
+    fig = plt.figure(figsize=(16,8))
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    fig.suptitle("Train Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
@@ -83,8 +89,9 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     plt.show() 
 
     #Affichage des 15 premières images
-    plt.figure(figsize=(16,8))
-    plt.suptitle("Test Dataset")
+    fig = plt.figure(figsize=(16,8))
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    fig.suptitle("Test Dataset")
     for i in range(1,16):
         plt.subplot(4,5, i)
         plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")

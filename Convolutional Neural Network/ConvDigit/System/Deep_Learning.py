@@ -9,7 +9,7 @@ from .Convolution_Neuron_Network import show_information
 from .Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
 from .Display_parametre_CNN import display_kernel_and_biais
 from .Propagation import forward_propagation, back_propagation, update
-
+from .Preprocessing import handle_key
 
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
                      dimensions_CNN, tuple_size_activation, C_CNN, C_DNN,
@@ -62,29 +62,36 @@ def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
 def plot_metrics(train_loss, test_loss, train_lear, test_lear,
                  train_accu, test_accu, train_conf, test_conf):
     fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     axs[0].plot(train_loss, label="Train")
     axs[0].plot(test_loss, label="Test")
     axs[0].set_title("Fonction de coût")
+    y_max = max(max(train_loss), max(test_loss))
+    axs[0].set_ylim(0, y_max)
     axs[0].legend()
 
     axs[1].plot(train_lear, label="Train")
     axs[1].plot(test_lear, label="Test")
     axs[1].set_title("Dérivée coût")
+    y_min = min(min(train_loss), min(test_loss))
+    axs[1].set_ylim(0, y_min)
     axs[1].legend()
 
     axs[2].plot(train_accu, label="Train")
     axs[2].plot(test_accu, label="Test")
     axs[2].set_title("Accuracy")
+    axs[2].set_ylim(0, 1)
     axs[2].legend()
 
     axs[3].plot(train_conf, label="Train")
     axs[3].plot(test_conf, label="Test")
     axs[3].set_title("Confidence")
+    axs[3].set_ylim(0, 1)
     axs[3].legend()
 
     plt.tight_layout()
-    plt.show()
+    plt.show(block=False)
 
 
 
@@ -107,7 +114,29 @@ def convolution_neuron_network(
     train_loss, train_accu, train_lear, train_conf = [], [], [], []
     test_loss, test_accu, test_lear, test_conf = [], [], [], []
 
-    best_accu = 0
+    rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
+
+    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
+                                    parametres_CNN, parametres_DNN,
+                                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+    
+    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
+                                    parametres_CNN, parametres_DNN,
+                                    tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+    train_loss.append(tl)
+    train_lear.append(tdx)
+    train_accu.append(ta)
+    train_conf.append(tc)
+
+    test_loss.append(vl)
+    test_lear.append(vdx)
+    test_accu.append(va)
+    test_conf.append(vc)
+    
+    best_accu = va
+    print(f"\nInitial accurracy: {best_accu}")
+    print(f"Initial confidence score: {vc}")
     best_model = {"CNN": None, "DNN": None}
 
     # Démarrer le chronomètre
@@ -150,7 +179,8 @@ def convolution_neuron_network(
 
                 if va > best_accu:
                     best_accu = va
-                    print(f"\nNew accuracy: {train_accu[-1]}")
+                    print(f"\nNew accuracy: {va}")
+                    print(f"New confidence score: {vc}")
                     best_model["CNN"] = deepcopy(parametres_CNN)
                     best_model["DNN"] = deepcopy(parametres_DNN)
 
@@ -161,10 +191,12 @@ def convolution_neuron_network(
     elapsed_time_minutes = (end_time - start_time) / 60
 
     # Résultats finaux
-    print(f"\n🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")
+    print(f"\n🚂💰 Coût final - Train    : {train_loss[-1]:.5f}")
+    print(f"🧪💰 Coût final - Test     : {test_loss[-1]:.5f}")
+    print(f"🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")
     print(f"🧪 Accuracy finale - Test  : {test_accu[-1]:.5f}")
     print(f"🔎 Confidence score - Test : {test_conf[-1]:.5f}")
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 
-    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1], elapsed_time_minutes
+    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes
