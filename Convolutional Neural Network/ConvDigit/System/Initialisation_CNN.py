@@ -84,13 +84,13 @@ def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_s
     nb_layer =  list_size_activation[i-1][0]
     o_size = list_size_activation[i][1]
 
-    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, k_size**2, 1).astype(np.float16) * 2 -1
-    parametres["b" + str(i)] = np.random.rand(nb_kernel, o_size**2, 1).astype(np.float16) * 2 - 1
+    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, np.int64(k_size**2), 1).astype(np.float16) * 2 -1
+    parametres["b" + str(i)] = np.random.rand(nb_kernel, np.int64(o_size)**2, 1).astype(np.float16) * 2 - 1
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
-    parametres_grad["m" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
-    parametres_grad["v" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1)).astype(np.float16)
+    parametres_grad["m" + str(i)] = np.zeros((nb_kernel, nb_layer, np.int64(k_size**2), 1)).astype(np.float16)
+    parametres_grad["v" + str(i)] = np.zeros((nb_kernel, nb_layer, np.int64(k_size**2), 1)).astype(np.float16)
 
     return parametres, parametres_grad
 

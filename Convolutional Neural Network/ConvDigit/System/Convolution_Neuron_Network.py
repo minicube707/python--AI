@@ -296,7 +296,7 @@ def back_propagation_pooling(activation, dimensions, dZ, c):
     max_indices = np.argmax(activation["A" + str(c-1)], axis=2)
 
     # Initialise le résultat avec des zéros
-    result = np.zeros_like(activation["A" + str(c-1)])
+    result = np.zeros_like(activation["A" + str(c-1)], dtype=np.int16)
 
     # Utilise un indexage avancé pour placer les valeurs maximales
     batch_indices = np.arange(activation["A" + str(c-1)].shape[0])[:, None]
@@ -498,8 +498,8 @@ numpy.array      :             the activation matrice
 """
 def deshape(X, k_size_sqrt, stride):
 
-    input_size = np.int8(np.sqrt(X.shape[1]*X.shape[2]))
-    new_X = np.array([])
+    input_size = int(np.sqrt(X.shape[1]*X.shape[2]))
+    new_X = np.array([], dtype=np.int16)
     
     step1 = input_size // stride
     step2 = k_size_sqrt
@@ -507,7 +507,7 @@ def deshape(X, k_size_sqrt, stride):
     for i in range(0, X.shape[0]):
         for j in range(0, X.shape[1], step1):
             for k in range(0, X.shape[2], step2):
-                new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
+                new_X = np.append(new_X, X[i, j:j + step1, k:k + step2].astype(np.uint16))
 
     new_X = new_X.reshape((X.shape[0], input_size ,input_size))
     return new_X
