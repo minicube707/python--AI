@@ -44,7 +44,7 @@ def save_model(path, model_name, data):
         pickle.dump(data, file)
 
 
-def file_management(test_accu, test_conf, dimensions_CNN):
+def file_management(test_accu, test_conf):
     str_accu = f"{test_accu:.5f}".replace(".", ",")
     str_conf = f"{test_conf:.5f}".replace(".", ",")
 

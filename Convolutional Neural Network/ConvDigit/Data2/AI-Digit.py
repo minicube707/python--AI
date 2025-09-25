@@ -50,12 +50,12 @@ mode = set_mode()
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.005
+learning_rate_CNN = 0.05
 beta1 = 0.9
 beta2 = 0.999
 
 # DNN
-learning_rate_DNN = 0.001
+learning_rate_DNN = 0.01
 
 
 print("\nInfo Training")
@@ -105,7 +105,7 @@ else:
     # ============================
 
     # Chargement du modele existant
-    model = select_model(module_dir, "model_logbook.csv")
+    model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(module_dir, model)
     _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
 
@@ -132,7 +132,7 @@ if mode in {1, 2}:
     # ============================
 
     # Sauvegarde du meilleur modèle entraîné ou chargé
-    name_model, model_info = file_management(test_accu, test_conf, dimensions_CNN)
+    name_model= file_management(test_accu, test_conf)
     print(name_model)
     save_model(module_dir,name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 

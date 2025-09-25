@@ -128,7 +128,7 @@ if mode in {1, 2}:
     # ============================
 
    # Sauvegarde du meilleur modèle entraîné ou chargé
-    name_model = file_management(test_accu, test_conf, dimensions_CNN)
+    name_model = file_management(test_accu, test_conf)
     print(name_model)
     save_model(module_dir, name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
 
