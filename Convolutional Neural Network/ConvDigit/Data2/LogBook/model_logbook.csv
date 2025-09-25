@@ -1,1 +1,2 @@
-name;date;nb_epoch;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning
+name;date;nb_epoch;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning;max_attempts;min_confidence_score
+DM(0,08000)(0,10214)(25-09-2025).pickle;25/09/2025;1;33.144085601965585;0.08;0.10214388130334162;3,3,3;32,64,64;0.05;0.01;0.9;0.999;1440;160;X;0;50.0;0.0
