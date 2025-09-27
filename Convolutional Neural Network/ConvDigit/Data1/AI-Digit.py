@@ -215,5 +215,9 @@ for i in range(nb_test):
     axs[1].set_ylabel("Probability")
     axs[1].set_ylim(0, 1)
 
+    # Ajout des lignes horizontales tous les 0.1
+    axs[1].set_yticks([i / 10 for i in range(11)])  # De 0.0 à 1.0 par pas de 0.1
+    axs[1].grid(axis='y', linestyle='--', linewidth=0.5, color='red')  # Ligne fine et discrète
+
     plt.tight_layout()
     plt.show()

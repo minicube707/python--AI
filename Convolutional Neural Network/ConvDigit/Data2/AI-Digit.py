@@ -9,7 +9,7 @@ from pathlib import Path
 # Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from System.Preprocessing import preprocessing
+from System.Preprocessing import preprocessing, handle_key
 from System.Mathematical_function import softmax
 from System.File_Management import file_management, select_model, load_model, save_model
 from System.Deep_Learning import convolution_neuron_network
@@ -41,21 +41,21 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000]
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 0
-max_attempts = 50
-min_confidence_score = 0
+nb_iteration = 1
+max_attempts = 100
+min_confidence_score = 0.15
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.05
+learning_rate_CNN = 0.005
 beta1 = 0.9
 beta2 = 0.999
 
 # DNN
-learning_rate_DNN = 0.01
+learning_rate_DNN = 0.001
 
 
 print("\nInfo Training")
@@ -206,6 +206,7 @@ for i in range(nb_test):
 
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     # Affichage de l'image
     axs[0].imshow(X_test[index].reshape(input_shape[1], input_shape[2]), cmap="gray")
@@ -218,6 +219,10 @@ for i in range(nb_test):
     axs[1].set_xlabel("Classes")
     axs[1].set_ylabel("Probability")
     axs[1].set_ylim(0, 1)
+
+    # Ajout des lignes horizontales tous les 0.1
+    axs[1].set_yticks([i / 10 for i in range(11)])  # De 0.0 à 1.0 par pas de 0.1
+    axs[1].grid(axis='y', linestyle='--', linewidth=0.5, color='red')  # Ligne fine et discrète
 
     plt.tight_layout()
     plt.show()

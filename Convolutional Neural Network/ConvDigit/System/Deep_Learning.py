@@ -67,15 +67,15 @@ def plot_metrics(train_loss, test_loss, train_lear, test_lear,
     axs[0].plot(train_loss, label="Train")
     axs[0].plot(test_loss, label="Test")
     axs[0].set_title("Fonction de coût")
-    y_max = max(max(train_loss), max(test_loss))
+    y_max = max(max(train_loss), max(test_loss)) +1 
     axs[0].set_ylim(0, y_max)
     axs[0].legend()
 
     axs[1].plot(train_lear, label="Train")
     axs[1].plot(test_lear, label="Test")
     axs[1].set_title("Dérivée coût")
-    y_min = min(min(train_loss), min(test_loss))
-    axs[1].set_ylim(0, y_min)
+    y_min = min(min(train_lear), min(test_lear))
+    axs[1].set_ylim(y_min, 0)
     axs[1].legend()
 
     axs[2].plot(train_accu, label="Train")
