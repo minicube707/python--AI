@@ -16,7 +16,8 @@ from System.Deep_Learning import convolution_neuron_network
 from System.Initialisation_CNN import initialisation_AI, initialisation_affectation
 from System.Propagation import forward_propagation
 from System.Set_mode import set_mode
-from System.Manage_logbook import fill_information, add_model
+from System.Manage_logbook import fill_information, add_model, show_all_info_model
+from System.Display_parametre_CNN import display_kernel_and_biais
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -34,7 +35,7 @@ input_shape = (1, 28, 28)
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000], input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:500], y[:500], input_shape)
 
 # ============================
 #         PARAMÈTRES
@@ -43,10 +44,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:2000], y[:2000]
 # Nombre d'itérations
 nb_iteration = 1
 max_attempts = 100
-min_confidence_score = 0.15
-
-# Mode d'exécution (1: train + save, 2: load + save, 3: load)
-mode = set_mode()
+min_confidence_score = 0.2
 
 # Paramètres d'apprentissage
 # CNN
@@ -71,6 +69,8 @@ print("Beta2: ", beta2)
 print("\nInfo DNN")
 print("Learning rate: ", learning_rate_DNN)
 
+# Mode d'exécution (1: train + save, 2: load + save, 3: load)
+mode = set_mode()
 
 if mode in {1}:
 
@@ -80,15 +80,15 @@ if mode in {1}:
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
     dimensions_CNN = {
-        "1": (3, 1, 0, 32, "kernel", "relu"),
+        "1": (5, 1, 0, 32, "kernel", "relu"),
         "2": (2, 2, 0, 1, "pooling", "max"),
         "3": (3, 1, 0, 64, "kernel", "relu"),
         "4": (2, 2, 0, 1, "pooling", "max"),
-        "5": (3, 1, 0, 64, "kernel", "sigmoide")
+        "5": (3, 1, 0, 128, "kernel", "sigmoide")
     }
 
     # Structure DNN : (hidden layer) 
-    hidden_layer = (64, 64)
+    hidden_layer = (128, 128)
 
     # Mode de padding : 'auto' = calcul automatique
     padding_mode = "auto"
@@ -164,8 +164,10 @@ if mode in {1, 2}:
     
     add_model(new_log, "LogBook", "model_logbook.csv")
 
-
-#display_kernel_and_biais(parametres_CNN)
+if mode in {4}:
+    show_all_info_model(model_info)
+    display_kernel_and_biais(parametres_CNN)
+    exit(0)
 
 #______________________________________________________________#
 

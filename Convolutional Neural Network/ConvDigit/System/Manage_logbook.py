@@ -56,16 +56,9 @@ def add_model(new_log, path, csv_file):
     print("Update LogBook")
 
 
-def show_info_all(path, csv_file):
-
-    # Charger le fichier CSV
-    df = pd.read_csv(path + "/" + csv_file, sep=';')
-
-    # Afficher toutes les colonnes sans troncature
-    pd.set_option('display.max_columns', None)
-
-    # Afficher toutes les valeurs
-    print(df)
+def show_all_info_model(model_dict):
+    for key, value in model_dict.items():
+        print(f"{key}: {value}")
 
 def show_info_main(path, csv_file):
 
