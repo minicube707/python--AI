@@ -2,6 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from .Preprocessing import handle_key
+
 def display_kernel(array_4d, type, stage, max_par_fig=12):
     if not isinstance(array_4d, np.ndarray) or array_4d.ndim != 4:
         raise ValueError("Entrée invalide : un array NumPy à 4 dimensions est requis (nb_kernels, nb_layers, height, width).")
@@ -19,7 +21,8 @@ def display_kernel(array_4d, type, stage, max_par_fig=12):
             cols = min(4, n)
             rows = (n + cols - 1) // cols
 
-            plt.figure(figsize=(cols * 4, rows * 3))
+            fig = plt.figure(figsize=(cols * 4, rows * 3))
+            fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
             for i in range(n):
                 plt.subplot(rows, cols, i + 1)
                 plt.imshow(batch[i], cmap='gray')
@@ -59,7 +62,8 @@ def display_biais(array_3d, type, stage, max_par_fig=12):
         cols = min(4, n)
         rows = (n + cols - 1) // cols
 
-        plt.figure(figsize=(cols * 4, rows * 3))
+        fig = plt.figure(figsize=(cols * 4, rows * 3))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
         for i in range(n):
             plt.subplot(rows, cols, i + 1)
             plt.imshow(batch[i], cmap='gray')
@@ -129,6 +133,7 @@ def display_comparaison_layer(y, y_pred, max_par_fig=12):
         rows = np.int8(np.ceil(n / cols))
 
         fig, axes = plt.subplots(rows, cols * 2, figsize=(4 * cols, 3 * rows))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
 
         # Assurer que axes est 2D même pour une seule ligne
         if rows == 1:
@@ -160,35 +165,3 @@ def display_comparaison_layer(y, y_pred, max_par_fig=12):
         plt.suptitle(f'Couches {start} à {end - 1}', fontsize=14)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.show()
-
-"""
-display_info_learning:
-=========DESCRIPTION=========
-Function that display the kernels & biais
-
-=========INPUT=========
-numpy.array     l_array :       list containt the loss during the trainnig
-numpy.array     a_array:        list containt the accuracy during the trainnig
-numpy.array     d_array:        list containt the derivative of loss during the trainnig
-
-=========OUTPUT=========
-void
-"""
-def display_info_learning(l_array, a_array, d_array):
-    plt.figure(figsize=(12,4))
-    plt.subplot(1, 3, 1)
-    plt.plot(l_array, label="Cost function")
-    plt.title("Fonction Cout")
-    plt.legend()
-
-    plt.subplot(1, 3, 2)
-    plt.plot(a_array, label="Accuracy du train_set")
-    plt.title("L'acccuracy")
-    plt.legend()
-
-    plt.subplot(1, 3, 3)
-    plt.plot(d_array, label="Variation de l'apprentisage")
-    plt.title("Deriver de la fonction cout")
-    plt.legend()
-
-    plt.show()

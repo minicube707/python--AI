@@ -81,7 +81,7 @@ void
 """
 def show_information(tuple_size_activation, dimensions):
 
-    print("\nDétail de la convolution :")
+    print("Détail de la convolution :")
     print("Nb activation")
     for i in range(len(tuple_size_activation)):
 
@@ -90,9 +90,8 @@ def show_information(tuple_size_activation, dimensions):
             print("->", end="")
 
     print(f"{tuple_size_activation[i][0]}")  
-    print("")
 
-    print("Padding")
+    print("\nPadding")
     for i in range(len(tuple_size_activation)):
 
         if i < len(tuple_size_activation)-1:
@@ -101,7 +100,6 @@ def show_information(tuple_size_activation, dimensions):
             print("->", end="")
 
     print(f"{tuple_size_activation[i][1]}")  
-    print("")
 
     print("\nkernel size, stride, padding, nb_kernel, type layer, function")
     for keys, values in dimensions.items():

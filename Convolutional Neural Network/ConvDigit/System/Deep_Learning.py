@@ -7,7 +7,6 @@ import time
 
 from .Convolution_Neuron_Network import show_information
 from .Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
-from .Display_parametre_CNN import display_kernel_and_biais
 from .Propagation import forward_propagation, back_propagation, update
 from .Preprocessing import handle_key
 
@@ -107,6 +106,8 @@ def convolution_neuron_network(
 
     C_CNN = len(dimensions_CNN)
     C_DNN = len(parametres_DNN) // 2
+    
+    nb_test_sample = min(50, len(y_test))
 
     show_information(tuple_size_activation, dimensions_CNN)
 
@@ -114,8 +115,8 @@ def convolution_neuron_network(
     train_loss, train_accu, train_lear, train_conf = [], [], [], []
     test_loss, test_accu, test_lear, test_conf = [], [], [], []
 
-    rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
-    rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
+    rand_idx_train = np.random.choice(X_train.shape[0], nb_test_sample, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], nb_test_sample, replace=False)
 
     tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                     parametres_CNN, parametres_DNN,
@@ -156,8 +157,8 @@ def convolution_neuron_network(
             k += 1
             if (k % 100 == 0):
                 # Évaluation partielle
-                rand_idx_train = np.random.choice(X_train.shape[0], 50, replace=False)
-                rand_idx_test = np.random.choice(X_test.shape[0], 50, replace=False)
+                rand_idx_train = np.random.choice(X_train.shape[0], nb_test_sample, replace=False)
+                rand_idx_test = np.random.choice(X_test.shape[0], nb_test_sample, replace=False)
 
                 tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                                 parametres_CNN, parametres_DNN,
@@ -190,6 +191,10 @@ def convolution_neuron_network(
     # Calcul du temps en minutes
     elapsed_time_minutes = (end_time - start_time) / 60
 
+    if (best_model["CNN"] == None):
+        best_model["CNN"] = deepcopy(parametres_CNN)
+        best_model["DNN"] = deepcopy(parametres_DNN)
+        
     # Résultats finaux
     print(f"\n🚂💰 Coût final - Train    : {train_loss[-1]:.5f}")
     print(f"🧪💰 Coût final - Test     : {test_loss[-1]:.5f}")
