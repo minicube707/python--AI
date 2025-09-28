@@ -154,6 +154,7 @@ def display_comparaison_layer(y, y_pred, max_par_fig=12):
             ax_pred.imshow(y_pred[layer_idx], cmap='gray')
             ax_pred.set_title(f'Prediction - Couche {layer_idx}')
             ax_pred.axis('off')
+            ax_pred.colorbar()
 
         # Masquer les axes inutilisés
         total_axes = rows * cols * 2

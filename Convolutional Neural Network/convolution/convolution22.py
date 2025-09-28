@@ -370,8 +370,10 @@ def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_s
     nb_layer =  list_size_activation[i-1][0]
     o_size = list_size_activation[i][1]
 
-    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, k_size**2, 1).astype(np.float16) * 2 -1
-    parametres["b" + str(i)] = np.random.rand(nb_kernel, o_size**2, 1).astype(np.float16) * 2 - 1
+    parametres["K" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1))
+    center_index = (k_size**2) // 2  # ex: pour 3x3 → 9//2 = 4
+    parametres["K" + str(i)][:, :, center_index, 0] = 1
+    parametres["b" + str(i)] = np.zeros((nb_kernel, o_size**2, 1)).astype(np.float16)
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
@@ -870,12 +872,14 @@ Evaluation Metrics Function
 """
 
 def dx_log_loss(y_pred, y_true):
-    epsilon = 1e-15
-    return -1 / y_true.size * np.sum((y_true / y_pred + epsilon) - (1 - y_true) / (1 - y_pred + epsilon))
+    epsilon = 1e-5
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+    return -1 / y_true.size * np.sum((y_true / (y_pred + epsilon)) - (1 - y_true) / (1 - y_pred + epsilon))
 
 def log_loss(y_pred, y_true):
 
-    epsilon = 1e-15 #Pour empecher les log(0) = -inf
+    epsilon = 1e-5 #Pour empecher les log(0) = -inf
+    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     return  (1/y_true.size) * np.sum( -y_true * np.log(y_pred + epsilon) - (1 - y_true) * np.log(1 - y_pred + epsilon))
 
 def accuracy_score(y_pred, y_true):
@@ -1024,13 +1028,15 @@ def display_comparaison_layer(y, y_pred, max_par_fig=12):
             ax_y = axes[row, col * 2]
             ax_pred = axes[row, col * 2 + 1]
 
-            ax_y.imshow(y[layer_idx], cmap='gray')
+            im_y = ax_y.imshow(y[layer_idx], cmap='gray')
             ax_y.set_title(f'Y - Couche {layer_idx}')
             ax_y.axis('off')
+            fig.colorbar(im_y, ax=ax_y, fraction=0.046, pad=0.04)
 
-            ax_pred.imshow(y_pred[layer_idx], cmap='gray')
+            im_pred = ax_pred.imshow(y_pred[layer_idx], cmap='gray')
             ax_pred.set_title(f'Prediction - Couche {layer_idx}')
             ax_pred.axis('off')
+            fig.colorbar(im_pred, ax=ax_pred, fraction=0.046, pad=0.04)
 
         # Masquer les axes inutilisés
         total_axes = rows * cols * 2
@@ -1081,22 +1087,29 @@ def main():
     learning_rate = 0.005
     beta1 = 0.9
     beta2 = 0.99
-    nb_iteration = 30_000
+    nb_iteration = 1
 
     x_shape = 28
     #X = np.random.rand(x_shape, x_shape)
-    X = np.arange(x_shape * x_shape).reshape(x_shape, x_shape)
+    X = np.zeros((x_shape, x_shape), dtype=int)
+    middle_index = x_shape // 2
+    X[middle_index, :] = 1
+    X[:, middle_index] = 1
+    print("X")
+    print(X)
 
     if len(X.shape) == 2:
         X = X.reshape(1, X.shape[0], X.shape[1])
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
-    dimensions = {  "1" :(2, 1, 0, 2, "kernel", "relu"),
-                    "2" :(2, 2, 0, 1, "pooling", "max"),
-                    "3" :(2, 1, 0, 2, "kernel", "relu"),
-                    "4" :(2, 2, 0, 1, "pooling", "max"),
-                    "5" :(2, 1, 0, 10, "kernel", "sigmoide")}
+    dimensions = {
+        "1": (7, 1, 0, 32, "kernel", "relu"),
+        "2": (2, 2, 0, 1, "pooling", "max"),
+        "3": (3, 1, 0, 64, "kernel", "relu"),
+        "4": (2, 2, 0, 1, "pooling", "max"),
+        "5": (3, 1, 0, 128, "kernel", "sigmoide")
+    }
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions, tuple_size_activation = initialisation(X.shape, dimensions, padding_mode)
@@ -1108,7 +1121,10 @@ def main():
         input_size = o_size
 
     y_shape = o_size
-    y = np.random.rand(tuple_size_activation[-1][0], y_shape, y_shape)
+    y = np.zeros((tuple_size_activation[-1][0], y_shape, y_shape))
+    middle_index = y_shape // 2
+    y[:, :, middle_index] = 1
+    y[:, middle_index, :] = 1
 
     if len(dimensions) > 1:
         X = add_padding(X, dimensions["2"][2])
