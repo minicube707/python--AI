@@ -79,9 +79,9 @@ dict        dimensions :            all the information on how is built the CNN
 =========OUTPUT=========
 void
 """
-def show_information(tuple_size_activation, dimensions):
+def show_information_CNN(tuple_size_activation, dimensions):
 
-    print("Détail de la convolution :")
+    print("\nDétail de la convolution :")
     print("Nb activation")
     for i in range(len(tuple_size_activation)):
 
@@ -126,19 +126,19 @@ void
 def error_initialisation(list_size, dimensions, input_size, previ_input_size, type_layer, fonction, stride):
 
     if input_size < 1:
-        show_information(list_size, dimensions)
+        show_information_CNN(list_size, dimensions)
         raise ValueError(f"ERROR: The current dimensions is {input_size}. Dimension can't be negatif")
         
     if previ_input_size % input_size != 0 and stride != 1:
-        show_information(list_size, dimensions)
+        show_information_CNN(list_size, dimensions)
         raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
     
     if type_layer not in ["kernel", "pooling"]:
-        show_information(list_size, dimensions)
+        show_information_CNN(list_size, dimensions)
         raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pooling' or 'kernel'.")
     
     if fonction not in ["relu", "sigmoide", "max"]:
-        show_information(list_size, dimensions)
+        show_information_CNN(list_size, dimensions)
         raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu' or 'sigmoide', 'max'.")
 
 

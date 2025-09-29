@@ -214,7 +214,7 @@ dict    parametres_grad :   containt all the information for the update operatio
 dict    parametres_DNN :    containt all the parametre of the DNN
 tuple   list_size_activation:   tuple of all activation shape with number of activation and padding
 """
-def initialisation_AI(input_shape, dimensions_CNN, padding_mode, hidden_layer, output_shape): 
+def initialisation_AI(input_shape, dimensions_CNN, padding_mode, dimensions_DNN, output_shape): 
         
     parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN (
     input_shape, dimensions_CNN, padding_mode
@@ -226,8 +226,7 @@ def initialisation_AI(input_shape, dimensions_CNN, padding_mode, hidden_layer, o
 
     last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
     flattened_size = np.int32((np.int32(input_size)**2 * last_CNN_layer[3]))
-    dimensions_DNN = [flattened_size] + list(hidden_layer) + [output_shape[1]]
 
-    parametres_DNN = initialisation_DNN (dimensions_DNN)
+    parametres_DNN = initialisation_DNN (dimensions_DNN, flattened_size, output_shape[1])
 
     return parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation

@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -18,6 +19,8 @@ from System.Propagation import forward_propagation
 from System.Set_mode import set_mode
 from System.Manage_logbook import fill_information, add_model, show_all_info_model
 from System.Display_parametre_CNN import display_kernel_and_biais
+from System.Convolution_Neuron_Network import show_information_CNN
+from System.Deep_Neuron_Network import show_information_DNN
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -42,7 +45,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X[:500], y[:500], 
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 0
 max_attempts = 100
 min_confidence_score = 0.2
 
@@ -88,14 +91,19 @@ if mode in {1}:
     }
 
     # Structure DNN : (hidden layer) 
-    hidden_layer = (128, 128)
+    dimensions_DNN = {
+        "1": (0,  "relu"),
+        "2": (64, "relu"),
+        "3": (64, "relu"),
+        "4": (0,  "relu")
+    }
 
     # Mode de padding : 'auto' = calcul automatique
     padding_mode = "auto"
 
     #Initialisation
     parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation = initialisation_AI (
-        input_shape, dimensions_CNN, padding_mode, hidden_layer, y_train.shape
+        input_shape, dimensions_CNN, padding_mode, dimensions_DNN, y_train.shape
     )
 
 
@@ -107,9 +115,11 @@ else:
     # Chargement du modele existant
     model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(module_dir, model)
-    _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)
+        
 
-
+show_information_CNN(tuple_size_activation, dimensions_CNN)
+show_information_DNN(parametres_DNN, dimensions_DNN)
 
 if mode in {1, 2}:
     # ============================
@@ -121,7 +131,7 @@ if mode in {1, 2}:
         X_train, y_train, X_test, y_test,
         nb_iteration,
         parametres_CNN, parametres_grad, parametres_DNN,
-        dimensions_CNN,
+        dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, learning_rate_DNN,
         max_attempts, min_confidence_score
@@ -181,7 +191,7 @@ plt.figure(figsize=(16,8))
 for i in range(1,16):
 
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T)
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
