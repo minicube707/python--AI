@@ -35,7 +35,6 @@ def initialisation_DNN(dimension, input_shape, output_shape):
 
     parametres ={}
     C = len(dimension)
-    
     dimension["1"] = (input_shape, dimension["1"][1])
     dimension[str(C)] = (output_shape, dimension[str(C)][1])
 
@@ -45,10 +44,15 @@ def initialisation_DNN(dimension, input_shape, output_shape):
         parametres["W" + str(c)] = (np.random.rand(dimension[str(c + 1)][0], dimension[str(c)][0])*2 -1)
         parametres["b" + str(c)] = (np.random.rand(dimension[str(c + 1)][0], 1)*2 -1)
 
+
         if dimension[str(c)][1] not in {"sigmoide", "relu"}:
-            show_information_DNN(parametres)
-            raise NameError(f"ERROR: Activation function '{dimension[c, 1]}' is not defined. Please correct with 'relu' or 'sigmoide'.")
-            
+            show_information_DNN(parametres, dimension)
+            raise NameError(f"ERROR: Activation function '{dimension[str(c)][1]}' is not defined. Please correct with 'relu' or 'sigmoide'.")
+
+    if dimension[str(C)][1] not in {"sigmoide", "relu"}:
+        show_information_DNN(parametres, dimension)
+        raise NameError(f"ERROR: Activation function '{dimension[str(C)][1]}' is not defined. Please correct with 'relu' or 'sigmoide'.")    
+     
     return parametres
 
 
