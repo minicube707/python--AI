@@ -9,6 +9,7 @@ from .Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss
 from .Propagation import forward_propagation, back_propagation, update
 from .Preprocessing import handle_key
 
+
 def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
                      dimensions_CNN, tuple_size_activation, C_CNN, 
                      dimensions_DNN, C_DNN,
