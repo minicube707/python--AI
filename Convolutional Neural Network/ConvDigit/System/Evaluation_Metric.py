@@ -12,9 +12,7 @@ Evaluation Metrics Function
 
 def dx_log_loss(y_true, y_pred):
     epsilon = 1e-15 #Pour empecher les /0 = ?
-    y_pred = np.clip(y_pred, -64, 64)
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
-    return -1 / y_true.size * np.sum((y_true / y_pred) - (1 - y_true) / (1 - y_pred))
+    return -1 / y_true.size * np.sum((y_true / y_pred + epsilon) - (1 - y_true) / (1 - y_pred + epsilon))
 
 def activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN):
     _, activation_DNN = forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
@@ -23,8 +21,6 @@ def activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensi
 
 def log_loss(y_true, y_pred):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    y_pred = np.clip(y_pred, -64, 64)
-    y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
     return  (1/y_true.size) * np.sum( -y_true * np.log(y_pred + epsilon) - (1 - y_true) * np.log(1 - y_pred + epsilon))
 
 def accuracy_score(y_true, y_pred):
