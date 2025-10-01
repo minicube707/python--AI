@@ -10,7 +10,7 @@ from pathlib import Path
 # Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from System.Preprocessing import preprocessing, handle_key
+from System.Preprocessing import preprocessing, handle_key, show_information_setting
 from System.Mathematical_function import softmax
 from System.File_Management import file_management, select_model, load_model, save_model
 from System.Deep_Learning import convolution_neuron_network
@@ -19,7 +19,7 @@ from System.Propagation import forward_propagation
 from System.Set_mode import set_mode
 from System.Manage_logbook import fill_information, add_model, show_all_info_model
 from System.Display_parametre_CNN import display_kernel_and_biais
-from System.Convolution_Neuron_Network import show_information_CNN
+from System.Convolution_Neuron_Network import show_information_CNN, create_tuple_size
 from System.Deep_Neuron_Network import show_information_DNN
 
 module_dir = os.path.dirname(__file__)
@@ -43,32 +43,21 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 0
-max_attempts = 100
-min_confidence_score = 0.25
+nb_iteration = 1
+max_attempts = 1
+min_confidence_score = 0
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.0005
+learning_rate_CNN = 0.05
 beta1 = 0.9
 beta2 = 0.999
 
 # DNN
-learning_rate_DNN = 0.0001
+learning_rate_DNN = 0.01
 
-
-print("\nInfo Training")
-print("Nombre d'iteration: ", nb_iteration);
-print("Max attempts: ", max_attempts)
-print("Min confidence score: ", min_confidence_score)
-
-print("\nInfo CNN")
-print("Learning rate: ", learning_rate_CNN)
-print("Beta1: ", beta1)
-print("Beta2: ", beta2)
-
-print("\nInfo DNN")
-print("Learning rate: ", learning_rate_DNN)
+show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
+                         learning_rate_CNN, beta1, beta2, learning_rate_DNN)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -85,19 +74,19 @@ if mode in {1}:
                         "3" :(2, 1, 0, 64, "kernel", "sigmoide")
     }
     
-    # Structure DNN : (hidden layer) 
+    # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
         "1": (0,  "relu"),
         "2": (64, "relu"),
         "3": (64, "relu"),
-        "4": (0,  "relu")
+        "4": (0,  "sigmoide")
     }
 
     # Mode de padding : 'auto' = calcul automatique
     padding_mode = "auto"
 
     #Initialisation
-    parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation = initialisation_AI (
+    parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN = initialisation_AI (
         input_shape, dimensions_CNN, padding_mode, dimensions_DNN, y_train.shape
     )
 
@@ -109,12 +98,13 @@ else:
 
     # Chargement du modele existant
     model, model_info = select_model(module_dir, "model_logbook.csv")
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = load_model(module_dir, model)
-    _, parametres_grad = initialisation_affectation(dimensions_CNN, tuple_size_activation)    
+    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape)    
 
 
-show_information_CNN(tuple_size_activation, dimensions_CNN)
+show_information_CNN(dimensions_CNN, input_shape)
 show_information_DNN(parametres_DNN, dimensions_DNN)
+
 
 if mode in {1, 2}:
     # ============================
@@ -122,6 +112,7 @@ if mode in {1, 2}:
     # ============================
 
     # Entraînement d'un nouveau modèle
+    tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
     parametres_CNN, parametres_DNN, test_accu, test_conf, test_loss, elapsed_time_minutes = convolution_neuron_network (
         X_train, y_train, X_test, y_test,
         nb_iteration,
@@ -139,18 +130,25 @@ if mode in {1, 2}:
     # Sauvegarde du meilleur modèle entraîné ou chargé
     name_model = file_management(test_accu, test_conf)
     print(name_model)
-    save_model(module_dir, name_model, (parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN))
+    save_model(module_dir, name_model, (parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN))
 
     date = datetime.today()
     date = date.strftime('%d/%m/%Y')
-    str_size = ','.join(str(v[0]) for v in dimensions_CNN.values() if v[4] == 'kernel')
-    str_nb_kernel = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
-
+ 
     if mode in {1}:
         nb_epoch = nb_iteration
         training_time = elapsed_time_minutes
         baseline_mode = "X"
         nb_fine_tunning = 0
+
+        #CNN
+        str_size_CNN = ','.join(str(v[0]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+        str_nb_kernel_CNN = ','.join(str(v[3]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+        str_function_CNN = ','.join(str(v[5]) for v in dimensions_CNN.values() if v[4] == 'kernel')
+
+        #DNN
+        str_size_DNN = ','.join(str(v[0]) for v in dimensions_DNN.values())
+        str_function_DNN = ','.join(str(v[1]) for v in dimensions_DNN.values())
 
     else:
         nb_epoch = float(model_info["nb_epoch"]) + nb_iteration
@@ -158,14 +156,22 @@ if mode in {1, 2}:
         baseline_mode = model_info["name"]
         nb_fine_tunning = float(model_info["Number_fine_tunning"]) + 1
 
-    new_log =  fill_information(name_model, date,
-                                nb_epoch, max_attempts, min_confidence_score,
-                                training_time, 
-                                test_accu, test_conf, test_loss,
-                                str_size, str_nb_kernel, 
-                                learning_rate_CNN, learning_rate_DNN, beta1, beta2, 
-                                len(y_train), len(y_test), 
-                                baseline_mode, nb_fine_tunning)
+        #CNN
+        str_size_CNN = model_info["kernel_size"]
+        str_nb_kernel_CNN = model_info["kernel_number"]
+        str_function_CNN = model_info["activation_function_CNN"]
+
+        #DNN
+        str_size_DNN = model_info["neurons_number"]
+        str_function_DNN = model_info["activation_function_DNN"]
+
+    new_log =  fill_information(name_model, date, training_time,
+                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, 
+                    test_loss, test_accu, test_conf, 
+                    learning_rate_CNN, str_size_CNN, str_nb_kernel_CNN, str_function_CNN,
+                    learning_rate_DNN, str_size_DNN, str_function_DNN,
+                    len(y_train), len(y_test), 
+                    baseline_mode, nb_fine_tunning)
     
     add_model(new_log, "LogBook", "model_logbook.csv")
 
@@ -208,7 +214,7 @@ for i in range(nb_test):
         break
     
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)

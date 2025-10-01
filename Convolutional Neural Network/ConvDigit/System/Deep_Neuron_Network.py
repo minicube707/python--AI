@@ -7,11 +7,18 @@ def show_information_DNN(parametres, dimensions):
 
     C = len(parametres) // 2
 
+    print("\n============================")
+    print("    INITIALISATION DNN")
+    print("============================")
+
     print("\nDétail du reseau de neuron")
     for c in range(1, C+1):
         print("W" + str(c), ":", parametres["W" + str(c)].shape)
         print("b" + str(c), ":", parametres["b" + str(c)].shape)
 
+    print("")
+    print(parametres["W1"].shape[1], end="")
+    print("->", end="")
     for c in range(1, C+1):
         print(parametres["W" + str(c)].shape[0], end="")
         if c < C:

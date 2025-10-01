@@ -8,9 +8,30 @@ from sklearn.ensemble import IsolationForest
 from .Sklearn_tools import train_test_split, Label_binarizer
 from .Convolution_Neuron_Network import add_padding, reshape
 
+def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, learning_rate_DNN):
+
+    print("\n============================")
+    print("         SETTING")
+    print("============================")
+
+    print("\nInfo Training")
+    print("Nombre d'iteration: ", nb_iteration);
+    print("Max attempts: ", max_attempts)
+    print("Min confidence score: ", min_confidence_score)
+
+    print("\nInfo CNN")
+    print("Learning rate: ", learning_rate_CNN)
+    print("Beta1: ", beta1)
+    print("Beta2: ", beta2)
+
+    print("\nInfo DNN")
+    print("Learning rate: ", learning_rate_DNN)
+
+
 def handle_key(event):
     if event.key == ' ':
         plt.close(event.canvas.figure)  # Ferme la fenêtre associée
+
 
 def preprocessing(X, y, input_shape, test_size=0.1):
     

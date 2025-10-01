@@ -4,13 +4,12 @@ import os
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
-def fill_information(name, date, 
-                    nb_epoch, max_attempts, min_confidence_score,
-                    training_time,
-                    accuracy, confidence_score, cost_loss,
-                    kernel_size, nb_kernel, 
-                    lr_CNN, lr_DNN, beta1, beta2, 
-                    training_size, test_size,
+def fill_information(name, date, training_time,
+                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, 
+                    cost_loss, accuracy, confidence_score, 
+                    lr_CNN, kernel_size, nb_kernel, activation_function_CNN,
+                    lr_DNN, nb_neurons, activation_function_DNN,
+                    training_size, test_size, 
                     model_fine_tunning, nb_fine_tunning):
 
     new_log = {}
@@ -18,21 +17,30 @@ def fill_information(name, date,
     new_log = {
     "name": name,
     "date": date, 
+    "training_time_(min)": training_time,
+
     "nb_epoch": nb_epoch,
     "max_attempts": max_attempts,
     "min_confidence_score": min_confidence_score,
-    "training_time_(min)": training_time,
+    "beta1": beta1,
+    "beta2": beta2,
+
     "cost_loss": cost_loss,
     "accuracy": accuracy,
     "confidence_score": confidence_score,
-    "kernel_size": kernel_size,
-    "number_kernel": nb_kernel,
+
     "learning_rate_CNN": lr_CNN,
+    "kernel_size": kernel_size,
+    "kernel_number": nb_kernel,
+    "activation_function_CNN": activation_function_CNN,
+    
     "learning_rate_DNN": lr_DNN,
-    "beta1": beta1,
-    "beta2": beta2,
+    "neurons_number": nb_neurons,
+    "activation_function_DNN": activation_function_DNN,
+
     "Size_training_set": training_size,
     "Size_test_set": test_size,
+
     "Based_model": model_fine_tunning,
     "Number_fine_tunning": nb_fine_tunning, 
     }

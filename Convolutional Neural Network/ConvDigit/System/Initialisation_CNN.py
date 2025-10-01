@@ -78,11 +78,7 @@ int     i :                 the stage of the CNN
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i):
-
-    nb_kernel = list_size_activation[i][0]
-    nb_layer =  list_size_activation[i-1][0]
-    o_size = list_size_activation[i][1]
+def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size):
 
     parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, np.int64(k_size**2), 1).astype(np.float16) * 2 -1
     parametres["b" + str(i)] = np.random.rand(nb_kernel, np.int64(o_size)**2, 1).astype(np.float16) * 2 - 1
@@ -113,6 +109,7 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
 
     list_size_activaton = []
     list_size_activaton.append((x_shape[0], x_shape[1]))
+    nb_activation  = x_shape[0]
     input_size =  x_shape[1]
     previ_input_size = input_size
     
@@ -124,22 +121,23 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
         if input_size % stride != 0 and padding_mode == "auto":
             padding = stride - input_size % stride
             list_size_activaton[-1] = (list_size_activaton[-1][0], input_size + padding)
-        
+
         if (dimensions[str(i)][4] == "kernel"):
             #Add the modificaton to the dict
             dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
         
         else:
+            nb_channel = nb_activation
             nb_channel = list_size_activaton[-1][0]
             dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
 
         o_size = calcul_output_shape(input_size, k_size, stride, padding)
         previ_input_size = input_size + padding
         input_size = o_size
+        nb_activation = dimensions[str(i)][3]
         
-
         list_size_activaton.append((nb_channel, input_size))
-        error_initialisation(list_size_activaton, dimensions, input_size, previ_input_size, type_layer, fonction, stride)
+        error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride)
 
     return dimensions, list_size_activaton
 
@@ -150,24 +148,31 @@ Set all the value to built the CNN
 
 =========INPUT=========
 dict    dimensions :    all the information on how is built the CNN
-list    list_size_activation :     list of all activation shape with number of activation and padding
+int     x_shape :       the shape of the input
 
 =========OUTPUT=========
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_affectation(dimensions, list_size_activation):
+def initialisation_affectation(dimensions, x_shape, list_size_activation):
 
     parametres = {}
     parametres_grad = {}
+
+    nb_layer = x_shape[0]
+    o_size = x_shape[1]
+
     for i in range(1, len(dimensions)+1):
-        k_size, _, _, _, type_layer, fonction = initialisation_extraction(dimensions, i)
+        k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
+        o_size = calcul_output_shape(o_size, dimensions[str(i)][0], dimensions[str(i)][1], dimensions[str(i)][2])
 
         if type_layer == "kernel":
-            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, list_size_activation, k_size, type_layer, fonction, i)
+            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size)
 
         elif type_layer == "pooling":
             parametres = initialisation_pooling(parametres, k_size, type_layer, fonction, i)
+
+        nb_layer = nb_kernel
 
     return parametres, parametres_grad
 
@@ -186,14 +191,13 @@ string  padding_mode :  string to know if the auto-padding is active
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 dict    dimension :         all the information on how is built the CNN
-tuple   list_size_activation:          tuple of all activation shape with number of activation and padding
 """
 def initialisation_CNN(x_shape, dimensions, padding_mode):
 
     dimensions, list_size_activation = initialisation_calcul(x_shape, dimensions, padding_mode)
-    parametres, parametres_grad = initialisation_affectation(dimensions, list_size_activation)
+    parametres, parametres_grad = initialisation_affectation(dimensions, x_shape, list_size_activation)
 
-    return parametres, parametres_grad, dimensions, tuple(list_size_activation)
+    return parametres, parametres_grad, dimensions
 
 
 """
@@ -216,7 +220,7 @@ tuple   list_size_activation:   tuple of all activation shape with number of act
 """
 def initialisation_AI(input_shape, dimensions_CNN, padding_mode, dimensions_DNN, output_shape): 
         
-    parametres_CNN, parametres_grad, dimensions_CNN, tuple_size_activation = initialisation_CNN (
+    parametres_CNN, parametres_grad, dimensions_CNN = initialisation_CNN (
     input_shape, dimensions_CNN, padding_mode
     )
 
@@ -229,4 +233,4 @@ def initialisation_AI(input_shape, dimensions_CNN, padding_mode, dimensions_DNN,
 
     parametres_DNN = initialisation_DNN (dimensions_DNN, flattened_size, output_shape[1])
 
-    return parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN, tuple_size_activation
+    return parametres_CNN, parametres_grad, parametres_DNN, dimensions_CNN

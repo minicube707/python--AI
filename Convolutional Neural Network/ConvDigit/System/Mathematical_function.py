@@ -94,7 +94,8 @@ numpy.array     x :     array containe the next activation
 def softmax(X):
     res = np.array([])
     for i in range(X.shape[0]):
-        res = np.append(res, np.exp(X[i,:]) / np.sum(np.exp(X[i,:])))
+        x = np.clip(X[i,:], -64, 64)
+        res = np.append(res, np.exp(x) / np.sum(np.exp(x)))
          
     return res.reshape((X.shape))
 

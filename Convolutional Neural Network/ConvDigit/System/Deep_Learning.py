@@ -31,7 +31,7 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
             parametres_grad, learning_rate_CNN, learning_rate_DNN, beta1, beta2, C_CNN)
 
         # Prediction
-        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, C_DNN)
+        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN)
 
         if accuracy_score(y.flatten(), pred.flatten()) > 0 and confidence_score(pred) >= min_confidence_score:
             break

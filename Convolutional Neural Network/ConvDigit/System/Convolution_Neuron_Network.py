@@ -26,6 +26,19 @@ dZ : derivative of the activation
 y : label
 """
 
+
+def create_tuple_size(X_shape, dimensions):
+
+    tuple_size = []
+
+    outout_shape = X_shape[1]
+    for i in range(len(dimensions)):
+        outout_shape = calcul_output_shape(outout_shape, dimensions[str(i+1)][0], dimensions[str(i+1)][1], dimensions[str(i+1)][2])
+        tuple_size.append(outout_shape)
+
+    return (tuple_size)
+
+
 """
 calcul_output_shape:
 =========DESCRIPTION=========
@@ -79,27 +92,37 @@ dict        dimensions :            all the information on how is built the CNN
 =========OUTPUT=========
 void
 """
-def show_information_CNN(tuple_size_activation, dimensions):
+def show_information_CNN(dimensions, input_size):
+
+    print("\n============================")
+    print("    INITIALISATION CNN")
+    print("============================")
 
     print("\nDétail de la convolution :")
     print("Nb activation")
-    for i in range(len(tuple_size_activation)):
+    print(f"{input_size[0]}", end="")
+    print("->", end="")
+    for i in range(1, len(dimensions)+1):
 
-        if i < len(tuple_size_activation)-1:
-            print(f"{tuple_size_activation[i][0]}", end="")
+        if i < len(dimensions):
+            print(f"{dimensions[str(i)][3]}", end="")
             print("->", end="")
 
-    print(f"{tuple_size_activation[i][0]}")  
+    print(f"{dimensions[str(i)][3]}")  
 
     print("\nPadding")
-    for i in range(len(tuple_size_activation)):
-
-        if i < len(tuple_size_activation)-1:
-            print(f"{tuple_size_activation[i][1] - dimensions[str(i+1)][2]}", end="")
+    outpu_shape = input_size[1]
+    for i in range(len(dimensions)):
+        
+        
+        if i < len(dimensions):
+            print(f"{outpu_shape}", end="")
             print(f"({dimensions[str(i+1)][2]})", end="")
             print("->", end="")
 
-    print(f"{tuple_size_activation[i][1]}")  
+        outpu_shape = calcul_output_shape(outpu_shape, dimensions[str(i+1)][0], dimensions[str(i+1)][1], dimensions[str(i+1)][2])
+
+    print(f"{outpu_shape}")  
 
     print("\nkernel size, stride, padding, nb_kernel, type layer, function")
     for keys, values in dimensions.items():
@@ -123,22 +146,22 @@ int         stride :            how many pixel the kernel move
 =========OUTPUT=========
 void
 """
-def error_initialisation(list_size, dimensions, input_size, previ_input_size, type_layer, fonction, stride):
+def error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride):
 
     if input_size < 1:
-        show_information_CNN(list_size, dimensions)
+        show_information_CNN(dimensions, input_size)
         raise ValueError(f"ERROR: The current dimensions is {input_size}. Dimension can't be negatif")
         
     if previ_input_size % input_size != 0 and stride != 1:
-        show_information_CNN(list_size, dimensions)
+        show_information_CNN(dimensions, input_size)
         raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
     
     if type_layer not in ["kernel", "pooling"]:
-        show_information_CNN(list_size, dimensions)
+        show_information_CNN(dimensions, input_size)
         raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pooling' or 'kernel'.")
     
     if fonction not in ["relu", "sigmoide", "max"]:
-        show_information_CNN(list_size, dimensions)
+        show_information_CNN(dimensions, input_size)
         raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu' or 'sigmoide', 'max'.")
 
 
@@ -243,14 +266,15 @@ def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions):
 
     activation = {"A0" : X}
     C = len(dimensions.keys())
-    
+    input_shape = X.shape[1]
+
     for c in range(1, C+1):
         A = activation["A" + str(c-1)]
         K = parametres["K" + str(c)]
         b = parametres["b" + str(c)]
         mode = parametres["f" + str(c)]
         type_layer = parametres["l" + str(c)]
-        x_size = tuple_size_activation[c][1]
+        x_size = tuple_size_activation[c-1]
 
         k_size = None
         stride = 1
@@ -267,7 +291,7 @@ def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions):
            padding = dimensions[str(c+2)][2] 
 
         activation["A" + str(c)] = function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding)
-
+        
     return activation
 
 """
@@ -397,7 +421,7 @@ def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_acti
 
         #Remove the padding
         #Activation are in square format
-        dZ = dZ[:,:tuple_size_activation[c][1], :tuple_size_activation[c][1]]
+        dZ = dZ[:,:tuple_size_activation[c-1], :tuple_size_activation[c-1]]
         
         if parametres["l" + str(c)] == "pooling":
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
