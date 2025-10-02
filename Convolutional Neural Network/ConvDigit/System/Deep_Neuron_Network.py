@@ -48,11 +48,7 @@ def initialisation_DNN(dimension, input_shape, output_shape):
         if dimension[str(c)][1] not in {"sigmoide", "relu"}:
             show_information_DNN(parametres, dimension)
             raise NameError(f"ERROR: Activation function '{dimension[str(c)][1]}' is not defined. Please correct with 'relu' or 'sigmoide'.")
-
-    if dimension[str(C)][1] not in {"sigmoide", "relu"}:
-        show_information_DNN(parametres, dimension)
-        raise NameError(f"ERROR: Activation function '{dimension[str(C)][1]}' is not defined. Please correct with 'relu' or 'sigmoide'.")    
-     
+ 
     return parametres
 
 

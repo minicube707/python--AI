@@ -33,10 +33,12 @@ with np.load("data/load_digits.npz") as f:
 # Forme d'entrée (canaux, hauteur, largeur)
 input_shape = (1, 8, 8)
 
+
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
 X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
+
 
 # ============================
 #         PARAMÈTRES
@@ -44,17 +46,17 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 
 # Nombre d'itérations
 nb_iteration = 1
-max_attempts = 1
-min_confidence_score = 0
+max_attempts = 100
+min_confidence_score = 0.2
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.05
+learning_rate_CNN = 0.005
 beta1 = 0.9
 beta2 = 0.999
 
 # DNN
-learning_rate_DNN = 0.01
+learning_rate_DNN = 0.001
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
                          learning_rate_CNN, beta1, beta2, learning_rate_DNN)
@@ -64,22 +66,22 @@ mode = set_mode()
 
 if mode in {1}:
 
+
     # ============================
     #     INITIALISATION CNN
     # ============================
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
-    dimensions_CNN = {  "1" :(3, 1, 0, 128, "kernel", "relu"),
+    dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                         "2" :(2, 2, 0, 1, "pooling", "max"), 
-                        "3" :(2, 1, 0, 64, "kernel", "sigmoide")
+                        "3" :(2, 1, 0, 128, "kernel", "sigmoide")
     }
     
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (0,  "relu"),
-        "2": (64, "relu"),
-        "3": (64, "relu"),
-        "4": (0,  "sigmoide")
+        "1": (0,  "sigmoide"),
+        "2": (64, "sigmoide"),
+        "3": (0,  "sigmoide")
     }
 
     # Mode de padding : 'auto' = calcul automatique
@@ -91,6 +93,7 @@ if mode in {1}:
     )
 
 
+
 else:
     # ============================
     #       SELECT A MODEL
@@ -99,11 +102,14 @@ else:
     # Chargement du modele existant
     model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
-    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape)    
+    tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape, tuple_size_activation)    
+
 
 
 show_information_CNN(dimensions_CNN, input_shape)
 show_information_DNN(parametres_DNN, dimensions_DNN)
+
 
 
 if mode in {1, 2}:
