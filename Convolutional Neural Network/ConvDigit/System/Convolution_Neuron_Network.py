@@ -457,8 +457,9 @@ def update_CNN(gradients, parametres, parametres_grad, learning_rate, beta1, bet
         if parametres["l" + str(c)] == "kernel":
 
             #Update moment
+            grad = np.clip(gradients["dK" + str(c)], -1e3, 1e3)
             parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + (1 - beta1) * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
-            parametres_grad["v" + str(c)] = beta2 * parametres_grad["v" + str(c)] + (1 - beta2) * gradients["dK" + str(c)]**2  # Deuxième estimation des moments (moyenne des carrés des gradients)
+            parametres_grad["v" + str(c)] = beta2 * parametres_grad["v" + str(c)] + (1 - beta2) * grad**2  # Deuxième estimation des moments (moyenne des carrés des gradients)
 
             #Biais correction
             m_hat = parametres_grad["m" + str(c)] / (1 - beta1**(c+1))

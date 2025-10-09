@@ -163,7 +163,6 @@ plt.show()
 
 
 #DEUXIEME PASSAGE
-W11, B11, W12, B12, W21, W22, B21 = initialisation()
 A11, A12, A21 = forward_propagation(X, W11, B11, W12, B12, W21, W22, B21)
 y = np.array([1, 0])
 
