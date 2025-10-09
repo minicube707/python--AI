@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 
 def log_loss(A, y):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
+    return  y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return y_true/y_pred - (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a * x + b
@@ -17,11 +17,11 @@ def sigmoide(X):
     return 1/(1 + np.exp(-X))
 
 #INITIALISATION
-X = np.array([0, 1])
-y = np.array([0, 1])
+X = 1
+y = 1
 
-learning_rate = 0.001
-nb_iteraton = 30_000
+learning_rate = 0.1
+nb_iteraton = 5000
 
 W = np.random.rand(1) * 2 - 1
 B = np.random.rand(1) * 2 - 1
@@ -47,28 +47,24 @@ print("Loss", log_loss(A, y))
 print("ACTIVATION", A)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for _ in tqdm(range(nb_iteraton)):
     
-    for i in range(X.size):
+    #Foreward propagation
+    Z = algebre(X, W, B)
+    A = sigmoide(Z)
 
-        #Foreward propagation
-        Z = algebre(X[i], W, B)
-        A = sigmoide(Z)
+    log.append(log_loss(A, y))
+    dx_log.append(dx_log_loss(y, A))
 
-        if (j % 50 == 0):
-            log.append(log_loss(A, y[i]))
-            dx_log.append(dx_log_loss(y[i], A))
+    W_log.append(W.copy())
+    B_log.append(B.copy())
 
-            W_log.append(W.copy())
-            B_log.append(B.copy())
-
-        #Backpropagation
-        dZ = A - y[i]       #dL/dZ
-        dW = X[i] * dZ      #dL/dW
-        db = dZ             #dL/dB
-        W -= dW * learning_rate
-        B -= db * learning_rate
-
+    #Backpropagation
+    dA = y - A      #dL/dZ
+    dW = X * dA     #dL/dW
+    db = dA         #dL/dB
+    W += dW * learning_rate
+    B += db * learning_rate
 
 print("")
 print("W: ", W)
@@ -86,6 +82,7 @@ axes[1].set_title("dx_log")
 plt.tight_layout()
 plt.show()
 
+
 # Créer une figure
 plt.figure(figsize=(12, 8))
 plt.plot(W_log, label='W')
@@ -98,14 +95,14 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-
 #DEUXIEME PASSAGE
-y = np.array([1, 0])
-
+y = 0
 print("")
-print("Deuxieme apprentissage")
+print("DEUXIEME apprentissage")
 print("X: ", X)
 print("y: ", y)
+print("W: ", W)
+print("B: ", B)
 
 Z = algebre(X, W, B)
 A = sigmoide(Z)
@@ -114,28 +111,24 @@ print("Loss", log_loss(A, y))
 print("ACTIVATION", A)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for _ in tqdm(range(nb_iteraton)):
     
-    for i in range(X.size):
+    #Foreward propagation
+    Z = algebre(X, W, B)
+    A = sigmoide(Z)
 
-        #Foreward propagation
-        Z = algebre(X[i], W, B)
-        A = sigmoide(Z)
+    log.append(log_loss(A, y))
+    dx_log.append(dx_log_loss(y, A))
 
-        if (j % 50 == 0):
-            log.append(log_loss(A, y[i]))
-            dx_log.append(dx_log_loss(y[i], A))
-
-            W_log.append(W.copy())
-            B_log.append(B.copy())
-
-        #Backpropagation
-        dA = A - y[i]
-        dW = X[i] * dA
-        db = dA
-        W -= dW * learning_rate
-        B -= db * learning_rate
-
+    W_log.append(W.copy())
+    B_log.append(B.copy())
+    
+    #Backpropagation
+    dZ = y - A          #dL/dZ
+    dW = X * dZ         #dL/dW
+    db = dZ             #dL/dB
+    W += dW * learning_rate
+    B += db * learning_rate
 
 print("")
 print("W: ", W)

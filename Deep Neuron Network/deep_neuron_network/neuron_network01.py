@@ -28,6 +28,9 @@ B = np.random.rand(1) * 2 - 1
 log = []
 dx_log = []
 
+# Avant la boucle principale, initialise les listes d'historique
+W_log, B_log = [], []
+
 print("")
 print("W: ", W)
 print("B: ", B)
@@ -48,10 +51,13 @@ for _ in tqdm(range(nb_iteraton)):
     log.append(log_loss(A, y))
     dx_log.append(dx_log_loss(y, A))
 
+    W_log.append(W.copy())
+    B_log.append(B.copy())
+
     #Backpropagation
-    dA = A - y
-    dW = X * dA
-    db = dA
+    dZ = A - y          #dL/dZ 
+    dW = X * dZ         #dL/dW
+    db = dZ             #dL/dB
     W -= dW * learning_rate
     B -= db * learning_rate
 
@@ -59,14 +65,26 @@ print("")
 print("W: ", W)
 print("B: ", B)
 
-print("Loss final ", log[-1])
+print("Loss final ", log_loss(A, y))
 print("ACTIVATION final", sigmoide(algebre(X, W, B)))
 
-plt.figure()
-plt.plot(log)
+# Créer une figure avec deux sous-graphes côte à côte
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1 ligne, 2 colonnes
+axes[0].plot(log)
+axes[0].set_title("log")
+axes[1].plot(dx_log)
+axes[1].set_title("dx_log")
+plt.tight_layout()
 plt.show()
 
-plt.figure()
-plt.plot(dx_log)
+# Créer une figure
+plt.figure(figsize=(12, 8))
+plt.plot(W_log, label='W')
+plt.plot(B_log, label='B')
+plt.legend()
+plt.title("Évolution des poids et biais")
+plt.xlabel("Itérations")
+plt.ylabel("Valeur")
+plt.grid(True)
+plt.tight_layout()
 plt.show()
-
