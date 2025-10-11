@@ -16,6 +16,12 @@ def algebre(x, a, b):
 def sigmoide(X):
     return 1/(1 + np.exp(-X))
 
+def relu(X, alpha):
+    return np.where(X < 0, alpha*X, X)
+
+def dx_relu(X, alpha):
+    return np.where(X < 0, alpha, 1)
+
 def initialisation():
     W11 = np.random.rand(1) * 2 - 1
     B11 = np.random.rand(1) * 2 - 1
@@ -35,7 +41,7 @@ def initialisation():
 
     return W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31
 
-def forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31):
+def forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha):
 
     #Layer1
     Z11 = algebre(X, W11, B11)     #Z11 = X * W11 + B11
@@ -45,17 +51,17 @@ def forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31
 
     #Layer2
     Z21 = A11 * W21 + A12 * W22 + B21
-    A21 = sigmoide(Z21)
+    A21 = relu(Z21, alpha)
     Z22 = A11 * W23 + A12 * W24 + B22
-    A22 = sigmoide(Z22)
+    A22 = relu(Z22, alpha)
 
     #Layer3
     Z31 = A21 * W31 + A22 * W32 + B31
     A31 = sigmoide(Z31)
 
-    return A11, A12, A21, A22, A31
+    return A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31
 
-def backward_propagation(X, y, A11, A12, A21, A22, A31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate):
+def backward_propagation(X, y, A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate, alpha):
 
     #Layer3
     dZ31 = A31 - y                  #dL/dZ31
@@ -64,20 +70,20 @@ def backward_propagation(X, y, A11, A12, A21, A22, A31, W11, W12, B11, B12, W21,
     db31 = dZ31                     #dL/db31
 
     #Layer2
-    dA21 = dZ31 * W31               #dL/dA21
-    dA22 = dZ31 * W32               #dL/dA22
-    dZ21 = dA21 * A21 * (1 - A21)   #dL/dZ21
-    dZ22 = dA22 * A22 * (1 - A22)   #dL/dZ22
-    dW21 = dZ21 * A11               #dL/dW21
-    dW22 = dZ21 * A12               #dL/dW22
-    dW23 = dZ22 * A11               #dL/dW23
-    dW24 = dZ22 * A12               #dL/dW24
-    db21 = dZ21                     #dL/db21
-    db22 = dZ22                     #dL/db22
+    dA21 = dZ31 * W31                       #dL/dA21
+    dA22 = dZ31 * W32                       #dL/dA22
+    dZ21 = dA21 * dx_relu(Z21, alpha)       #dL/dZ21
+    dZ22 = dA22 * dx_relu(Z22, alpha)       #dL/dZ22
+    dW21 = dZ21 * A11                       #dL/dW21
+    dW22 = dZ21 * A12                       #dL/dW22
+    dW23 = dZ22 * A11                       #dL/dW23
+    dW24 = dZ22 * A12                       #dL/dW24
+    db21 = dZ21                             #dL/db21
+    db22 = dZ22                             #dL/db22
 
     #Layer1
-    dA11 = dZ21 * W21 + dZ22 * W23          #dL/dA11
-    dA12 = dZ21 * W22 + dZ22 * W24          #dL/dA12
+    dA11 = dZ21 * W21 + dZ22 * W22          #dL/dA11
+    dA12 = dZ21 * W23 + dZ22 * W24          #dL/dA12
     dZ11 = dA11 * A11 * (1 - A11)           #dL/dZ11
     dZ12 = dA12 * A12 * (1 - A12)           #dL/dZ12
     dW11 = dZ11 * X                         #dL/dW11
@@ -110,8 +116,9 @@ def backward_propagation(X, y, A11, A12, A21, A22, A31, W11, W12, B11, B12, W21,
 X = np.array([0, 1])
 y = np.array([0, 1])
 
-learning_rate = 0.01
-nb_iteraton = 30_000
+learning_rate = 0.1
+nb_iteraton = 15_000
+alpha = 0.02
 
 log = []
 dx_log = []
@@ -124,7 +131,7 @@ W31_log, W32_log, B31_log = [], [], []
 
 #PREMIER PASSAGE
 W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = initialisation()
-A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 
 print("")
 print("Premier apprentissage")
@@ -144,7 +151,7 @@ for j in tqdm(range(nb_iteraton)):
     for i in range(X.size):
 
         #Foreward propagation
-        A11, A12, A21, A22, A31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+        A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 
         if (j % 50 == 0):
             log.append(log_loss(A31, y[i]))
@@ -166,10 +173,10 @@ for j in tqdm(range(nb_iteraton)):
         B31_log.append(B31.copy())
 
         #Backpropagation
-        W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate)
+        W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate, alpha)
 
 
-A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 )
+A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 
 print("")
 print(f"{'W11:':<6} {W11[0]:>10.6f}   {'B11:':<6} {B11[0]:>10.6f}")
@@ -215,7 +222,7 @@ plt.show()
 
 
 #DEUXIEME PASSAGE
-A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 y = np.array([1, 0])
 
 print("")
@@ -236,7 +243,7 @@ for j in tqdm(range(nb_iteraton)):
     for i in range(X.size):
 
         #Foreward propagation
-        A11, A12, A21, A22, A31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+        A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 
         if (j % 50 == 0):
             log.append(log_loss(A31, y[i]))
@@ -258,9 +265,9 @@ for j in tqdm(range(nb_iteraton)):
         B31_log.append(B31.copy())
 
         #Backpropagation
-        W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate)
+        W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate, alpha)
 
-A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+A11, A12, A21, A22, A31, Z11, Z12, Z21, Z22, Z31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, alpha)
 print("")
 print(f"{'W11:':<6} {W11[0]:>10.6f}   {'B11:':<6} {B11[0]:>10.6f}")
 print(f"{'W12:':<6} {W12[0]:>10.6f}   {'B12:':<6} {B12[0]:>10.6f}")

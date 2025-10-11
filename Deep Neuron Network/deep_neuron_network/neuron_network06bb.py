@@ -16,6 +16,11 @@ def algebre(x, a, b):
 def sigmoide(X):
     return 1/(1 + np.exp(-X))
 
+def tanh(X):
+    e1 = np.exp(X)
+    e2 = np.exp(-X)
+    return ((e1 - e2) / (e1 + e2))
+    
 def initialisation():
     W11 = np.random.rand(1) * 2 - 1
     B11 = np.random.rand(1) * 2 - 1
@@ -45,9 +50,9 @@ def forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31
 
     #Layer2
     Z21 = A11 * W21 + A12 * W22 + B21
-    A21 = sigmoide(Z21)
+    A21 = tanh(Z21)
     Z22 = A11 * W23 + A12 * W24 + B22
-    A22 = sigmoide(Z22)
+    A22 = tanh(Z22)
 
     #Layer3
     Z31 = A21 * W31 + A22 * W32 + B31
@@ -66,8 +71,8 @@ def backward_propagation(X, y, A11, A12, A21, A22, A31, W11, W12, B11, B12, W21,
     #Layer2
     dA21 = dZ31 * W31               #dL/dA21
     dA22 = dZ31 * W32               #dL/dA22
-    dZ21 = dA21 * A21 * (1 - A21)   #dL/dZ21
-    dZ22 = dA22 * A22 * (1 - A22)   #dL/dZ22
+    dZ21 = dA21 * (1 - A21**2)      #dL/dZ21
+    dZ22 = dA22 * (1 - A22**2)      #dL/dZ22
     dW21 = dZ21 * A11               #dL/dW21
     dW22 = dZ21 * A12               #dL/dW22
     dW23 = dZ22 * A11               #dL/dW23
