@@ -54,12 +54,13 @@ min_confidence_score = 0.2
 learning_rate_CNN = 0.005
 beta1 = 0.9
 beta2 = 0.999
+alpha = 0
 
 # DNN
 learning_rate_DNN = 0.001
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
-                         learning_rate_CNN, beta1, beta2, learning_rate_DNN)
+                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -79,7 +80,7 @@ if mode in {1}:
     
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (0,  "sigmoide"),
+        "1": (64, "sigmoide"),
         "2": (64, "sigmoide"),
         "3": (0,  "sigmoide")
     }
@@ -125,7 +126,7 @@ if mode in {1, 2}:
         parametres_CNN, parametres_grad, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, learning_rate_DNN,
+        learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
         max_attempts, min_confidence_score
     )
 
@@ -172,7 +173,7 @@ if mode in {1, 2}:
         str_function_DNN = model_info["activation_function_DNN"]
 
     new_log =  fill_information(name_model, date, training_time,
-                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, 
+                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, alpha,
                     test_loss, test_accu, test_conf, 
                     learning_rate_CNN, str_size_CNN, str_nb_kernel_CNN, str_function_CNN,
                     learning_rate_DNN, str_size_DNN, str_function_DNN,

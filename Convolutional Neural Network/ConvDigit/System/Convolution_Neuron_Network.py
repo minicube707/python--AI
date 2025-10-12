@@ -160,9 +160,9 @@ def error_initialisation(dimensions, input_size, previ_input_size, type_layer, f
         show_information_CNN(dimensions, input_size)
         raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pooling' or 'kernel'.")
     
-    if fonction not in ["relu", "sigmoide", "max"]:
+    if fonction not in ["relu", "sigmoide", "max", "tanh"]:
         show_information_CNN(dimensions, input_size)
-        raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu' or 'sigmoide', 'max'.")
+        raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu', 'sigmoide', 'max' ou 'tanh'.")
 
 
 
@@ -199,16 +199,16 @@ string          mode :              the type of activation function we use
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def kernel_activation(A, K, b, x_size, mode):
+def kernel_activation(A, K, b, x_size, mode, alpha):
 
     Z = correlate(A, K, b, x_size)
 
     if mode == "relu":
-        Z = relu(Z)
+        A = relu(Z, alpha)
     elif mode == "sigmoide":
-        Z = sigmoide(Z)
+        A = sigmoide(Z)
     
-    return(Z)
+    return A, Z 
 
 
 """
@@ -230,22 +230,23 @@ int             padding :           how many pixel we add to the border of the a
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding):
+def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding, alpha):
 
     #Activation are in line format
     if type_layer == "kernel":
-        Z = kernel_activation(A, K, b, x_size, mode)
+        A, Z = kernel_activation(A, K, b, x_size, mode, alpha)
     else:
-        Z = pooling_activation(A)
-
+        A = pooling_activation(A)
+        Z = None
+        
     #Activation are in square format
     if padding != None:
-        Z = add_padding(Z, padding)
+        A = add_padding(A, padding)
     if k_size != None:
-        Z = reshape(Z, k_size , x_size, stride, padding)  
+        A = reshape(A, k_size , x_size, stride, padding)  
 
     #Activation are in line format
-    return Z
+    return A, Z
 
 
 """
@@ -262,7 +263,7 @@ dict            dimensions :                    all the information on how is bu
 =========OUTPUT=========
 dict            activation :     containt all the activation during the foreward propagation
 """
-def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions):
+def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions, alpha):
 
     activation = {"A0" : X}
     C = len(dimensions.keys())
@@ -290,7 +291,7 @@ def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions):
         if c+1 < C:
            padding = dimensions[str(c+2)][2] 
 
-        activation["A" + str(c)] = function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding)
+        activation["A" + str(c)], activation["Z" + str(c)] = function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding, alpha)
         
     return activation
 
@@ -350,7 +351,7 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     containt all the gradient need for the update
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c):
+def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha):
         
     #Create a table for each dx of the kernel
     L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
@@ -377,14 +378,13 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
             
     if c > 1:
         activation_fonction = parametres["f" + str(c)]
-        A = activation["A" + str(c)]
         dim = dimensions[str(c)]
 
         # Chose the correct derivative
         if activation_fonction == "relu":
-            dA = dx_relu(A)
+            dA = dx_relu(activation["Z" + str(c)], alpha)
         elif activation_fonction == "sigmoide":
-            dA = dx_sigmoide(A)
+            dA = dx_sigmoide(activation["A" + str(c)])
 
         dA = deshape(dA, dim[0], dim[1])
         dZ *= dA
@@ -410,7 +410,7 @@ tuple           list_size_activation:           tuple of all activation shape wi
 =========OUTPUT=========
 dict           gradients :     containt all the gradient need for the update
 """
-def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_activation):
+def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_activation, alpha):
 
     #Here the derivative activation are in shape nxn, then they are modify to work effectively with code
     C = len(dimensions.keys())
@@ -427,7 +427,7 @@ def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_acti
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
 
         elif parametres["l" + str(c)] == "kernel":
-            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c)
+            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha)
 
     return gradients
 

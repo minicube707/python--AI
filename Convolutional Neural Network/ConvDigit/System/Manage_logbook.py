@@ -5,7 +5,7 @@ module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
 def fill_information(name, date, training_time,
-                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, 
+                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, alpha,
                     cost_loss, accuracy, confidence_score, 
                     lr_CNN, kernel_size, nb_kernel, activation_function_CNN,
                     lr_DNN, nb_neurons, activation_function_DNN,
@@ -24,6 +24,7 @@ def fill_information(name, date, training_time,
     "min_confidence_score": min_confidence_score,
     "beta1": beta1,
     "beta2": beta2,
+    "alpha": alpha,
 
     "cost_loss": cost_loss,
     "accuracy": accuracy,

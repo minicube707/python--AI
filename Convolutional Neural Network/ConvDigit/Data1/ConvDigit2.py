@@ -13,6 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from System.Mathematical_function import softmax
 from System.Propagation import forward_propagation
 from System.File_Management import select_model, load_model
+from System.Convolution_Neuron_Network import create_tuple_size
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -104,11 +105,12 @@ def research(grid, parametres, kernel_size):
     grid = pooling(grid, kernel_size=kernel_size)
     grid = grid.reshape((1, 64))
 
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = parametres
+    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
     C_CNN = len(dimensions_CNN.keys())
     C_DNN = len(parametres_DNN) // 2
 
-    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    tuple_size_activation = create_tuple_size((1, 8, 8), dimensions_CNN)
+    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
     
     # Prédiction des probabilités avec softmax
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()

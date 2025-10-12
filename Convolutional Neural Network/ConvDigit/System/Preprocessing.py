@@ -8,7 +8,7 @@ from sklearn.ensemble import IsolationForest
 from .Sklearn_tools import train_test_split, Label_binarizer
 from .Convolution_Neuron_Network import add_padding, reshape
 
-def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, learning_rate_DNN):
+def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN):
 
     print("\n============================")
     print("         SETTING")
@@ -23,6 +23,7 @@ def show_information_setting(nb_iteration, max_attempts, min_confidence_score, l
     print("Learning rate: ", learning_rate_CNN)
     print("Beta1: ", beta1)
     print("Beta2: ", beta2)
+    print("Alpha: ", alpha)
 
     print("\nInfo DNN")
     print("Learning rate: ", learning_rate_DNN)

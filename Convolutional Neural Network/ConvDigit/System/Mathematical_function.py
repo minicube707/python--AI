@@ -2,6 +2,12 @@
 import numpy as np
 from scipy.signal import correlate2d
 
+def tanh(X):
+    return np.tanh(X)
+
+def dx_tanh(X):
+    return (1 - X**2)
+            
 """
 ============================
 ==========Fonction==========
@@ -33,8 +39,8 @@ numpy.array     X :     the activation matrice
 =========OUTPUT=========
 numpy.array     x :     array containe the next activation
 """
-def relu(X):
-    return np.where(X < 0, 0, X)
+def relu(X, alpha):
+    return np.where(X < 0, alpha*X, X)
 
 
 """
@@ -60,8 +66,8 @@ numpy.array     X :     the activation matrice
 =========OUTPUT=========
 numpy.array     x :     array containe the next activation
 """
-def dx_relu(X):
-    return np.where(X < 0, 0, 1)
+def dx_relu(X, alpha):
+    return np.where(X < 0, alpha, 1)
 
 
 """
