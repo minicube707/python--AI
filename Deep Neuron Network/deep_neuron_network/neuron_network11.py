@@ -12,9 +12,6 @@ def log_loss(A, y):
 def dx_log_loss(y_true, y_pred):
     return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
 
-def algebre(x, a, b):
-    return a * x  + b
-
 def sigmoide(X):
     return 1/(1 + np.exp(-X))
 

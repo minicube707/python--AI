@@ -24,8 +24,6 @@ def dx_log_loss(y_true, A21, A22, A23, A24):
     R += - y_true[3] / S4 
     return R
 
-def algebre(x, a, b):
-    return a * x  + b
 
 def sigmoide(X):
     return 1/(1 + np.exp(-X))
