@@ -45,19 +45,19 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 10
 max_attempts = 100
-min_confidence_score = 0.2
+min_confidence_score = 1
 
 # Paramètres d'apprentissage
 # CNN
 learning_rate_CNN = 0.005
 beta1 = 0.9
 beta2 = 0.999
-alpha = 0
+alpha = 0.001
 
 # DNN
-learning_rate_DNN = 0.001
+learning_rate_DNN = 0.01
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
                          learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN)
@@ -75,14 +75,14 @@ if mode in {1}:
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
     dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                         "2" :(2, 2, 0, 1, "pooling", "max"), 
-                        "3" :(2, 1, 0, 128, "kernel", "sigmoide")
+                        "3" :(2, 1, 0, 128, "kernel", "relu")
     }
     
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (64, "sigmoide"),
-        "2": (64, "sigmoide"),
-        "3": (0,  "sigmoide")
+        "1": (64, "relu"),
+        "2": (64, "relu"),
+        "3": (0,  "relu")
     }
 
     # Mode de padding : 'auto' = calcul automatique
@@ -201,7 +201,7 @@ fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de
 for i in range(1,16):
 
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
+    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T)
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
@@ -221,7 +221,7 @@ for i in range(nb_test):
         break
     
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
+    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)

@@ -98,11 +98,12 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def softmax(X):
+
+    X = np.clip(X, -64, 64)
     res = np.array([])
     for i in range(X.shape[0]):
-        x = np.clip(X[i,:], -64, 64)
-        res = np.append(res, np.exp(x) / np.sum(np.exp(x)))
-         
+        res = np.append(res, np.exp(X[i]) / np.sum(np.exp(X)))
+    
     return res.reshape((X.shape))
 
 

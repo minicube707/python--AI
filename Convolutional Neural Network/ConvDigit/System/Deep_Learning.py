@@ -34,7 +34,7 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
         # Prediction
         pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha)
 
-        if accuracy_score(y.flatten(), pred.flatten()) > 0 and confidence_score(pred) >= min_confidence_score:
+        if accuracy_score(y, pred) > 0 and confidence_score(y, pred) >= min_confidence_score:
             break
 
     return parametres_CNN, parametres_DNN
@@ -51,8 +51,8 @@ def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
                           tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha)
         loss += log_loss(y[idx], pred)
         dx_l += dx_log_loss(y[idx], pred)
-        accu += accuracy_score(y[idx].flatten(), pred.flatten())
-        conf += confidence_score(pred)
+        accu += accuracy_score(y[idx], pred)
+        conf += confidence_score(y[idx], pred)
 
     n = len(indices)
     return loss / n, dx_l / n, accu / n, conf / n
@@ -151,7 +151,7 @@ def convolution_neuron_network(
             )
 
             k += 1
-            if (k % 10 == 0):
+            if (k % 100 == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], nb_test_sample, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], nb_test_sample, replace=False)
