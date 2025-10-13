@@ -3,16 +3,25 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import LabelBinarizer
+from itertools import product
 
-np.set_printoptions(precision=4, suppress=True)
+np.set_printoptions(precision=2, suppress=True)
+
+np.set_printoptions(
+    threshold=np.inf,       # Affiche tout
+    linewidth=200,          # Largeur max avant saut de ligne
+    edgeitems=10,           # Combien d’éléments afficher en début/fin si tronqué
+    precision=3,            # Nombre de décimales
+    suppress=True           # Ne pas utiliser la notation scientifique
+)
 
 def log_loss(A, y):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return  - 1/y.shape[1] * y * np.log(A + epsilon)
+    return  np.mean(- y * np.log(A + epsilon), axis=1)
 
 def dx_log_loss(y_true, y_pred):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return - 1/y_true.shape[1]  * y_true/(y_pred + epsilon)
+    return  np.mean(- y_true/(y_pred + epsilon), axis=1)
 
 def sigmoide(X):
     X = np.clip(X, -100, 100)
@@ -134,14 +143,12 @@ def grah(log, dx_log):
     # Créer une figure avec deux sous-graphes côte à côte
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1 ligne, 2 colonnes
     # Courbes et légende dynamiques pour log
-    for i in range(log.shape[1]):
-        axes[0].plot(log[:, i], label=f"Logloss {i+1}")
+    axes[0].plot(log, label=f"Logloss")
     axes[0].set_title("Log")
     axes[0].legend()
 
     # Courbes et légende dynamiques pour dx_log
-    for i in range(dx_log.shape[1]):
-        axes[1].plot(dx_log[:, i], label=f"dLogloss {i+1}")
+    axes[1].plot(dx_log, label=f"dLogloss")
     axes[1].set_title("dLog")
     axes[1].legend()
 
@@ -150,17 +157,13 @@ def grah(log, dx_log):
 
 
 #INITIALISATION
-X = np.array([[0, 0, 0],
-              [0, 0, 1],
-              [0, 1, 0],
-              [0, 1, 1],
-              [1, 0, 0],
-              [1, 0, 1],
-              [1, 1, 0],
-              [1, 1, 1],
-             ])
+# Génération de toutes les combinaisons de 3 bits (0 et 1)
+n = 4
+combinations = list(product([0, 1], repeat=n))
+# Conversion en tableau numpy
+X = np.array(combinations)
 
-y = np.arange(8)
+y = np.arange(np.power(2, n))
 
 transformer=LabelBinarizer()
 transformer.fit(y)
@@ -170,11 +173,9 @@ learning_rate = 0.01
 nb_iteraton = 30_000
 
 dimension = {
-    "1" : (4, "relu"),
-    "2" : (4, "relu"),
-    "3" : (4, "relu"),
-    "4" : (4, "relu"),
-    "5" : (0, "relu")
+    "1" : (8, "relu"),
+    "2" : (8, "relu"),
+    "3" : (0, "relu")
 }
 
 log = []
