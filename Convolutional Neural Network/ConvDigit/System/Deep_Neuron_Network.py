@@ -53,7 +53,7 @@ def initialisation_DNN(dimension, input_shape, output_shape):
 
 def foward_propagation_DNN(X, parametres, dimension, C, alpha):
 
-    activation = {"A0" : X}
+    activation = {"A0" : X, "Z0" : X}
     C = len(dimension)
 
     for i in range(1, C+1):
