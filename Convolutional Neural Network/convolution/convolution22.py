@@ -1024,13 +1024,15 @@ def display_comparaison_layer(y, y_pred, max_par_fig=12):
             ax_y = axes[row, col * 2]
             ax_pred = axes[row, col * 2 + 1]
 
-            ax_y.imshow(y[layer_idx], cmap='gray')
+            im1 = ax_y.imshow(y[layer_idx], cmap='gray')
             ax_y.set_title(f'Y - Couche {layer_idx}')
             ax_y.axis('off')
+            fig.colorbar(im1, ax=ax_y, fraction=0.046, pad=0.04)
 
-            ax_pred.imshow(y_pred[layer_idx], cmap='gray')
+            im2 = ax_pred.imshow(y_pred[layer_idx], cmap='gray')
             ax_pred.set_title(f'Prediction - Couche {layer_idx}')
             ax_pred.axis('off')
+            fig.colorbar(im2, ax=ax_pred, fraction=0.046, pad=0.04)
 
         # Masquer les axes inutilisés
         total_axes = rows * cols * 2
