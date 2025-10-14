@@ -38,28 +38,29 @@ input_shape = (1, 28, 28)
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:500], y[:500], input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape)
 
 # ============================
 #         PARAMÈTRES
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 0
-max_attempts = 100
-min_confidence_score = 0.2
+nb_iteration = 10
+max_attempts = 1
+min_confidence_score = 0
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.005
+learning_rate_CNN = 0.001
 beta1 = 0.9
 beta2 = 0.999
+alpha = 0.001
 
 # DNN
 learning_rate_DNN = 0.001
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
-                         learning_rate_CNN, beta1, beta2, learning_rate_DNN)
+                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -76,12 +77,12 @@ if mode in {1}:
         "2": (2, 2, 0, 1, "pooling", "max"),
         "3": (3, 1, 0, 64, "kernel", "relu"),
         "4": (2, 2, 0, 1, "pooling", "max"),
-        "5": (3, 1, 0, 128, "kernel", "sigmoide")
+        "5": (3, 1, 0, 64, "kernel", "relu")
     }
 
     # Structure DNN : (hidden layer) 
     dimensions_DNN = {
-        "1": (0,  "relu"),
+        "1": (64, "relu"),
         "2": (64, "relu"),
         "3": (64, "relu"),
         "4": (0,  "relu")
@@ -123,7 +124,7 @@ if mode in {1, 2}:
         parametres_CNN, parametres_grad, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, learning_rate_DNN,
+        learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
         max_attempts, min_confidence_score
     )
 
@@ -170,7 +171,7 @@ if mode in {1, 2}:
         str_function_DNN = model_info["activation_function_DNN"]
 
     new_log =  fill_information(name_model, date, training_time,
-                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, 
+                    nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, alpha,
                     test_loss, test_accu, test_conf, 
                     learning_rate_CNN, str_size_CNN, str_nb_kernel_CNN, str_function_CNN,
                     learning_rate_DNN, str_size_DNN, str_function_DNN,
@@ -196,7 +197,7 @@ plt.figure(figsize=(16,8))
 for i in range(1,16):
 
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
+    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T)
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
@@ -216,7 +217,7 @@ for i in range(nb_test):
         break
     
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
+    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
