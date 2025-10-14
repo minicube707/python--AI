@@ -229,6 +229,8 @@ def convolution_neuron_network(
     print(f"🧠📉 Derive Coût final - Test 🧪    : {test_lear[-1]:.5f}")
     print("Accuracy Ratio                         :", test_accu[-1] / train_accu[-1])
     print("Indicateur d’overfitting               :", test_loss[-1] - train_loss[-1])
+
+    print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
     print("")
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
