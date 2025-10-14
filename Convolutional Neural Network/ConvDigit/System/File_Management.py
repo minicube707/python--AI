@@ -33,15 +33,16 @@ def save_model(path, model_name, data):
 
     model_path = os.path.join(path, "Model")
     
+    # Créer le dossier s'il n'existe pas
     if not os.path.exists(model_path):
-        chemin_absolu = os.path.abspath(model_path)
-        print(f"[ERREUR] Dossier 'Model' non trouvé.")
-        print(f"Chemin testé (absolu) : {chemin_absolu}\n")
-        exit(1)
+        os.makedirs(model_path)
+        print(f"[INFO] Dossier 'Model' créé à : {os.path.abspath(model_path)}")
 
+    # Sauvegarder le modèle
     model_path = os.path.join(model_path, model_name)
     with open(model_path, 'wb') as file:
         pickle.dump(data, file)
+    print(f"SUCCÈS: Modèle sauvegardé")
 
 
 def file_management(test_accu, test_conf):
