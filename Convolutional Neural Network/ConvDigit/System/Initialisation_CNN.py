@@ -79,14 +79,30 @@ dict    parametres :        containt all the information for the kernel operatio
 dict    parametres_grad :   containt all the information for the update operation
 """
 def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size):
+    shape = (nb_kernel, nb_layer, k_size**2, 1)
 
-    parametres["K" + str(i)] = np.random.rand(nb_kernel, nb_layer, np.int64(k_size**2), 1).astype(np.float16) * 2 -1
-    parametres["b" + str(i)] = np.random.rand(nb_kernel, np.int64(o_size)**2, 1).astype(np.float16) * 2 - 1
+    if fonction == "relu":
+        std = np.sqrt(2 / (nb_layer * k_size**2))
+        K = np.random.randn(*shape).astype(np.float32) * std
+
+    elif fonction == "tanh" or  fonction == "sigmoide":
+        limit = np.sqrt(6 / (nb_layer + nb_kernel))
+        K = (np.random.rand(*shape).astype(np.float32) * 2 - 1) * limit
+
+    else:
+        # Default to small random values
+        K = np.random.randn(*shape).astype(np.float32) * 0.01
+
+    b_shape = (nb_kernel, o_size**2, 1)
+    b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
+
+    parametres["K" + str(i)] = K
+    parametres["b" + str(i)] = b
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
-    parametres_grad["m" + str(i)] = np.zeros((nb_kernel, nb_layer, np.int64(k_size**2), 1)).astype(np.float16)
-    parametres_grad["v" + str(i)] = np.zeros((nb_kernel, nb_layer, np.int64(k_size**2), 1)).astype(np.float16)
+    parametres_grad["m" + str(i)] = np.zeros(shape).astype(np.float32)
+    parametres_grad["v" + str(i)] = np.zeros(shape).astype(np.float32)
 
     return parametres, parametres_grad
 

@@ -39,8 +39,21 @@ def initialisation_DNN(dimension, input_shape, output_shape):
     #The weight and bias are initialise to bettween -1 and 1)
     for i in range(1, C+1):
         nb_neuron = dimension[str(i)][0]
-        parametres["W" + str(i)] = np.random.rand(nb_activation, nb_neuron) * 2 -1
-        parametres["B" + str(i)] = np.random.rand(1, nb_neuron) * 2 -1
+
+        # He initialization
+        if dimension[str(i)][1] == "relu":
+            std = np.sqrt(2. / nb_activation)
+            W = np.random.randn(nb_activation, nb_neuron) * std
+
+        # Xavier (Glorot) initialization
+        elif dimension[str(i)][1] in {"sigmoide", "tanh"}:
+            limit = np.sqrt(6. / (nb_activation + nb_neuron))
+            W = np.random.uniform(-limit, limit, size=(nb_activation, nb_neuron))
+
+        # Biais initialisé à 0 (standard)
+        B = np.zeros((1, nb_neuron))  
+        parametres["W" + str(i)] = W.astype(np.float32)
+        parametres["B" + str(i)] = B.astype(np.float32)
         nb_activation = nb_neuron
 
 
