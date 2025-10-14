@@ -100,12 +100,10 @@ numpy.array     x :     array containe the next activation
 def softmax(X):
 
     X = np.clip(X, -64, 64)
-    res = np.array([])
-    for i in range(X.shape[0]):
-        res = np.append(res, np.exp(X[i]) / np.sum(np.exp(X)))
+    X_max = np.max(X, axis=1, keepdims=True)
+    e_x = np.exp(X - X_max)
     
-    return res.reshape((X.shape))
-
+    return e_x / np.sum(e_x, axis=1, keepdims=True)
 
 """
 correlate

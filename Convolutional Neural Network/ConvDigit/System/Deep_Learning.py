@@ -133,6 +133,8 @@ def convolution_neuron_network(
     best_accu = va
     print(f"\nInitial accurracy: {best_accu}")
     print(f"Initial confidence score: {vc}")
+    print(f"Initial loss: {vl}")
+    print("")
     best_model = {"CNN": None, "DNN": None}
 
     # Démarrer le chronomètre
@@ -178,6 +180,8 @@ def convolution_neuron_network(
                     best_accu = va
                     print(f"\nNew accuracy: {va}")
                     print(f"New confidence score: {vc}")
+                    print(f"New loss: {vl}")
+                    print("")
                     best_model["CNN"] = deepcopy(parametres_CNN)
                     best_model["DNN"] = deepcopy(parametres_DNN)
 

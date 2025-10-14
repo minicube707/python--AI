@@ -26,7 +26,8 @@ def forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation
 
     activations_CNN = foward_propagation_CNN(X, parametres_CNN, tuple_size_activation, dimensions_CNN, alpha)
     A = activations_CNN["A" + str(C_CNN)].reshape(1, activations_CNN["A" + str(C_CNN)].size)
-    activation_DNN = foward_propagation_DNN(A, parametres_DNN, dimensions_DNN, C_DNN, alpha)
+    Z = activations_CNN["Z" + str(C_CNN)].reshape(1, activations_CNN["Z" + str(C_CNN)].size)
+    activation_DNN = foward_propagation_DNN(A, Z, parametres_DNN, dimensions_DNN, C_DNN, alpha)
 
     return activations_CNN, activation_DNN
 
