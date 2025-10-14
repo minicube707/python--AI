@@ -100,20 +100,23 @@ def pooling(grid, kernel_size):
     return new_grid
 
 
-def research(grid, parametres, kernel_size):
+def research(grid, parametres, kernel_size, model_info):
 
     grid = pooling(grid, kernel_size=kernel_size)
     grid = grid.reshape((1, 64))
 
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
-    C_CNN = len(dimensions_CNN.keys())
-    C_DNN = len(parametres_DNN) // 2
+    tuple_size_activation = create_tuple_size((1, 8, 8), dimensions_CNN)
+    alpha = model_info["alpha"]
+
+    C_CNN = len(dimensions_CNN)
+    C_DNN = len(dimensions_DNN)
 
     tuple_size_activation = create_tuple_size((1, 8, 8), dimensions_CNN)
-    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN)
+    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
+    probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
@@ -143,7 +146,7 @@ def main (win , width):
     kernel_size = 2
     grid = np.zeros((rows, rows))
 
-    model, _ = select_model(module_dir, "model_logbook.csv")
+    model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres = load_model(module_dir, model)
     
     run = True
@@ -159,7 +162,7 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres, kernel_size=kernel_size)
+                    research(grid, parametres, kernel_size, model_info)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))

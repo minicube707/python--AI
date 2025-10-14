@@ -13,6 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from System.Mathematical_function import softmax
 from System.Propagation import forward_propagation
 from System.File_Management import select_model, load_model
+from System.Convolution_Neuron_Network import create_tuple_size
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -83,18 +84,21 @@ def delete_node (width, rows, grid):
 
     return grid
 
-def research(grid, parametres):
+def research(grid, parametres, model_info):
 
     grid = grid.reshape((1, 64))
 
-    parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN = parametres
-    C_CNN = len(dimensions_CNN.keys())
-    C_DNN = len(parametres_DNN) // 2
+    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
+    tuple_size_activation = create_tuple_size((1, 8, 8), dimensions_CNN)
+    alpha = model_info["alpha"]
 
-    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN)
+    C_CNN = len(dimensions_CNN)
+    C_DNN = len(dimensions_DNN)
+
+    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
     
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
+    probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
     
@@ -123,9 +127,9 @@ def main (win , width):
     rows = 8
     grid = np.zeros((rows, rows))
 
-    model, _ = select_model(module_dir, "model_logbook.csv")
+    model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres = load_model(module_dir, model)
-    
+
     run = True
     while run:
         #Pygame event
@@ -139,7 +143,7 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres)
+                    research(grid, parametres, model_info)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
