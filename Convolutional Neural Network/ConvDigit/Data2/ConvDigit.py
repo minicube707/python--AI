@@ -14,6 +14,7 @@ from System.Mathematical_function import softmax
 from System.Propagation import forward_propagation
 from System.File_Management import select_model, load_model
 from System.Convolution_Neuron_Network import create_tuple_size
+from System.Preprocessing import  handle_key
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -36,14 +37,17 @@ def draw_grid (win, rows, width):
             pygame.draw.line(win, GREY, (j * gap, 0), (j * gap, width))
 
 
-def draw (win, rows, width, grid):
+def draw(win, rows, width, grid):
     win.fill(BLACK)
     gap = width // rows
 
-    coordinates = np.where(grid == 1)
-    coordinates = np.vstack((coordinates[1], coordinates[0])).T
-    for coord in coordinates:
-        pygame.draw.rect(win, WHITE, (coord[0]*gap, coord[1]*gap,  gap, gap))
+    for row in range(rows):
+        for col in range(rows):
+            value = grid[row, col]
+            if value > 0:
+                # Convertit la valeur (entre 0 et 1) en intensité de gris (0 à 255)
+                color = (value, value, value)
+                pygame.draw.rect(win, color, (col * gap, row * gap, gap, gap))
 
     draw_grid(win, rows, width)
     pygame.display.update()
@@ -59,16 +63,24 @@ def get_clicked_pos (pos, rows, width):
     return row, col
 
 
-def add_node (width, rows, grid):
-
-    #Left click
+def add_node(width, rows, grid, brush_size=2):
+    # Left click
     if pygame.mouse.get_pressed()[0]:
         pos = pygame.mouse.get_pos()
-        if (0 <= pos[0] < width)  and (0 <= pos[1] < width):
-            row, col = get_clicked_pos(pos, rows, width)
-            if (grid[row, col] == 0):
-                grid[row, col] = 1
+        if (0 <= pos[0] < width) and (0 <= pos[1] < width):
+            center_row, center_col = get_clicked_pos(pos, rows, width)
+            max_intensity = 255
 
+            for dr in range(-brush_size, brush_size + 1):
+                for dc in range(-brush_size, brush_size + 1):
+                    r = center_row + dr
+                    c = center_col + dc
+
+                    if 0 <= r < rows and 0 <= c < rows:
+                        distance = np.sqrt(dr**2 + dc**2)
+                        if distance <= brush_size:
+                            intensity = max(0, int(max_intensity * (1 - (distance / brush_size))))
+                            grid[r, c] = max(grid[r, c], intensity)  # Pour éviter d’écraser un plus fort dégradé
     return grid
 
 def delete_node (width, rows, grid):
@@ -87,7 +99,8 @@ def delete_node (width, rows, grid):
 def research(grid, parametres, model_info):
 
     grid = grid.reshape((1, 784))
-
+    grid /= 255
+    
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
     tuple_size_activation = create_tuple_size((1, 28, 28), dimensions_CNN)
     alpha = model_info["alpha"]
@@ -104,6 +117,7 @@ def research(grid, parametres, model_info):
     
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     # Affichage de l'image
     axs[0].imshow(grid.reshape((28, 28)), cmap="gray")
@@ -148,7 +162,7 @@ def main (win , width):
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
 
-        grid = add_node (width, rows, grid)
+        grid = add_node (width, rows, grid, 2)
         grid = delete_node (width, rows, grid)
         draw(win, rows, width, grid)
 
