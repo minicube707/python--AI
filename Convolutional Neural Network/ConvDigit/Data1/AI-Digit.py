@@ -45,9 +45,10 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 20
+nb_iteration = 1
 max_attempts = 1
 min_confidence_score = 0
+validation_size = 50
 
 # Paramètres d'apprentissage
 # CNN
@@ -59,8 +60,12 @@ alpha = 0.001
 # DNN
 learning_rate_DNN = 0.001
 
+if (validation_size > len(y_test)):
+    print("Validation set two large")
+    exit(1)
+
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
-                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN)
+                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -127,7 +132,7 @@ if mode in {1, 2}:
         dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score
+        max_attempts, min_confidence_score, validation_size
     )
 
     # ============================
@@ -178,7 +183,7 @@ if mode in {1, 2}:
                     learning_rate_CNN, str_size_CNN, str_nb_kernel_CNN, str_function_CNN,
                     learning_rate_DNN, str_size_DNN, str_function_DNN,
                     len(y_train), len(y_test), 
-                    baseline_mode, nb_fine_tunning)
+                    baseline_mode, nb_fine_tunning, validation_size)
     
     add_model(new_log, "LogBook", "model_logbook.csv")
 

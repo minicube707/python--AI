@@ -82,8 +82,8 @@ def plot_metrics(train_loss, test_loss, train_lear, test_lear,
 
     def plot_with_trend(ax, train, test, title, ylim=None):
         # Données brutes
-        ax.plot(train, label="Train")
-        ax.plot(test, label="Test")
+        ax.plot(train, label="Train", alpha=0.5)
+        ax.plot(test, label="Test", alpha=0.5)
 
         # Lissage
         sm_train = smooth_curve(train, window)
@@ -118,20 +118,20 @@ def convolution_neuron_network(
         dimensions_CNN, dimension_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score 
+        max_attempts, min_confidence_score, validation_size
     ):
 
     C_CNN = len(dimensions_CNN)
     C_DNN = len(parametres_DNN) // 2
     
-    nb_test_sample = min(50, len(y_test))
+
 
     # Suivi des métriques
     train_loss, train_accu, train_lear, train_conf = [], [], [], []
     test_loss, test_accu, test_lear, test_conf = [], [], [], []
 
-    rand_idx_train = np.random.choice(X_train.shape[0], nb_test_sample, replace=False)
-    rand_idx_test = np.random.choice(X_test.shape[0], nb_test_sample, replace=False)
+    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
     tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                     parametres_CNN, parametres_DNN,
@@ -175,8 +175,8 @@ def convolution_neuron_network(
             k += 1
             if (k % 100 == 0):
                 # Évaluation partielle
-                rand_idx_train = np.random.choice(X_train.shape[0], nb_test_sample, replace=False)
-                rand_idx_test = np.random.choice(X_test.shape[0], nb_test_sample, replace=False)
+                rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
+                rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
                 tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                                 parametres_CNN, parametres_DNN,
