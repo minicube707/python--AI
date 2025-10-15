@@ -45,19 +45,19 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 10
+nb_iteration = 20
 max_attempts = 1
 min_confidence_score = 0
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.0001
+learning_rate_CNN = 0.001
 beta1 = 0.9
 beta2 = 0.999
 alpha = 0.001
 
 # DNN
-learning_rate_DNN = 0.0001
+learning_rate_DNN = 0.001
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
                          learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN)
@@ -75,13 +75,13 @@ if mode in {1}:
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
     dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                         "2" :(2, 2, 0, 1, "pooling", "max"), 
-                        "3" :(2, 1, 0, 128, "kernel", "sigmoide")
+                        "3" :(2, 1, 0, 128, "kernel", "tanh")
     }
     
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (64, "tanh"),
-        "2": (64, "tanh"),
+        "1": (64, "relu"),
+        "2": (64, "relu"),
         "3": (0,  "relu")
     }
 

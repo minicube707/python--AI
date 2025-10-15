@@ -1,7 +1,7 @@
 
 import  numpy as np
 
-from .Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoide
+from .Mathematical_function import relu, sigmoide, max_pooling, convolution, correlate, dx_relu, dx_sigmoide, tanh, dx_tanh
 
 
 #Allow to show all tab with numpy
@@ -199,15 +199,16 @@ string          mode :              the type of activation function we use
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def kernel_activation(A, K, b, x_size, mode, alpha):
+def kernel_activation(X, K, b, x_size, mode, alpha):
 
-    Z = correlate(A, K, b, x_size)
+    Z = correlate(X, K, b, x_size)
 
     if mode == "relu":
         A = relu(Z, alpha)
     elif mode == "sigmoide":
         A = sigmoide(Z)
-    
+    elif mode == "tanh":
+        A = tanh(Z)
     return A, Z 
 
 
@@ -230,13 +231,13 @@ int             padding :           how many pixel we add to the border of the a
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def function_activation(A, K, b, mode, type_layer, k_size, x_size, stride, padding, alpha):
+def function_activation(X, K, b, mode, type_layer, k_size, x_size, stride, padding, alpha):
 
     #Activation are in line format
     if type_layer == "kernel":
-        A, Z = kernel_activation(A, K, b, x_size, mode, alpha)
+        A, Z = kernel_activation(X, K, b, x_size, mode, alpha)
     else:
-        A = pooling_activation(A)
+        A = pooling_activation(X)
         Z = None
         
     #Activation are in square format
@@ -385,6 +386,8 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
             dA = dx_relu(activation["Z" + str(c)], alpha)
         elif activation_fonction == "sigmoide":
             dA = dx_sigmoide(activation["A" + str(c)])
+        elif activation_fonction == "tanh":
+            dA = dx_tanh(activation["A" + str(c)])
 
         dA = deshape(dA, dim[0], dim[1])
         dZ *= dA
