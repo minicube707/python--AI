@@ -57,34 +57,54 @@ def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
     n = len(indices)
     return loss / n, dx_l / n, accu / n, conf / n
 
-
+def smooth_curve(values, window=10):
+    """Calcule une moyenne glissante"""
+    values = np.array(values)
+    if len(values) < window:
+        return values
+    return np.convolve(values, np.ones(window)/window, mode='valid')
 
 def plot_metrics(train_loss, test_loss, train_lear, test_lear,
                  train_accu, test_accu, train_conf, test_conf):
+    
     fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Raccourci clavier actif
 
-    axs[0].plot(train_loss, label="Train")
-    axs[0].plot(test_loss, label="Test")
-    axs[0].set_title("Fonction de coût")
-    axs[0].legend()
+    window = 4  # Taille de la fenêtre pour le lissage
 
-    axs[1].plot(train_lear, label="Train")
-    axs[1].plot(test_lear, label="Test")
-    axs[1].set_title("Dérivée coût")
-    axs[1].legend()
+    # Données à tracer : (titre, train_data, test_data, ylim)
+    metrics = [
+        ("Fonction de coût", train_loss, test_loss, None),
+        ("Dérivée coût", train_lear, test_lear, None),
+        ("Accuracy", train_accu, test_accu, (0, 1)),
+        ("Confidence", train_conf, test_conf, (0, 1))
+    ]
 
-    axs[2].plot(train_accu, label="Train")
-    axs[2].plot(test_accu, label="Test")
-    axs[2].set_title("Accuracy")
-    axs[2].set_ylim(0, 1)
-    axs[2].legend()
+    def plot_with_trend(ax, train, test, title, ylim=None):
+        # Données brutes
+        ax.plot(train, label="Train")
+        ax.plot(test, label="Test")
 
-    axs[3].plot(train_conf, label="Train")
-    axs[3].plot(test_conf, label="Test")
-    axs[3].set_title("Confidence")
-    axs[3].set_ylim(0, 1)
-    axs[3].legend()
+        # Lissage
+        sm_train = smooth_curve(train, window)
+        sm_test = smooth_curve(test, window)
+
+        # Centrage
+        offset_train = (len(train) - len(sm_train)) // 2
+        offset_test = (len(test) - len(sm_test)) // 2
+
+        # Courbes lissées
+        ax.plot(range(offset_train, offset_train + len(sm_train)), sm_train, label="Trend Train", color='fuchsia', linewidth=2)
+        ax.plot(range(offset_test, offset_test + len(sm_test)), sm_test, label="Trend Test", color='lime', linewidth=2)
+
+        ax.set_title(title)
+        if ylim:
+            ax.set_ylim(*ylim)
+        ax.legend()
+
+    # Tracer les 4 métriques
+    for i, (title, train_data, test_data, ylim) in enumerate(metrics):
+        plot_with_trend(axs[i], train_data, test_data, title, ylim)
 
     plt.tight_layout()
     plt.show(block=False)
@@ -196,11 +216,22 @@ def convolution_neuron_network(
         best_model["DNN"] = deepcopy(parametres_DNN)
         
     # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train    : {train_loss[-1]:.5f}")
-    print(f"🧪💰 Coût final - Test     : {test_loss[-1]:.5f}")
-    print(f"🧠 Accuracy finale - Train : {train_accu[-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test  : {test_accu[-1]:.5f}")
-    print(f"🔎 Confidence score - Test : {test_conf[-1]:.5f}")
+    print(f"\n🚂💰 Coût final - Train          : {train_loss[-1]:.5f}")
+    print(f"🧪💰 Coût final - Test             : {test_loss[-1]:.5f}")
+    print(f"🧠📉 Derive Coût final - Train 🚆  : {train_lear[-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪   : {test_lear[-1]:.5f}")
+    print(f"🧠 Accuracy finale - Train          : {train_accu[-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test           : {test_accu[-1]:.5f}")
+    print(f"🔎 Confidence score - Test          : {test_conf[-1]:.5f}")
+
+    print("\nIndicateur underfiting/overfiting")
+    print(f"🧠📉 Derive Coût final - Train 🚆   : {train_lear[-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪    : {test_lear[-1]:.5f}")
+    print("Accuracy Ratio                         :", test_accu[-1] / train_accu[-1])
+    print("Indicateur d’overfitting               :", test_loss[-1] - train_loss[-1])
+
+    print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
+    print("")
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 

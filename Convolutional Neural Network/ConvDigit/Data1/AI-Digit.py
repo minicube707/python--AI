@@ -75,7 +75,7 @@ if mode in {1}:
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
     dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
                         "2" :(2, 2, 0, 1, "pooling", "max"), 
-                        "3" :(2, 1, 0, 128, "kernel", "tanh")
+                        "3" :(2, 1, 0, 128, "kernel", "relu")
     }
     
     # Structure DNN : (number of neurone, activations) 
@@ -188,8 +188,6 @@ if mode in {4}:
     display_kernel_and_biais(parametres_CNN)
     exit(0)
 
-if mode in {1, 2}:
-    print(f"Temps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
 #______________________________________________________________#
 
 C_CNN = len(dimensions_CNN.keys())

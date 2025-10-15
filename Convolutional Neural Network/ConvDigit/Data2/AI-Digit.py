@@ -38,14 +38,14 @@ input_shape = (1, 28, 28)
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:500], y[:500], input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 
 # ============================
 #         PARAMÈTRES
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 10
+nb_iteration = 3
 max_attempts = 1
 min_confidence_score = 0
 
@@ -77,12 +77,12 @@ if mode in {1}:
         "2": (2, 2, 0, 1, "pooling", "max"),
         "3": (3, 1, 0, 64, "kernel", "relu"),
         "4": (2, 2, 0, 1, "pooling", "max"),
-        "5": (3, 1, 0, 64, "kernel", "tanh")
+        "5": (3, 1, 0, 64, "kernel", "relu")
     }
 
     # Structure DNN : (hidden layer) 
     dimensions_DNN = {
-        "1": (64,  "relu"),
+        "1": (124, "relu"),
         "2": (64, "relu"),
         "3": (64, "relu"),
         "4": (0,  "relu")
@@ -104,8 +104,9 @@ else:
 
     # Chargement du modele existant
     model, model_info = select_model(module_dir, "model_logbook.csv")
-    parametres_CNN, parametres_DNN, dimensions_CNN = load_model(module_dir, model)
-    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape)
+    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
+    tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape, tuple_size_activation) 
         
 
 show_information_CNN(dimensions_CNN, input_shape)
@@ -221,7 +222,7 @@ for i in range(nb_test):
     
     # Prédiction des probabilités avec softmax
     _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
-    probabilities = softmax(activation_DNN["A" + str(C_DNN)].T).flatten()
+    probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 

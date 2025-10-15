@@ -51,7 +51,14 @@ def fill_information(name, date, training_time,
 
 def add_model(new_log, path, csv_file):
 
-    filename= path + "/" + csv_file
+    # Chemin complet du fichier CSV
+    filename = os.path.join(path, csv_file)
+    
+    # Créer le dossier si besoin
+    folder = os.path.dirname(filename)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
+        print(f"[INFO] Dossier créé : {os.path.abspath(folder)}")
 
     try:
         df = pd.read_csv(filename, sep=';')
