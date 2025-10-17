@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from .Preprocessing import handle_key
 
-def display_kernel(array_4d, type, stage, max_par_fig=12):
+def display_kernel(array_4d, type, stage, max_par_fig=24):
     if not isinstance(array_4d, np.ndarray) or array_4d.ndim != 4:
         raise ValueError("Entrée invalide : un array NumPy à 4 dimensions est requis (nb_kernels, nb_layers, height, width).")
 
@@ -90,12 +90,12 @@ def display_kernel_and_biais(parametres):
     for key, value in parametres.items():
         if isinstance(value, np.ndarray):
 
-
+            
             if key.startswith('K'):
                 sqrt = np.int8(np.sqrt(value.shape[2]))
                 K = value.reshape(value.shape[0], value.shape[1], sqrt, sqrt)
                 display_kernel(K, "Kernel", key[-1])
-
+        
             elif key.startswith('b'):
                 sqrt = np.int8(np.sqrt(value.shape[1]))
                 B = value.reshape(value.shape[0], sqrt, sqrt)
