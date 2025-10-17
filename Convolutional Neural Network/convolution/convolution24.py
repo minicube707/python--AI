@@ -736,7 +736,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
 
     #Add the result in the dictionary
     gradients["dK" + str(c)] = dK
-    gradients["db" + str(c)]  = np.sum(dZ, axis=(1, 2), keepdims=True)
+    gradients["db" + str(c)]  = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
             
     if c > 1:
         activation_fonction = parametres["f" + str(c)]
