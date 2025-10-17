@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from .Preprocessing import handle_key
 
-def display_kernel(array_4d, type, stage, max_par_fig=24):
+def display_kernel(array_4d, type, stage, max_par_fig=16):
     if not isinstance(array_4d, np.ndarray) or array_4d.ndim != 4:
         raise ValueError("Entrée invalide : un array NumPy à 4 dimensions est requis (nb_kernels, nb_layers, height, width).")
 
