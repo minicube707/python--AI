@@ -41,7 +41,7 @@ def fill_information(name, date, training_time,
 
     "Size_training_set": training_size,
     "Size_test_set": test_size,
-    "Size_validation": validation_size,
+    "Size_validation_set": validation_size,
 
     "Based_model": model_fine_tunning,
     "Number_fine_tunning": nb_fine_tunning, 
