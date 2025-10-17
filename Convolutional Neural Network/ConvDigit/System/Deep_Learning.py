@@ -155,7 +155,6 @@ def convolution_neuron_network(
     print(f"Initial confidence score: {vc}")
     print(f"Initial loss: {vl}")
     print("")
-    best_model = {"CNN": None, "DNN": None}
 
     # Démarrer le chronomètre
     start_time = time.time()
@@ -202,18 +201,12 @@ def convolution_neuron_network(
                     print(f"New confidence score: {vc}")
                     print(f"New loss: {vl}")
                     print("")
-                    best_model["CNN"] = deepcopy(parametres_CNN)
-                    best_model["DNN"] = deepcopy(parametres_DNN)
 
     # Arrêter le chronomètre
     end_time = time.time()
 
     # Calcul du temps en minutes
     elapsed_time_minutes = (end_time - start_time) / 60
-
-    if (best_model["CNN"] == None):
-        best_model["CNN"] = deepcopy(parametres_CNN)
-        best_model["DNN"] = deepcopy(parametres_DNN)
         
     # Résultats finaux
     print(f"\n🚂💰 Coût final - Train          : {train_loss[-1]:.5f}")
@@ -235,4 +228,4 @@ def convolution_neuron_network(
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 
-    return best_model["CNN"], best_model["DNN"], test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes
+    return deepcopy(parametres_CNN), deepcopy(parametres_DNN), test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes
