@@ -177,7 +177,7 @@ Activation of pooling
 numpy.array     A :                 the activation matrice
 
 =========OUTPUT=========
-numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
+numpy.array     Z   : the result of the activation matrice after pass throw the activation function
 """
 def pooling_activation(A):
     Z = max_pooling(A)
@@ -197,7 +197,7 @@ int             x_size :            the size in row of the activation matrice
 string          mode :              the type of activation function we use
 
 =========OUTPUT=========
-numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
+numpy.array     Z   : the result of the activation matrice after pass throw the activation function
 """
 def kernel_activation(X, K, b, x_size, mode, alpha):
 
@@ -229,7 +229,7 @@ int             stride :            how many pixel the kernel move
 int             padding :           how many pixel we add to the border of the activation
 
 =========OUTPUT=========
-numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
+numpy.array     Z   : the result of the activation matrice after pass throw the activation function
 """
 def function_activation(X, K, b, mode, type_layer, k_size, x_size, stride, padding, alpha):
 
@@ -257,12 +257,12 @@ Pass the input into the activation functions for the foreward propagation
 
 =========INPUT=========
 numpy.array     X :                             the features,input of the CNN
-dict            parametres :                    containt all the information for the kernel operation
+dict            parametres :                    contains all the information for the kernel operation
 tuple           list_size_activation:           tuple of all activation shape with number of activation and padding
 dict            dimensions :                    all the information on how is built the CNN
 
 =========OUTPUT=========
-dict            activation :     containt all the activation during the foreward propagation
+dict            activation :     contains all the activation during the foreward propagation
 """
 def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions, alpha):
 
@@ -299,16 +299,16 @@ def foward_propagation_CNN(X, parametres, tuple_size_activation, dimensions, alp
 """
 back_propagation_pooling:
 =========DESCRIPTION=========
-Evalaute the difference between the target and the resultat got for the layer pooling
+Evaluate the difference between the target and the result got for the layer pooling
 
 =========INPUT=========
-dict            activation :    containt all the activation during the foreward propagation
+dict            activation :    contains all the activation during the foreward propagation
 dict            dimensions :    all the information on how is built the CNN
-numpy.array     DZ :            the derivated of the previous activation (what should be the activation)
+numpy.array     DZ :            the derivative of the previous activation (what should be the activation)
 int             c  :            which stage we are in backpropagatioin 
 
 =========OUTPUT=========
-numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
+numpy.array     DZ :            the derivative of this activation for the next step of backpropagation
 """
 def back_propagation_pooling(activation, dimensions, dZ, c):
     
@@ -338,19 +338,19 @@ def back_propagation_pooling(activation, dimensions, dZ, c):
 """
 back_propagation_kernel:
 =========DESCRIPTION=========
-Evalaute the difference between the target and the resultat got for the layer kernel
+Evaluate the difference between the target and the result got for the layer kernel
 
 =========INPUT=========
-dict            activation :    containt all the activation during the foreward propagation
-dict            parametres :    containt all the information for the kernel operation
-dict            parametres :    containt all the information for the kernel operation
-dict            gradients  :    containt all the information for the update
-numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
+dict            activation :    contains all the activation during the foreward propagation
+dict            parametres :    contains all the parameter
+dict            dimensions :    contains all the information for the kernel operation
+dict            gradients  :    contains all the information for the update
+numpy.array     dZ :            the derivative of the previous activation (what should be the activation)
 int             c  :            which stage we are in backpropagatioin 
 
 =========OUTPUT=========
-dict            gradients :     containt all the gradient need for the update
-numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
+dict            gradients :     contains all the gradient need for the update
+numpy.array     DZ :            the derivative of this activation for the next step of backpropagation
 """
 def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha):
         
@@ -375,7 +375,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
 
     #Add the result in the dictionary
     gradients["dK" + str(c)] = dK
-    gradients["db" + str(c)] = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
+    gradients["db" + str(c)] = np.sum(dZ, axis=(1, 2), keepdims=True)
             
     if c > 1:
         activation_fonction = parametres["f" + str(c)]
@@ -401,17 +401,17 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
 """
 back_propagation:
 =========DESCRIPTION=========
-Evalaute the difference between the target and the resultat got
+Evaluate the difference between the target and the result got
 
 =========INPUT=========
-dict            activation :                    containt all the activation during the foreward propagation
-dict            parametres :                    containt all the information for the kernel operation
+dict            activation :                    contains all the activation during the foreward propagation
+dict            parametres :                    contains all the information for the kernel operation
 dict            dimensions :                    all the information on how is built the CNN
 numpy.array     y :                             the target, the objectif of the CNN
 tuple           list_size_activation:           tuple of all activation shape with number of activation and padding
 
 =========OUTPUT=========
-dict           gradients :     containt all the gradient need for the update
+dict           gradients :     contains all the gradient need for the update
 """
 def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_activation, alpha):
 
@@ -441,16 +441,16 @@ update:
 Update the kernel and the biais, to improve the accuracy of the CNN
 
 =========INPUT=========
-dict            gradients :         containt all the gradient need for the update
-dict            parametres :        containt all the information for the kernel operation
-dict            parametres_grad :   containt all the information for the update operation
+dict            gradients :         contains all the gradient need for the update
+dict            parametres :        contains all the information for the kernel operation
+dict            parametres_grad :   contains all the information for the update operation
 float           learning_rate :     constante to slow down the update of the parametre
 float           beta1 :             constante for Adam
 float           beta2 :             constante for Adam
 int             C :                 constante the number of stage in CNN
 
 =========OUTPUT=========
-dict            parametres :        containt all the information for the kernel operation
+dict            parametres :        contains all the information for the kernel operation
 """
 def update_CNN(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
         
