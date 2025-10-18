@@ -38,17 +38,17 @@ input_shape = (1, 28, 28)
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:10000], y[:10000], input_shape)
 
 # ============================
 #         PARAMÈTRES
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 3
+nb_iteration = 10
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 500
+validation_size = 100
 
 # Paramètres d'apprentissage
 # CNN
@@ -112,7 +112,8 @@ else:
     model, model_info = select_model(module_dir, "model_logbook.csv")
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
     tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
-    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape, tuple_size_activation) 
+    _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape, tuple_size_activation)
+    alpha = model_info["alpha"]
         
 
 show_information_CNN(dimensions_CNN, input_shape)
@@ -189,7 +190,11 @@ if mode in {1, 2}:
 
 if mode in {4}:
     show_all_info_model(model_info)
-    display_kernel_and_biais(parametres_CNN)
+    display_kernel_and_biais(X, y, 
+        parametres_CNN, parametres_DNN,
+        dimensions_CNN, dimensions_DNN,
+        tuple_size_activation, alpha)
+    
     exit(0)
 
 if mode in {1, 2}:

@@ -11,7 +11,7 @@ def set_mode():
         try:
             int_answer = int(str_answer)
         except:
-            print("Veuilliez repondre que par 1, 2 ou 3")
+            print("Veuilliez repondre que par 1, 2, 3 ou 4")
             continue
         if (int_answer == 0):
             print("Exit")
@@ -34,4 +34,4 @@ def set_mode():
             return(4)
         
         else:
-            print("Veuilliez repondre que par 1, 2 ou 3")
+            print("Veuilliez repondre que par 1, 2, 3 ou 4")

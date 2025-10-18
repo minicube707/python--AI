@@ -3,6 +3,111 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .Preprocessing import handle_key
+from .Propagation import forward_propagation
+from .Convolution_Neuron_Network import deshape
+
+def display_comparaison_layer(A, Z=None, max_par_fig=12):
+    """
+    Affiche chaque couche du tableau 3D A, et optionnellement Z si fourni,
+    côte à côte. S'adapte si Z est None.
+    """
+    if A.ndim != 3:
+        raise ValueError("A doit être un array 3D (D, H, W)")
+
+    if Z is not None:
+        if Z.shape != A.shape:
+            raise ValueError("A et Z doivent avoir la même forme si Z est fourni")
+        mode_paire = True
+    else:
+        mode_paire = False
+
+    total_couches = A.shape[0]
+
+    for start in range(0, total_couches, max_par_fig):
+        end = min(start + max_par_fig, total_couches)
+        n = end - start
+
+        cols = min(4, n)
+        rows = int(np.ceil(n / cols))
+        total_subplots = cols * rows
+
+        fig_cols = cols * 2 if mode_paire else cols
+        fig, axes = plt.subplots(rows, fig_cols, figsize=(4 * cols, 3 * rows))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+        
+        # Assurer que axes est toujours 2D
+        if rows == 1:
+            axes = np.expand_dims(axes, 0)
+        if fig_cols == 1:
+            axes = np.expand_dims(axes, axis=1)
+
+        for i in range(n):
+            layer_idx = start + i
+            row = i // cols
+            col = i % cols
+
+            # Affichage de A
+            ax_a = axes[row, col * 2] if mode_paire else axes[row, col]
+            im_a = ax_a.imshow(A[layer_idx], cmap='gray')
+            ax_a.set_title(f"A - Couche {layer_idx}")
+            ax_a.axis('off')
+            fig.colorbar(im_a, ax=ax_a, fraction=0.046, pad=0.04)
+
+            # Affichage de Z si présent
+            if mode_paire:
+                ax_z = axes[row, col * 2 + 1]
+                im_z = ax_z.imshow(Z[layer_idx], cmap='gray')
+                ax_z.set_title(f"Z - Couche {layer_idx}")
+                ax_z.axis('off')
+                fig.colorbar(im_z, ax=ax_z, fraction=0.046, pad=0.04)
+
+        # Masquer les axes inutilisés
+        for j in range(n, total_subplots):
+            row = j // cols
+            col = j % cols
+            if mode_paire:
+                axes[row, col * 2].axis('off')
+                axes[row, col * 2 + 1].axis('off')
+            else:
+                axes[row, col].axis('off')
+
+        plt.suptitle(f'Couches {start} à {end - 1}', fontsize=14)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.show()
+
+
+
+def display_activation(X, y, 
+        parametres_CNN, parametres_DNN,
+        dimensions_CNN, dimensions_DNN,
+        tuple_size_activation, alpha):
+
+    print("")
+    number_wanted = int(input("Which number do want ?\n"))
+
+    # Trouver tous les index correspondant au chiffre voulu
+    indices = [i for i, label in enumerate(y) if label == number_wanted]
+
+    # Choisir un index aléatoire parmi ceux-là
+    index_choisi = np.random.choice(indices)
+
+    # Afficher l'image
+    plt.imshow(X[index_choisi].reshape(28, 28), cmap='gray')
+    plt.title(f"Chiffre: {y[index_choisi]}")
+    plt.axis('off')
+    plt.show()
+
+    C_CNN = len(dimensions_CNN.keys())
+    C_DNN = len(parametres_DNN) // 2
+
+    activations_CNN, _ = forward_propagation(
+        X[index_choisi], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+
+    for i in range(1, len(activations_CNN)-1):        
+        display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i)][0], dimensions_CNN[str(i)][1]),
+                                   activations_CNN["Z" +str(i)])
+
+
 
 def display_kernel(array_4d, type, stage, max_par_fig=16):
     if not isinstance(array_4d, np.ndarray) or array_4d.ndim != 4:
@@ -33,6 +138,7 @@ def display_kernel(array_4d, type, stage, max_par_fig=16):
             plt.suptitle(f'Stage {stage} | Kernel {kernel_idx} (Layers {start} à {end - 1})', fontsize=14)
             plt.tight_layout(rect=[0, 0, 1, 0.95])
             plt.show()
+
 
 """
 display_layer:
@@ -86,83 +192,65 @@ dict    parametres :    containt all the information for the pooling operation
 =========OUTPUT=========
 void
 """
-def display_kernel_and_biais(parametres):
-    for key, value in parametres.items():
+def display_kernel_and_biais(X, y, 
+        parametres_CNN, parametres_DNN,
+        dimensions_CNN, dimensions_DNN,
+        tuple_size_activation, alpha):
+
+    def set_mode():
+        while(1):
+            print("\n0: Exit")
+            print("1: Activation")
+            print("2: Kernel")
+            print("3: Biais")
+
+            str_answer = input("Qu'est ce que vous voulez faire ?\n")
+            try:
+                int_answer = int(str_answer)
+            except:
+                print("Veuilliez repondre que par 1, 2 ou 3")
+                continue
+            if (int_answer == 0):
+                print("Exit")
+                exit(0)
+
+            if (int_answer == 1):
+                print("Vous voulez inspecter les activations")
+                return(1)
+            
+            elif (int_answer == 2):
+                print("Vous voulez inspecter les kernel")
+                return(2)
+            
+            elif (int_answer == 3):
+                print("Vous voulez inspecter les biais")
+                return(3)
+    
+            else:
+                print("Veuilliez repondre que par 1, 2 ou 3")
+
+    mode = set_mode()
+    if mode == 0:
+        return
+    
+    if mode == 1:
+        display_activation(X, y, 
+        parametres_CNN, parametres_DNN,
+        dimensions_CNN, dimensions_DNN,
+        tuple_size_activation, alpha)
+        return
+    
+    for key, value in parametres_CNN.items():
         if isinstance(value, np.ndarray):
 
             
-            if key.startswith('K'):
+            if (key.startswith('K') and mode == 2 ):
                 sqrt = np.int8(np.sqrt(value.shape[2]))
                 K = value.reshape(value.shape[0], value.shape[1], sqrt, sqrt)
                 display_kernel(K, "Kernel", key[-1])
         
-            elif key.startswith('b'):
+            elif (key.startswith('b') and mode == 3 ):
                 sqrt = np.int8(np.sqrt(value.shape[1]))
                 B = value.reshape(value.shape[0], sqrt, sqrt)
                 display_biais(B, "Biais", key[-1])
 
-
-"""
-display_comparaison_layer:
-=========DESCRIPTION=========
-Function that display the kernels & biais
-
-=========INPUT=========
-numpy.array     y :             the target
-numpy.array     y_pred :        the prediction of the model
-
-=========OUTPUT=========
-void
-"""
-def display_comparaison_layer(y, y_pred, max_par_fig=12):
-    """
-    Affiche chaque couche de deux tableaux 3D (y et y_pred) côte à côte,
-    répartis sur plusieurs figures si nécessaire (max_par_fig par figure).
-    """
-
-    if y.shape != y_pred.shape or y.ndim != 3:
-        raise ValueError("y et y_pred doivent être des arrays 3D de même forme (D, H, W)")
-
-    total_couches = y.shape[0]
-
-    for start in range(0, total_couches, max_par_fig):
-        end = min(start + max_par_fig, total_couches)
-        n = end - start
-
-        cols = min(4, n)  # 4 paires par ligne
-        rows = np.int8(np.ceil(n / cols))
-
-        fig, axes = plt.subplots(rows, cols * 2, figsize=(4 * cols, 3 * rows))
-        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
-
-        # Assurer que axes est 2D même pour une seule ligne
-        if rows == 1:
-            axes = np.expand_dims(axes, 0)
-
-        for i in range(n):
-            layer_idx = start + i
-            row = i // cols
-            col = i % cols
-
-            ax_y = axes[row, col * 2]
-            ax_pred = axes[row, col * 2 + 1]
-
-            ax_y.imshow(y[layer_idx], cmap='gray')
-            ax_y.set_title(f'Y - Couche {layer_idx}')
-            ax_y.axis('off')
-
-            ax_pred.imshow(y_pred[layer_idx], cmap='gray')
-            ax_pred.set_title(f'Prediction - Couche {layer_idx}')
-            ax_pred.axis('off')
-            ax_pred.colorbar()
-
-        # Masquer les axes inutilisés
-        total_axes = rows * cols * 2
-        for j in range(n * 2, total_axes):
-            row = j // (cols * 2)
-            col = j % (cols * 2)
-            axes[row, col].axis('off')
-
-        plt.suptitle(f'Couches {start} à {end - 1}', fontsize=14)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-        plt.show()
