@@ -692,9 +692,7 @@ def back_propagation_pooling(activation, dimensions, dZ, c):
     
     k_size = dimensions[str(c)][0]
     stride = dimensions[str(c)][1]
-
-    if k_size != None:
-        dZ = deshape(result, k_size, stride)
+    dZ = deshape(result, k_size, stride)
     
     return dZ
 
@@ -1166,7 +1164,7 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
     tuple_size_activation = create_tuple_size((1, 28, 28), dimensions_CNN)
     activations_CNN = foward_propagation(X, parametres_CNN, tuple_size_activation, dimensions_CNN, alpha)
 
-    for i in range(1, len(dimensions_CNN)+1):
+    for i in range(1, len(dimensions_CNN)):
         display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i+1)][0],  dimensions_CNN[str(i+1)][1]),
                                    activations_CNN["Z" +str(i)])
 

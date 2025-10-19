@@ -1033,7 +1033,7 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
 
     activations_CNN = foward_propagation(X, parametres_CNN, dimensions_CNN, alpha)
 
-    for i in range(1, len(dimensions_CNN)+1):     
+    for i in range(1, len(dimensions_CNN)):     
         display_comparaison_layer(activations_CNN["A" +str(i)], activations_CNN["Z" +str(i)])
         
 
