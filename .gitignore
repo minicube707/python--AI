@@ -21,3 +21,5 @@ env/
 
 # Ignorer les fichiers Jupyter Notebook checkpoints (si tu utilises des .ipynb)
 .ipynb_checkpoints/
+Convolutional Neural Network/ConvDigit/Data1/__pycache__/Initialisation_CNN.cpython-310.pyc
+*.pyc
