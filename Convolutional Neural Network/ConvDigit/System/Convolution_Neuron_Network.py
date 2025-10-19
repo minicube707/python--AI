@@ -512,7 +512,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
 """
 deshape:
 =========DESCRIPTION=========
-#Is the inverse function of reshape. Allow to pass ABxC to AxnNxN
+#Is the inverse function of reshape. Allow to pass ABxC to AxNxN
 
 =========INPUT=========
 numpy.array     X :             the activation matrice
@@ -522,21 +522,52 @@ int             stride :        how many pixel the kernel move
 =========OUTPUT=========
 numpy.array      :             the activation matrice
 """
+
+
 def deshape(X, k_size_sqrt, stride):
+    """
+    Reconstitue une matrice A à partir de blocs X (chaque ligne = bloc aplati)
+    k_size_sqrt : taille racine du bloc (par exemple 2 pour un bloc 2x2)
+    stride : entier, nombre de pas entre chaque bloc (en lignes et colonnes)
+    """
 
-    input_size = int(np.sqrt(X.shape[1]*X.shape[2]))
-    new_X = np.array([])
-    
-    step1 = input_size // stride
-    step2 = k_size_sqrt
+    def predire_taille_A(B, h, w, stride):
+        nb_layer, n_blocks, elements_par_bloc = B.shape
 
-    for i in range(0, X.shape[0]):
-        for j in range(0, X.shape[1], step1):
-            for k in range(0, X.shape[2], step2):
-                new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
+        # Essayer de deviner la grille de blocs (en supposant qu'elle est rectangulaire)
+        n_rows_blocks = (B.shape[1]) // ((B.shape[1])**0.5)
+        n_rows_blocks = int(round(n_rows_blocks))
+        n_cols_blocks = B.shape[1] // n_rows_blocks
 
-    new_X = new_X.reshape((X.shape[0], input_size , input_size))
-    return new_X
+        height_A = (n_rows_blocks - 1) * stride + h
+        width_A = (n_cols_blocks - 1) * stride + w
+
+        return (nb_layer, height_A, width_A)
+
+    h = w = k_size_sqrt  # taille du bloc
+
+    # Taille de la matrice à reconstruire
+    A_shape = predire_taille_A(X, h, w, stride)
+    A_rec = np.zeros(A_shape, dtype=float)
+    counts = np.zeros_like(A_rec)
+
+    for l in range(A_shape[0]):  # Pour chaque couche
+        k = 0  # Important : réinitialiser k pour chaque couche
+        for i in range(0, A_shape[1] - h + 1, stride):
+            for j in range(0, A_shape[2] - w + 1, stride):
+                if k >= X.shape[1]:  # Vérifie le nombre de blocs par couche
+                    break
+                block = X[l, k].reshape(h, w)
+                A_rec[l, i:i+h, j:j+w] += block
+                counts[l, i:i+h, j:j+w] += 1
+                k += 1
+
+    # Moyenne des valeurs partagées, éviter division par zéro
+    with np.errstate(divide='ignore', invalid='ignore'):
+        A_rec = np.divide(A_rec, counts, where=counts != 0)
+        A_rec[counts == 0] = 0  # ou np.nan si tu veux marquer les trous
+
+    return A_rec
 
 
 
