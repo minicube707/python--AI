@@ -329,8 +329,9 @@ def back_propagation_pooling(activation, dimensions, dZ, c):
     #Use a mask, everywhere is 0, exept where the max value while be take
     result[batch_indices, row_indices, max_indices] = max_dZ
 
-    # Affichage
-    dZ = deshape(result, dimensions[str(c)][0], dimensions[str(c)][1])
+    k_size = dimensions[str(c)][0]
+    stride = dimensions[str(c)][1]
+    dZ = deshape(result, k_size, stride)
 
     return dZ
 
@@ -389,7 +390,6 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         elif activation_fonction == "tanh":
             dA = dx_tanh(activation["A" + str(c)])
 
-        dA = deshape(dA, dim[0], dim[1])
         dZ *= dA
 
         # Apply convolution

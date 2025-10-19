@@ -103,7 +103,7 @@ def display_activation(X, y,
     activations_CNN, _ = forward_propagation(
         X[index_choisi], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
 
-    for i in range(1, len(activations_CNN)-1):
+    for i in range(1, len(dimensions_CNN)-1):
             display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i+1)][0], dimensions_CNN[str(i+1)][1]),
                                     activations_CNN["Z" +str(i)])
 

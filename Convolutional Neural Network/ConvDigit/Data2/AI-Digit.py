@@ -38,17 +38,17 @@ input_shape = (1, 28, 28)
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:10000], y[:10000], input_shape)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape)
 
 # ============================
 #         PARAMÈTRES
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 10
+nb_iteration = 5
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 100
+validation_size = 80
 
 # Paramètres d'apprentissage
 # CNN
@@ -61,8 +61,7 @@ alpha = 0.001
 learning_rate_DNN = 0.001
 
 if (validation_size > len(y_test)):
-    print("Validation set two large")
-    exit(1)
+    validation_size = len(y_test)
 
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
