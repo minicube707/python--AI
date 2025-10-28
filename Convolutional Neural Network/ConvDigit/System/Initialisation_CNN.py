@@ -93,7 +93,7 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
         # Default to small random values
         K = np.random.randn(*shape).astype(np.float32) * 0.01
 
-    b_shape = (nb_kernel, o_size**2, 1)
+    b_shape = (nb_kernel, np.int64(o_size)**2, 1)
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
 
     parametres["K" + str(i)] = K

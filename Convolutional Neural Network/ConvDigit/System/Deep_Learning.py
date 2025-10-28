@@ -172,7 +172,7 @@ def convolution_neuron_network(
             )
 
             k += 1
-            if (k % 100 == 0):
+            if (k % 1000 == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)

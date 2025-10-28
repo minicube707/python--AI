@@ -506,7 +506,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
                 new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = calcul_output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape(X.shape[0], (o_size)**2, k_size)
+    return new_X.reshape(X.shape[0], np.int64(o_size)**2, k_size)
 
 
 """

@@ -1,1 +1,0 @@
-name;date;nb_epoch;training_time_(min);accuracy;confidence_score;kernel_size;number_kernel;learning_rate_CNN;learning_rate_DNN;beta1;beta2;Size_training_set;Size_test_set;Based_model;Number_fine_tunning
