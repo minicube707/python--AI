@@ -9,7 +9,8 @@ def fill_information(name, date, training_time,
                     cost_loss, accuracy, confidence_score, 
                     lr_DNN, nb_neurons, activation_function_DNN,
                     training_size, test_size, 
-                    model_fine_tunning, nb_fine_tunning, validation_size):
+                    model_fine_tunning, nb_fine_tunning, validation_size,
+                    validation_frequency, ratio_test):
 
     new_log = {}
     
@@ -33,7 +34,9 @@ def fill_information(name, date, training_time,
 
     "Size_training_set": training_size,
     "Size_test_set": test_size,
+    "Ratio_train/test":ratio_test,
     "Size_validation": validation_size,
+    "Validation_frequency":validation_frequency,
 
     "Based_model": model_fine_tunning,
     "Number_fine_tunning": nb_fine_tunning, 

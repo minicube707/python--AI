@@ -1,13 +1,16 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
 
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.ensemble import IsolationForest
 
 from .Sklearn_tools import train_test_split, Label_binarizer
 
-def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, alpha, 
+def show_information_setting(nb_iteration, max_attempts, min_confidence_score, alpha, 
                              learning_rate_DNN, validation_size, ratio_test):
 
     print("\n============================")
@@ -52,7 +55,7 @@ def set_mode():
             return(1)
         
         elif (int_answer == 2):
-            print("You use CNN Data")
+            print("You use DNN Data")
             return(2)
         
         else:
@@ -67,6 +70,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     
     data_mode = set_mode()
 
+    # --- MODE 1 : Affichage d’images ---
     if (data_mode == 1):
         classes = np.unique(y)
         for cls in classes:
@@ -85,6 +89,24 @@ def preprocessing(X, y, input_shape, test_size=0.1):
             plt.tight_layout()
             plt.show() 
 
+    # --- MODE 2 : Visualisation graphique ---
+    if (data_mode == 2):
+
+        df = pd.DataFrame(X, columns=[
+            "sepal length (cm)", "sepal width (cm)",
+            "petal length (cm)", "petal width (cm)"
+        ])
+        df["species"] = y  # ajoute les étiquettes d’espèces
+
+        # Style esthétique
+        sns.set(style="whitegrid", context="notebook", palette="muted")
+
+        # --- 1. Pairplot ---
+        sns.pairplot(df, hue="species", diag_kind="kde", height=2.2)
+        fig = plt.figure(figsize=(8, 6))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+        fig.suptitle("Visualisation du dataset Iris 🌸", y=1.02, fontsize=16)
+        plt.show()
 
     #______________________________________________________________#
     #Remove the bad data

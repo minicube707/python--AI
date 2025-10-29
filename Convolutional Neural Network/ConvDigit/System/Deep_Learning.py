@@ -118,7 +118,7 @@ def convolution_neuron_network(
         dimensions_CNN, dimension_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size
+        max_attempts, min_confidence_score, validation_size, validation_frequency
     ):
 
     C_CNN = len(dimensions_CNN)
@@ -172,7 +172,7 @@ def convolution_neuron_network(
             )
 
             k += 1
-            if (k % 1000 == 0):
+            if (k % validation_frequency == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)

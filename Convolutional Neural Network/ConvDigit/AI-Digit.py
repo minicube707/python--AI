@@ -35,13 +35,15 @@ module_dir = os.path.join(module_dir, dir_name)
 # Forme d'entrée (canaux, hauteur, largeur)
 if X.ndim == 3:
     _, side, _ = X.shape
-    input_shape = X.shape
+    input_shape = (1, X.shape[1],X.shape[2] )
+    print("Input shappe: ", input_shape)
     X = X.reshape(X.shape[0], -1)
 
 elif X.ndim == 2:
     n_samples, n_features = X.shape
     side = int(np.sqrt(n_features))
     input_shape = (1, side, side)
+    print("Input shappe: ", input_shape)
 
 else:
     raise ValueError(f"Unsupported input dimension: {X.ndim}")
@@ -51,12 +53,12 @@ else:
 #         PARAMÈTRES
 # ============================
 
-nb_iteration = 0
+nb_iteration = 5
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 50
-ratio_test = 0.1
-
+validation_size = 500
+ratio_test = 0.2
+validation_frequency = 100
 
 # Paramètres d'apprentissage
 # CNN
@@ -72,14 +74,14 @@ learning_rate_DNN = 0.001
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, ratio_test)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape, ratio_test)
 
 if (validation_size > len(y_test)):
     validation_size = len(y_test)
 
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
-                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size)
+                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size, ratio_test)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -92,16 +94,20 @@ if mode in {1}:
     # ============================
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
-    dimensions_CNN = {  "1" :(3, 1, 0, 64, "kernel", "relu"),
-                        "2" :(2, 2, 0, 1, "pooling", "max"), 
-                        "3" :(2, 1, 0, 128, "kernel", "relu")
+    dimensions_CNN = {
+        "1": (5, 1, 0, 32, "kernel", "relu"),
+        "2": (2, 2, 0, 1, "pooling", "max"),
+        "3": (3, 1, 0, 64, "kernel", "relu"),
+        "4": (2, 2, 0, 1, "pooling", "max"),
+        "5": (3, 1, 0, 64, "kernel", "relu")
     }
     
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (64, "relu"),
+        "1": (124, "relu"),
         "2": (64, "relu"),
-        "3": (0,  "relu")
+        "3": (64, "relu"),
+        "4": (0,  "relu")
     }
 
     # Mode de padding : 'auto' = calcul automatique
@@ -146,7 +152,7 @@ if mode in {1, 2}:
         dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size
+        max_attempts, min_confidence_score, validation_size, validation_frequency
     )
 
     # ============================
@@ -197,7 +203,8 @@ if mode in {1, 2}:
                     learning_rate_CNN, str_size_CNN, str_nb_kernel_CNN, str_function_CNN,
                     learning_rate_DNN, str_size_DNN, str_function_DNN,
                     len(y_train), len(y_test), 
-                    baseline_mode, nb_fine_tunning, validation_size)
+                    baseline_mode, nb_fine_tunning, validation_size,
+                    validation_frequency, ratio_test)
     
     add_model(new_log, os.path.join(module_dir, "LogBook"), "model_logbook.csv")
 

@@ -48,11 +48,12 @@ else:
 #         PARAMÈTRES
 # ============================
 
-nb_iteration = 10
-max_attempts = 0
+nb_iteration = 20
+max_attempts = 1
 min_confidence_score = 0
-validation_size = 500
-ratio_test = 0.1
+validation_size = 1000
+ratio_test = 0.2
+validation_frequency = 10_000
 
 # Paramètres d'apprentissage
 
@@ -117,7 +118,7 @@ if mode in {1, 2}:
         X_train, y_train, X_test, y_test,
         nb_iteration,parametres_DNN, dimensions_DNN,
         alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size
+        max_attempts, min_confidence_score, validation_size, validation_frequency
     )
 
     # ============================
@@ -157,7 +158,8 @@ if mode in {1, 2}:
                     test_loss, test_accu, test_conf, 
                     learning_rate_DNN, str_size_DNN, str_function_DNN,
                     len(y_train), len(y_test), 
-                    baseline_mode, nb_fine_tunning, validation_size)
+                    baseline_mode, nb_fine_tunning, validation_size,
+                    validation_frequency, ratio_test)
     
     add_model(new_log, os.path.join(module_dir, "LogBook"), "model_logbook.csv")
 
