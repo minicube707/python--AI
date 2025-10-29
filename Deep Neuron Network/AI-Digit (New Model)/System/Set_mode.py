@@ -6,7 +6,6 @@ def set_mode():
         print("1: Train a new model")
         print("2: Fine-tuning a train model")
         print("3: Test a model")
-        print("4: Examine a model")
         str_answer = input("Qu'est ce que vous voulez faire ?\n")
         try:
             int_answer = int(str_answer)
@@ -28,10 +27,6 @@ def set_mode():
         elif (int_answer == 3):
             print("Vous avez choisi le mode test")
             return(3)
-        
-        elif (int_answer == 4):
-            print("Vous avez choisi le mode test")
-            return(4)
         
         else:
             print("Veuilliez repondre que par 1, 2 ou 3")
