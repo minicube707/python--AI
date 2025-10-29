@@ -62,16 +62,32 @@ def create_other_class(X, n_other_ratio=0.1):
     return X_other, y_other
 
 
-def visualize_samples(X, y, n=10):
-    """Affiche quelques images pour vérification"""
-    plt.figure(figsize=(10, 3))
-    for i in range(n):
-        plt.subplot(2, n // 2, i + 1)
-        plt.imshow(X[i], cmap='gray')
-        plt.title(int(y[i]))
-        plt.axis('off')
-    plt.tight_layout()
-    plt.show()
+def handle_key(event):
+    if event.key == ' ':
+        plt.close(event.canvas.figure)  # Ferme la fenêtre associée
+
+def visualize_samples(X, y, n=20):
+    """Affiche n images de chaque classe"""
+    
+    classes = np.unique(y)
+    for cls in classes:
+        # Crée une figure pour chaque classe
+        fig = plt.figure(figsize=(16, 8))
+        fig.suptitle(f"Classe {cls}", fontsize=16)
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+
+        # Récupère les indices des images correspondant à cette classe
+        indices = np.where(y == cls)[0][:n]
+        
+        # Affiche les n premières images
+        for i, idx in enumerate(indices):
+            plt.subplot(2, n // 2, i + 1)
+            plt.imshow(X[idx], cmap='gray')
+            plt.title(f"{int(y[idx])}")
+            plt.axis('off')
+        
+        plt.tight_layout()
+        plt.show()
 
 
 # ==============================
@@ -96,21 +112,23 @@ def augment_mnist(dataset_path, selected_file, save_path=None):
     X_noisy = add_noise(X_shifted, noise_level=0.2)
 
     # --- Création de la classe "autre" ---
-    X_other, y_other = create_other_class(X_noisy, n_other_ratio=0.1)
+    #X_other, y_other = create_other_class(X_noisy, n_other_ratio=0.1)
 
     # --- Fusion finale ---
-    X_final = np.concatenate([X_noisy, X_other], axis=0)
-    y_final = np.concatenate([y_shifted, y_other], axis=0)
+    #X_final = np.concatenate([X_noisy, X_other], axis=0)
+    #y_final = np.concatenate([y_shifted, y_other], axis=0)
+    X_final = X_noisy
+    y_final = y_shifted
 
     print(f"[INFO] Dataset final : {X_final.shape}, classes uniques : {np.unique(y_final)}")
+
+    # --- Visualisation rapide ---
+    visualize_samples(X_final, y_final)
 
     # --- Sauvegarde optionnelle ---
     if save_path is not None:
         np.savez_compressed(save_path, data=X_final, target=y_final)
         print(f"[INFO] Dataset sauvegardé dans {save_path}")
-
-    # --- Visualisation rapide ---
-    visualize_samples(X_final, y_final)
 
     return X_final, y_final
 
@@ -129,3 +147,4 @@ if __name__ == "__main__":
     print("Exists?", os.path.exists(full_path))
 
     X_final, y_final = augment_mnist(dataset_path, selected_file, save_path)
+    print(np.unique(y_final))
