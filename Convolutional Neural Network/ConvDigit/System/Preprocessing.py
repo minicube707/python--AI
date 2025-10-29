@@ -41,17 +41,25 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     print("X:",X.shape)
     print("Y:",y.shape)
 
-    #Affichage des 15 premières images
-    fig = plt.figure(figsize=(16, 8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Dataset")
-    for i in range(1,16):
-        plt.subplot(4,5, i)
-        plt.imshow(X.reshape((X.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(y[i])
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show()  
+    """
+    Affiche les 15 premières images de chaque classe du dataset.
+    """
+    classes = np.unique(y)
+    for cls in classes:
+        fig = plt.figure(figsize=(16, 8))
+        fig.suptitle(f"Classe {cls}", fontsize=16)
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+        
+        # Récupère les indices des images correspondant à la classe cls
+        indices = np.where(y == cls)[0][:15]  # 15 premières images
+        for i, idx in enumerate(indices):
+            plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
+            plt.imshow(X[idx].reshape(input_shape[1], input_shape[2]), cmap="gray")
+            plt.title(f"{y[idx]}")
+            plt.axis("off")
+
+        plt.tight_layout()
+        plt.show()
 
     #______________________________________________________________#
     #Remove the bad data

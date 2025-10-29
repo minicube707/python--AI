@@ -5,8 +5,8 @@ from datetime import datetime
 
 from .Manage_logbook import show_info_main
 
-def load_model(path, dir_name, model_name):
-    model_dir = os.path.join(path, dir_name, "Model")
+def load_model(path, model_name):
+    model_dir = os.path.join(path, "Model")
     model_path = os.path.join(model_dir, model_name)
     
     if not os.path.exists(model_path):
@@ -29,9 +29,9 @@ def load_model(path, dir_name, model_name):
 
 
 
-def save_model(path, dir_name, model_name, data):
+def save_model(path, model_name, data):
 
-    model_dir = os.path.join(path, dir_name, "Model")
+    model_path = os.path.join(path, "Model")
     
     # Créer le dossier s'il n'existe pas
     if not os.path.exists(model_path):
@@ -65,10 +65,10 @@ def transform_name(filename: str) -> str:
         new_name = new_name[:-4]
     return new_name
 
-def select_model(path, dir_name, csv_file):
+def select_model(path, csv_file):
 
     # Étape 2 : Lire le fichier CSV dans le dossier logbook
-    logbook_path = os.path.join(path, dir_name, csv_file)
+    logbook_path = os.path.join(path, csv_file)
     
     if not os.path.exists(logbook_path):
         chemin_absolu = os.path.abspath(logbook_path)
@@ -80,7 +80,7 @@ def select_model(path, dir_name, csv_file):
 
     # Étape 3 : Afficher les lignes disponibles dans le logbook
     print("\nModèles disponibles dans le logbook:")
-    show_info_main(dir_name, csv_file)
+    show_info_main(path, csv_file)
 
     # Étape 4 : Demander à l'utilisateur de choisir un modèle
     index = 0
@@ -106,7 +106,7 @@ def select_model(path, dir_name, csv_file):
     print(f"\nModèle sélectionné : {selected_model_name}")
 
     # Étape 6 : Chercher le fichier dans le dossier Model/
-    model_dir = os.path.join(path, dir_name, "Model")
+    model_dir = os.path.join(path, "Model")
 
     if not os.path.exists(model_dir):
         chemin_absolu = os.path.abspath(model_dir)

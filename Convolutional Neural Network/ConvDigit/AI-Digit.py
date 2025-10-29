@@ -7,15 +7,18 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+#System
+from System.Set_mode import set_mode
+from System.Manage_data import manage_data
+from System.Manage_file import file_management, select_model, load_model, save_model, transform_name
+from System.Manage_logbook import fill_information, add_model, show_all_info_model
+
+#IA
 from System.Preprocessing import preprocessing, handle_key, show_information_setting
 from System.Mathematical_function import softmax
 from System.Deep_Learning import convolution_neuron_network
 from System.Initialisation_CNN import initialisation_AI, initialisation_affectation
 from System.Propagation import forward_propagation
-from System.Set_mode import set_mode
-from System.Manage_data import manage_data
-from System.Manage_file import file_management, select_model, load_model, save_model, transform_name
-from System.Manage_logbook import fill_information, add_model, show_all_info_model
 from System.Display_parametre_CNN import display_kernel_and_biais
 from System.Convolution_Neuron_Network import show_information_CNN, create_tuple_size
 from System.Deep_Neuron_Network import show_information_DNN
@@ -27,9 +30,11 @@ os.chdir(module_dir)
 #Data_Digit
 X, y, data_name = manage_data()
 dir_name = transform_name(data_name)
+module_dir = os.path.join(module_dir, dir_name)
 
 # Forme d'entrée (canaux, hauteur, largeur)
 if X.ndim == 3:
+    _, side, _ = X.shape
     input_shape = X.shape
     X = X.reshape(X.shape[0], -1)
 
@@ -52,7 +57,7 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
 # ============================
 
 # Nombre d'itérations
-nb_iteration = 1
+nb_iteration = 0
 max_attempts = 1
 min_confidence_score = 0
 validation_size = 50
@@ -68,8 +73,8 @@ alpha = 0.001
 learning_rate_DNN = 0.001
 
 if (validation_size > len(y_test)):
-    print("Validation set two large")
-    exit(1)
+    validation_size = len(y_test)
+
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
                          learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size)
@@ -113,8 +118,8 @@ else:
     # ============================
 
     # Chargement du modele existant
-    model, model_info = select_model(module_dir, dir_name, "LogBook/model_logbook.csv")
-    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, dir_name, model)
+    model, model_info = select_model(module_dir, "LogBook/model_logbook.csv")
+    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
     tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
     _, parametres_grad = initialisation_affectation(dimensions_CNN, input_shape, tuple_size_activation)    
 
@@ -149,7 +154,7 @@ if mode in {1, 2}:
     # Sauvegarde du meilleur modèle entraîné ou chargé
     name_model = file_management(test_accu, test_conf)
     print(name_model)
-    save_model(module_dir, dir_name, name_model, (parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN))
+    save_model(module_dir, name_model, (parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN))
 
     date = datetime.today()
     date = date.strftime('%d/%m/%Y')
@@ -192,12 +197,15 @@ if mode in {1, 2}:
                     len(y_train), len(y_test), 
                     baseline_mode, nb_fine_tunning, validation_size)
     
-    add_model(new_log, "LogBook", "model_logbook.csv")
+    add_model(new_log, os.path.join(module_dir, "LogBook"), "model_logbook.csv")
 
 if mode in {4}:
     print("")
     show_all_info_model(model_info)
-    display_kernel_and_biais(parametres_CNN)
+    display_kernel_and_biais(X, y, 
+        parametres_CNN, parametres_DNN,
+        dimensions_CNN, dimensions_DNN,
+        tuple_size_activation, alpha)
     exit(0)
 
 #______________________________________________________________#
@@ -219,7 +227,7 @@ for i in range(1,16):
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow(X_test[i].reshape(8, 8), cmap="gray")
+    plt.imshow(X_test[i].reshape(side, side), cmap="gray")
     plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
@@ -228,8 +236,23 @@ plt.show()
 nb_test = 10
 print("")
 for i in range(nb_test):
-    index = int(input(f"Please enter a number between 1 and {X_test.shape[0]}: "))
-    if index == index < 0:
+   
+    index = input(f"Please enter a number between 1 and {X_test.shape[0]}: ")
+   
+   # Check if input is empty or invalid
+    if not index.strip():  
+        print("❌ Please enter a valid number.")
+        continue
+    
+    try:
+        index = int(index)
+    except ValueError:
+        print("❌ Invalid input. Please enter an integer.")
+        continue
+
+    # Exit condition
+    if index < 0:
+        print("Exiting")
         break
     
     # Prédiction des probabilités avec softmax
@@ -243,7 +266,7 @@ for i in range(nb_test):
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
     
     # Affichage de l'image
-    axs[0].imshow(X_test[index].reshape(8, 8), cmap="gray")
+    axs[0].imshow(X_test[index].reshape(side, side), cmap="gray")
     axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 

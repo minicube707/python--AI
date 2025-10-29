@@ -38,7 +38,7 @@ def manage_data():
         choice = int(choice)
         if 1 <= choice <= len(files):
             selected_file = files[choice - 1]
-            print(f"✅ Vous avez sélectionné : {selected_file}")
+            print(f"\n✅ Vous avez sélectionné : {selected_file}")
             with np.load(os.path.join(dataset_path, selected_file)) as f:
                 return f["data"], f["target"], selected_file
 

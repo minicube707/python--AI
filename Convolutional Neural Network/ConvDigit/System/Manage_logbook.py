@@ -1,8 +1,6 @@
 import pandas as pd
-import os
 
-module_dir = os.path.dirname(__file__)
-os.chdir(module_dir)
+import os
 
 def fill_information(name, date, training_time,
                     nb_epoch,  max_attempts, min_confidence_score, beta1, beta2, alpha,
