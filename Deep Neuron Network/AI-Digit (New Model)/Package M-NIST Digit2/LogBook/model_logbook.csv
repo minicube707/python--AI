@@ -1,0 +1,2 @@
+name;date;training_time_(min);nb_epoch;max_attempts;min_confidence_score;alpha;cost_loss;accuracy;confidence_score;learning_rate_DNN;neurons_number;activation_function_DNN;Size_training_set;Size_test_set;Size_validation;Based_model;Number_fine_tunning
+DM(0,30625)(0,12418)(29-10-2025).pickle;29/10/2025;0.09785837332407633;5;1;0;0.001;2.1499312929830827;0.30625;0.12417791838642966;0.001;124,64,64,10;relu,relu,relu,relu;640;160;160;X;0
