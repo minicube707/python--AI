@@ -31,32 +31,28 @@ module_dir = os.path.join(module_dir, dir_name)
 if X.ndim == 3:
     _, side, _ = X.shape
     input_shape = X.shape
+    print("Input shape ", input_shape)
     X = X.reshape(X.shape[0], -1)
 
 elif X.ndim == 2:
     n_samples, n_features = X.shape
     side = int(np.sqrt(n_features))
     input_shape = (1, side, side)
+    print("Input shape ", input_shape)
 
 else:
     raise ValueError(f"Unsupported input dimension: {X.ndim}")
 
 
 # ============================
-#     PRÉTRAITEMENT DONNÉES
-# ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
-
-
-# ============================
 #         PARAMÈTRES
 # ============================
 
-# Nombre d'itérations
-nb_iteration = 0
+nb_iteration = 10
 max_attempts = 0
 min_confidence_score = 0
 validation_size = 500
+ratio_test = 0.1
 
 # Paramètres d'apprentissage
 
@@ -64,10 +60,16 @@ validation_size = 500
 learning_rate_DNN = 0.001
 alpha = 0.001
 
+
+# ============================
+#     PRÉTRAITEMENT DONNÉES
+# ============================
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, ratio_test)
+
 if (validation_size > len(y_test)):
     validation_size = len(y_test)
 
-show_information_setting(nb_iteration, max_attempts, min_confidence_score,  alpha, learning_rate_DNN, validation_size)
+show_information_setting(nb_iteration, max_attempts, min_confidence_score,  alpha, learning_rate_DNN, validation_size, ratio_test)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()

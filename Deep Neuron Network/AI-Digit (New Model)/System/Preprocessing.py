@@ -7,7 +7,8 @@ from sklearn.ensemble import IsolationForest
 
 from .Sklearn_tools import train_test_split, Label_binarizer
 
-def show_information_setting(nb_iteration, max_attempts, min_confidence_score, alpha, learning_rate_DNN, validation_size):
+def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, alpha, 
+                             learning_rate_DNN, validation_size, ratio_test):
 
     print("\n============================")
     print("         SETTING")
@@ -18,14 +19,44 @@ def show_information_setting(nb_iteration, max_attempts, min_confidence_score, a
     print("Max attempts: ", max_attempts)
     print("Min confidence score: ", min_confidence_score)
     print("Validation_size: ", validation_size)
+    print("Ratio trainset/testset: ", ratio_test)
 
     print("\nInfo DNN")
     print("Learning rate: ", learning_rate_DNN)
     print("Alpha: ", alpha)
 
+
 def handle_key(event):
     if event.key == ' ':
         plt.close(event.canvas.figure)  # Ferme la fenêtre associée
+
+
+def set_mode():
+
+    while(1):
+        print("\n0: Exit")
+        print("1: CNN Data")
+        print("2: DNN Data")
+        str_answer = input("What type of data it is ?\n")
+        try:
+            int_answer = int(str_answer)
+        except:
+            print("Please answer with only 1 or 2")
+            continue
+        if (int_answer == 0):
+            print("Exit")
+            exit(0)
+
+        if (int_answer == 1):
+            print("You use CNN Data")
+            return(1)
+        
+        elif (int_answer == 2):
+            print("You use CNN Data")
+            return(2)
+        
+        else:
+            print("Please answer with only 1 or 2")
 
 
 def preprocessing(X, y, input_shape, test_size=0.1):
@@ -33,18 +64,27 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     print("Data shape")
     print("X:",X.shape)
     print("Y:",y.shape)
+    
+    data_mode = set_mode()
 
-    #Affichage des 15 premières images
-    fig = plt.figure(figsize=(16, 8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Dataset")
-    for i in range(1,16):
-        plt.subplot(4,5, i)
-        plt.imshow(X.reshape((X.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(y[i])
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show()  
+    if (data_mode == 1):
+        classes = np.unique(y)
+        for cls in classes:
+            fig = plt.figure(figsize=(16, 8))
+            fig.suptitle(f"Classe {cls}", fontsize=16)
+            fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+            
+            # Récupère les indices des images correspondant à la classe cls
+            indices = np.where(y == cls)[0][:15]  # 15 premières images
+            for i, idx in enumerate(indices):
+                plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
+                plt.imshow(X[idx].reshape(input_shape[1], input_shape[2]), cmap="gray")
+                plt.title(f"{y[idx]}")
+                plt.axis("off")
+
+            plt.tight_layout()
+            plt.show() 
+
 
     #______________________________________________________________#
     #Remove the bad data
@@ -93,10 +133,11 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     print("y_train.shape:", y_train.shape)
 
     #Affichage des 15 premières images du dataset
-    fig = plt.figure(figsize=(16,8))
+    n = min(16, len(y_train))
+    fig = plt.figure(figsize=(n,8))
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
     fig.suptitle("Train Dataset")
-    for i in range(1,16):
+    for i in range(1,n):
         plt.subplot(4,5, i)
         plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
         plt.title(str(np.argmax(y_train[i])))
@@ -105,10 +146,11 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     plt.show() 
 
     #Affichage des 15 premières images
-    fig = plt.figure(figsize=(16,8))
+    n = min(16, len(y_test))
+    fig = plt.figure(figsize=(n,8))
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
     fig.suptitle("Test Dataset")
-    for i in range(1,16):
+    for i in range(1,n):
         plt.subplot(4,5, i)
         plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
         plt.title(str(np.argmax(y_test[i])))

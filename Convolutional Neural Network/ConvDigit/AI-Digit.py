@@ -46,21 +46,17 @@ elif X.ndim == 2:
 else:
     raise ValueError(f"Unsupported input dimension: {X.ndim}")
 
-# ============================
-#     PRÉTRAITEMENT DONNÉES
-# ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape)
-
 
 # ============================
 #         PARAMÈTRES
 # ============================
 
-# Nombre d'itérations
 nb_iteration = 0
 max_attempts = 1
 min_confidence_score = 0
 validation_size = 50
+ratio_test = 0.1
+
 
 # Paramètres d'apprentissage
 # CNN
@@ -71,6 +67,12 @@ alpha = 0.001
 
 # DNN
 learning_rate_DNN = 0.001
+
+
+# ============================
+#     PRÉTRAITEMENT DONNÉES
+# ============================
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, ratio_test)
 
 if (validation_size > len(y_test)):
     validation_size = len(y_test)
