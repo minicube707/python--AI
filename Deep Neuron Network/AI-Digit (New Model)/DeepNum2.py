@@ -4,8 +4,9 @@ import pygame
 import matplotlib.pyplot as plt
 import os
 
-from Deep_Neuron_Network import softmax, foward_propagation
-from File_Management import select_model, get_hidden_layers
+from System.Deep_Neuron_Network import softmax, foward_propagation_DNN
+from System.Manage_file import select_model, load_model
+
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -76,14 +77,34 @@ def delete_node (width, rows, grid):
 
     return grid
 
-def research(grid, parametres):
+def pooling(grid, kernel_size):
 
+    # Nombre de blocs dans chaque dimension
+    out_shape = (grid.shape[0] // kernel_size, grid.shape[1] // kernel_size)
+
+    # Initialisation de la matrice résultat
+    new_grid = np.zeros(out_shape)
+
+    # Max pooling manuel avec un pas de kernel_size
+    for i in range(0, grid.shape[0], kernel_size):
+        for j in range(0, grid.shape[1], kernel_size):
+            new_grid[i // kernel_size, j // kernel_size] = np.mean(grid[i:i + kernel_size, j:j + kernel_size])
+
+    return new_grid
+
+
+def research(grid, parametres, kernel_size, model_info):
+
+    grid = pooling(grid, kernel_size=kernel_size)
     grid = grid.reshape((1, 64))
-    activation = foward_propagation(grid.T, parametres)
-    C = len(parametres) // 2
+
+    alpha = model_info["alpha"]
+    parametres_DNN, dimensions_DNN = parametres
+    C = len(parametres_DNN) // 2
+    activation = foward_propagation_DNN(grid.T, parametres_DNN, dimensions_DNN, C, alpha)
 
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation["A" + str(C)].T)[0]
+    probabilities = softmax(activation["A" + str(C)]).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
@@ -106,15 +127,49 @@ def research(grid, parametres):
     plt.show()
 
 
+
+def lister_dossiers():
+    # Récupère le chemin du répertoire courant
+    repertoire_courant = os.getcwd()
+    
+    # Liste uniquement les dossiers
+    dossiers = [d for d in os.listdir(repertoire_courant) if os.path.isdir(d)]
+    
+    if not dossiers:
+        print("Aucun dossier trouvé dans le répertoire courant.")
+        return None
+    
+    # Affiche les dossiers avec un numéro
+    print("Dossiers disponibles :")
+    for i, dossier in enumerate(dossiers, start=1):
+        print(f"{i}. {dossier}")
+    
+    # Demande à l'utilisateur de choisir un dossier
+    while True:
+        try:
+            choix = int(input("\nEntrez le numéro du dossier à choisir : "))
+            if 1 <= choix <= len(dossiers):
+                dossier_choisi = dossiers[choix - 1]
+                print(f"\nVous avez choisi : {dossier_choisi}")
+                return dossier_choisi
+            else:
+                print("Numéro invalide, réessayez.")
+        except ValueError:
+            print("Veuillez entrer un nombre valide.")
+
+
+
+
 #Main algorithm
 def main (win , width):
 
-    rows = 8
+    rows = 16
+    kernel_size = 2
     grid = np.zeros((rows, rows))
 
-    model = select_model()
-    with open("Model/" + str(model), 'rb') as file:
-        parametres = pickle.load(file)
+    dir_name = lister_dossiers() 
+    model, model_info = select_model(dir_name, "LogBook/model_logbook.csv")
+    parametres = load_model(dir_name, model)
     
     run = True
     while run:
@@ -129,7 +184,7 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres)
+                    research(grid, parametres, kernel_size, model_info)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))

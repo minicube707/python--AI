@@ -12,7 +12,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from System.Mathematical_function import softmax
 from System.Propagation import forward_propagation
-from System.File_Management import select_model, load_model
+from System.Manage_file import select_model, load_model
 from System.Convolution_Neuron_Network import create_tuple_size
 from System.Preprocessing import  handle_key
 
@@ -135,14 +135,45 @@ def research(grid, parametres, model_info):
     plt.show()
 
 
+def lister_dossiers():
+    # Récupère le chemin du répertoire courant
+    repertoire_courant = os.getcwd()
+    
+    # Liste uniquement les dossiers
+    dossiers = [d for d in os.listdir(repertoire_courant) if os.path.isdir(d)]
+    
+    if not dossiers:
+        print("Aucun dossier trouvé dans le répertoire courant.")
+        return None
+    
+    # Affiche les dossiers avec un numéro
+    print("Dossiers disponibles :")
+    for i, dossier in enumerate(dossiers, start=1):
+        print(f"{i}. {dossier}")
+    
+    # Demande à l'utilisateur de choisir un dossier
+    while True:
+        try:
+            choix = int(input("\nEntrez le numéro du dossier à choisir : "))
+            if 1 <= choix <= len(dossiers):
+                dossier_choisi = dossiers[choix - 1]
+                print(f"\nVous avez choisi : {dossier_choisi}")
+                return dossier_choisi
+            else:
+                print("Numéro invalide, réessayez.")
+        except ValueError:
+            print("Veuillez entrer un nombre valide.")
+
+
 #Main algorithm
 def main (win , width):
 
-    rows = 28
-    grid = np.zeros((rows, rows))
+    dir_name = lister_dossiers() 
+    model, model_info = select_model(dir_name, "LogBook/model_logbook.csv")
+    parametres = load_model(dir_name, model)
 
-    model, model_info = select_model(module_dir, "model_logbook.csv")
-    parametres = load_model(module_dir, model)
+    rows = int(input("Grid size ?"))
+    grid = np.zeros((rows, rows))
 
     run = True
     while run:

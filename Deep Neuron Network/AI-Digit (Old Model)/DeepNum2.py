@@ -4,8 +4,8 @@ import pygame
 import matplotlib.pyplot as plt
 import os
 
-from Deep_Neuron_Network import softmax, foward_propagation
-from File_Management import select_model, get_hidden_layers
+from System.Deep_Neuron_Network import softmax, foward_propagation
+from System.Manage_file import select_model, get_hidden_layers
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -76,8 +76,25 @@ def delete_node (width, rows, grid):
 
     return grid
 
-def research(grid, parametres):
+def pooling(grid, kernel_size):
 
+    # Nombre de blocs dans chaque dimension
+    out_shape = (grid.shape[0] // kernel_size, grid.shape[1] // kernel_size)
+
+    # Initialisation de la matrice résultat
+    new_grid = np.zeros(out_shape)
+
+    # Max pooling manuel avec un pas de kernel_size
+    for i in range(0, grid.shape[0], kernel_size):
+        for j in range(0, grid.shape[1], kernel_size):
+            new_grid[i // kernel_size, j // kernel_size] = np.mean(grid[i:i + kernel_size, j:j + kernel_size])
+
+    return new_grid
+
+
+def research(grid, parametres, kernel_size):
+
+    grid = pooling(grid, kernel_size=kernel_size)
     grid = grid.reshape((1, 64))
     activation = foward_propagation(grid.T, parametres)
     C = len(parametres) // 2
@@ -109,7 +126,8 @@ def research(grid, parametres):
 #Main algorithm
 def main (win , width):
 
-    rows = 8
+    rows = 16
+    kernel_size = 2
     grid = np.zeros((rows, rows))
 
     model = select_model()
@@ -129,7 +147,7 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres)
+                    research(grid, parametres, kernel_size=kernel_size)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
