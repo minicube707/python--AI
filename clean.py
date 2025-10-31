@@ -1,6 +1,9 @@
 import os
 import shutil
 
+module_dir = os.path.dirname(__file__)
+os.chdir(module_dir)
+
 def remove_pycache(start_dir="."):
     """
     Supprime récursivement tous les dossiers __pycache__ à partir de start_dir.
@@ -25,4 +28,4 @@ def remove_pycache(start_dir="."):
 
 if __name__ == "__main__":
     # Tu peux remplacer "." par un autre chemin si tu veux cibler un dossier précis.
-    remove_pycache(".")
+    remove_pycache(module_dir)
