@@ -75,7 +75,7 @@ learning_rate_DNN = 0.001
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, ratio_test, dataset_size)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, dataset_size, ratio_test)
 
 if (validation_size > len(y_test)):
     validation_size = len(y_test)

@@ -44,8 +44,6 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     print("X:",X.shape)
     print("Y:",y.shape)
 
-   
-
     """
     Affiche les 15 premières images de chaque classe du dataset.
     """

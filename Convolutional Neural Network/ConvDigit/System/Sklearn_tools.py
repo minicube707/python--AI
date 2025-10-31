@@ -2,20 +2,32 @@
 import numpy as np
 
 def train_test_split(X, y, test_size, dataset_size):
-    # Calculer la taille du test
-    n_samples = dataset_size
-    test_size = int(n_samples * test_size)  # Nombre d'exemples pour le test
+
+    # Taille totale du dataset d'origine
+    total_size = X.shape[0]
+
+    # Si dataset_size n'est pas précisé, on prend tout
+    if dataset_size is None or dataset_size > total_size:
+        dataset_size = total_size
     
-    # Générer un masque de mélanger les indices
-    indices = np.random.permutation(n_samples)
+    # Mélange initial des indices pour choisir un sous-ensemble du dataset
+    all_indices = np.random.permutation(total_size)[:dataset_size]
     
-    # Séparer les indices pour le train et le test
-    test_indices = indices[:test_size]
-    train_indices = indices[test_size:]
+    # Sous-échantillonnage de X et y
+    X_subset = X[all_indices]
+    y_subset = y[all_indices]
     
-    # Sélectionner les ensembles d'entraînement et de test
-    X_train, X_test = X[train_indices], X[test_indices]
-    y_train, y_test = y[train_indices], y[test_indices]
+    # Calcul du nombre d'exemples pour le test
+    test_count = int(dataset_size * test_size)
+    
+    # Mélange à nouveau pour séparer train/test
+    indices = np.random.permutation(dataset_size)
+    test_indices = indices[:test_count]
+    train_indices = indices[test_count:]
+    
+    # Création des ensembles
+    X_train, X_test = X_subset[train_indices], X_subset[test_indices]
+    y_train, y_test = y_subset[train_indices], y_subset[test_indices]
     
     return X_train, X_test, y_train, y_test
 
