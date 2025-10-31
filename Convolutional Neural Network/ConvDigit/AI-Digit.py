@@ -53,12 +53,13 @@ else:
 #         PARAMÈTRES
 # ============================
 
-nb_iteration = 5
+nb_iteration = 1
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 500
+validation_size = 1_000
 ratio_test = 0.2
-validation_frequency = 100
+validation_frequency = 10_000
+dataset_size = 100_000
 
 # Paramètres d'apprentissage
 # CNN
@@ -74,14 +75,14 @@ learning_rate_DNN = 0.001
 # ============================
 #     PRÉTRAITEMENT DONNÉES
 # ============================
-X_train, y_train, X_test, y_test, transformer = preprocessing(X[:1000], y[:1000], input_shape, ratio_test)
+X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape, ratio_test, dataset_size)
 
 if (validation_size > len(y_test)):
     validation_size = len(y_test)
 
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
-                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size, ratio_test)
+                         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size, ratio_test, dataset_size)
 
 # Mode d'exécution (1: train + save, 2: load + save, 3: load)
 mode = set_mode()
@@ -204,7 +205,7 @@ if mode in {1, 2}:
                     learning_rate_DNN, str_size_DNN, str_function_DNN,
                     len(y_train), len(y_test), 
                     baseline_mode, nb_fine_tunning, validation_size,
-                    validation_frequency, ratio_test)
+                    validation_frequency, ratio_test, dataset_size)
     
     add_model(new_log, os.path.join(module_dir, "LogBook"), "model_logbook.csv")
 

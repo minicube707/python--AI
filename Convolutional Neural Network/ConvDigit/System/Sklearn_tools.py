@@ -1,9 +1,9 @@
 
 import numpy as np
 
-def train_test_split(X, y, test_size):
+def train_test_split(X, y, test_size, dataset_size):
     # Calculer la taille du test
-    n_samples = X.shape[0]
+    n_samples = dataset_size
     test_size = int(n_samples * test_size)  # Nombre d'exemples pour le test
     
     # Générer un masque de mélanger les indices

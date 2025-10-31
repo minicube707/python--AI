@@ -9,7 +9,7 @@ from .Sklearn_tools import train_test_split, Label_binarizer
 from .Convolution_Neuron_Network import add_padding, reshape
 
 def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, alpha, 
-                             learning_rate_DNN, validation_size, ratio_test):
+                             learning_rate_DNN, validation_size, ratio_test, dataset_size):
 
     print("\n============================")
     print("         SETTING")
@@ -21,6 +21,7 @@ def show_information_setting(nb_iteration, max_attempts, min_confidence_score, l
     print("Min confidence score: ", min_confidence_score)
     print("Validation_size: ", validation_size)
     print("Ratio trainset/testset: ", ratio_test)
+    print("Dataset size: ", dataset_size)
     
     print("\nInfo CNN")
     print("Learning rate: ", learning_rate_CNN)
@@ -37,7 +38,7 @@ def handle_key(event):
         plt.close(event.canvas.figure)  # Ferme la fenêtre associée
 
 
-def preprocessing(X, y, input_shape, test_size=0.1):
+def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     
     print("Data shape")
     print("X:",X.shape)
@@ -76,7 +77,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
 
     #______________________________________________________________#
     #Split the dataset for the training
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size, dataset_size)
 
     y_train = y_train.reshape((y_train.shape[0], 1))
     y_test = y_test.reshape((y_test.shape[0], 1))
