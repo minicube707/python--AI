@@ -353,7 +353,7 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     contains all the gradient need for the update
 numpy.array     DZ :            the derivative of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha):
+def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, C, c, alpha):
         
     #Create a table for each dx of the kernel
     L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
@@ -381,14 +381,23 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
     if c > 1:
         activation_fonction = parametres["f" + str(c)]
         dim = dimensions[str(c)]
-
+        k_size = dimensions[str(c-1)][0]
+        stride = dimensions[str(c-1)][1]
+        
         # Chose the correct derivative
         if activation_fonction == "relu":
             dA = dx_relu(activation["Z" + str(c)], alpha)
+            
         elif activation_fonction == "sigmoide":
             dA = dx_sigmoide(activation["A" + str(c)])
+            if c < C:
+                dA = deshape(dA, k_size, stride)
+
         elif activation_fonction == "tanh":
             dA = dx_tanh(activation["A" + str(c)])
+            if c < C:
+                dA = deshape(dA, k_size, stride)
+           
 
         dZ *= dA
 
@@ -430,7 +439,7 @@ def back_propagation_CNN(activation, parametres, dimensions, dZ, tuple_size_acti
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
 
         elif parametres["l" + str(c)] == "kernel":
-            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha)
+            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, C, c, alpha)
 
     return gradients
 

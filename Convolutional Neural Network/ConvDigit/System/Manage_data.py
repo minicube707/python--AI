@@ -39,8 +39,16 @@ def manage_data():
         if 1 <= choice <= len(files):
             selected_file = files[choice - 1]
             print(f"\n✅ Vous avez sélectionné : {selected_file}")
-            with np.load(os.path.join(dataset_path, selected_file)) as f:
-                return f["data"], f["target"], selected_file
+
+            while True:
+                answer = input("Do you what load data ? \n")
+                if answer == "yes" or answer == "y":
+                    with np.load(os.path.join(dataset_path, selected_file)) as f:
+                        return f["data"], f["target"], selected_file
+                elif answer == "no" or answer == "n":
+                    return None, None, selected_file
+                else:
+                    print("Please answer by yes or no")
 
         elif choice == 0:
             exit(0)

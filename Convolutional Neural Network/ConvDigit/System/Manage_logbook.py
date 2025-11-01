@@ -85,4 +85,4 @@ def show_info_main(path, csv_file):
     df = pd.read_csv(path + "/" + csv_file, sep=';')
 
     # Afficher toutes les valeurs  
-    print(df[["name", "date", "training_time_(min)", "accuracy", "confidence_score", "Number_fine_tunning"]].rename(lambda x: x + 1))
+    print(df[["name", "date", "training_time_(min)", "accuracy", "confidence_score", "Number_fine_tunning", "Based_model"]].rename(lambda x: x + 1))
