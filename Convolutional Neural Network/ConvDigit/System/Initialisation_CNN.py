@@ -153,7 +153,7 @@ def initialisation_calcul(x_shape, dimensions, padding_mode):
         nb_activation = dimensions[str(i)][3]
         
         list_size_activaton.append((nb_channel, input_size))
-        error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride)
+        error_initialisation(dimensions, (input_size, nb_activation), previ_input_size, type_layer, fonction, stride)
 
     return dimensions, list_size_activaton
 

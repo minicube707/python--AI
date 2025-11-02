@@ -100,6 +100,7 @@ def show_information_CNN(dimensions, input_size):
 
     print("\nDétail de la convolution :")
     print("Nb activation")
+    print(input_size)
     print(f"{input_size[0]}", end="")
     print("->", end="")
     for i in range(1, len(dimensions)+1):
@@ -148,13 +149,13 @@ void
 """
 def error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride):
 
-    if input_size < 1:
+    if input_size[0] < 1:
         show_information_CNN(dimensions, input_size)
-        raise ValueError(f"ERROR: The current dimensions is {input_size}. Dimension can't be negatif")
+        raise ValueError(f"ERROR: The current dimensions is {input_size[0]}. Dimension can't be negatif")
         
-    if previ_input_size % input_size != 0 and stride != 1:
+    if previ_input_size % input_size[0] != 0 and stride != 1:
         show_information_CNN(dimensions, input_size)
-        raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
+        raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size[0]}")
     
     if type_layer not in ["kernel", "pooling"]:
         show_information_CNN(dimensions, input_size)
