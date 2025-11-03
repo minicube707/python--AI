@@ -205,6 +205,35 @@ def convolution_neuron_network(
     # Arrêter le chronomètre
     end_time = time.time()
 
+    # Évaluation partielle
+    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
+
+    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
+                                    parametres_CNN, parametres_DNN,
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+
+    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
+                                    parametres_CNN, parametres_DNN,
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+
+    train_loss.append(tl)
+    train_lear.append(tdx)
+    train_accu.append(ta)
+    train_conf.append(tc)
+
+    test_loss.append(vl)
+    test_lear.append(vdx)
+    test_accu.append(va)
+    test_conf.append(vc)
+
+    if va > best_accu:
+        best_accu = va
+        print(f"\nNew accuracy: {va}")
+        print(f"New confidence score: {vc}")
+        print(f"New loss: {vl}")
+        print("")
+
     # Calcul du temps en minutes
     elapsed_time_minutes = (end_time - start_time) / 60
         
