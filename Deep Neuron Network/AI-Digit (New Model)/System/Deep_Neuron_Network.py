@@ -66,9 +66,10 @@ def initialisation_DNN(dimension, input_shape, output_shape):
 
 def foward_propagation_DNN(X, parametres, dimension, C, alpha):
 
-    activation = {"A0" : X.reshape(1, X.size)}
+    activation = {"A0" : X}
 
     for i in range(1, C+1):
+
         Z = np.dot(activation["A" + str(i-1)], parametres["W" + str(i)]) + parametres["B" + str(i)]
         activation["Z" + str(i)] = Z
 
