@@ -70,7 +70,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     
     data_mode = set_mode()
 
-    # --- MODE 1 : Affichage d’images ---
+    # --- MODE 1 : Affichage d’images : CNN---
     if (data_mode == 1):
         classes = np.unique(y)
         for cls in classes:
@@ -89,7 +89,7 @@ def preprocessing(X, y, input_shape, test_size=0.1):
             plt.tight_layout()
             plt.show() 
 
-    # --- MODE 2 : Visualisation graphique ---
+    # --- MODE 2 : Visualisation graphique : DNN---
     if (data_mode == 2):
 
         df = pd.DataFrame(X, columns=[
@@ -98,14 +98,14 @@ def preprocessing(X, y, input_shape, test_size=0.1):
         ])
         df["species"] = y  # ajoute les étiquettes d’espèces
 
-        # Style esthétique
+        # --- Style ---
         sns.set(style="whitegrid", context="notebook", palette="muted")
 
-        # --- 1. Pairplot ---
-        sns.pairplot(df, hue="species", diag_kind="kde", height=2.2)
-        fig = plt.figure(figsize=(8, 6))
-        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
-        fig.suptitle("Visualisation du dataset Iris 🌸", y=1.02, fontsize=16)
+        # --- Pairplot ---
+        g = sns.pairplot(df, hue="species", diag_kind="kde", height=2.2)
+        g.fig.canvas.mpl_connect('key_press_event', handle_key)  # Détection de la touche sur la bonne figure
+        g.fig.suptitle("Visualisation du dataset Iris 🌸", y=1.02, fontsize=16)
+
         plt.show()
 
     #______________________________________________________________#
@@ -146,38 +146,38 @@ def preprocessing(X, y, input_shape, test_size=0.1):
     New_X_test = X_test / X_train.max()
 
     
+    if (data_mode == 1):
+        #Pour les X se sont les variables en premier (ici les pixels) puis le nombres d'échantillons 
+        #Pour les y se sont les labels d'abord puis le nombre d'échantillons
+        print("\nNew_X_train.shape:", New_X_train.shape)
+        print("New_X_test.shape:", New_X_test.shape)
+        print("y_test.shape:", y_test.shape)
+        print("y_train.shape:", y_train.shape)
 
-    #Pour les X se sont les variables en premier (ici les pixels) puis le nombres d'échantillons 
-    #Pour les y se sont les labels d'abord puis le nombre d'échantillons
-    print("\nNew_X_train.shape:", New_X_train.shape)
-    print("New_X_test.shape:", New_X_test.shape)
-    print("y_test.shape:", y_test.shape)
-    print("y_train.shape:", y_train.shape)
+        #Affichage des 15 premières images du dataset
+        n = min(16, len(y_train))
+        fig = plt.figure(figsize=(n,8))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+        fig.suptitle("Train Dataset")
+        for i in range(1,n):
+            plt.subplot(4,5, i)
+            plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+            plt.title(str(np.argmax(y_train[i])))
+            plt.axis("off")
+        plt.tight_layout()    
+        plt.show() 
 
-    #Affichage des 15 premières images du dataset
-    n = min(16, len(y_train))
-    fig = plt.figure(figsize=(n,8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Train Dataset")
-    for i in range(1,n):
-        plt.subplot(4,5, i)
-        plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(str(np.argmax(y_train[i])))
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show() 
-
-    #Affichage des 15 premières images
-    n = min(16, len(y_test))
-    fig = plt.figure(figsize=(n,8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Test Dataset")
-    for i in range(1,n):
-        plt.subplot(4,5, i)
-        plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        plt.title(str(np.argmax(y_test[i])))
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show() 
+        #Affichage des 15 premières images
+        n = min(16, len(y_test))
+        fig = plt.figure(figsize=(n,8))
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+        fig.suptitle("Test Dataset")
+        for i in range(1,n):
+            plt.subplot(4,5, i)
+            plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+            plt.title(str(np.argmax(y_test[i])))
+            plt.axis("off")
+        plt.tight_layout()    
+        plt.show() 
 
     return New_X_train, y_train, New_X_test, y_test, transformer

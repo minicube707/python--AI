@@ -20,7 +20,7 @@ def train_one_sample(X, y, parametres_DNN, dimensions_DNN, C_DNN, learning_rate_
         parametres_DNN = update_DNN(gradients_DNN, parametres_DNN, learning_rate_DNN, dimensions_DNN)
         pred = activation(X, parametres_DNN, dimensions_DNN, C_DNN, alpha)
 
-        if accuracy_score(y, pred) > 0 and confidence_score(y, pred) >= min_confidence_score:
+        if confidence_score(y, pred) >= min_confidence_score:
             break
 
     return  parametres_DNN
@@ -43,6 +43,36 @@ def compute_metrics(X, y, indices, parametres_DNN, dimensions_DNN, C_DNN, alpha)
 
     n = len(indices)
     return loss / n, dx_l / n, accu / n, conf / n
+
+
+def eval_model(X_train, y_train, X_test, y_test ,parametres_DNN, dimension_DNN,
+        alpha, validation_size, best_accu,
+        train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, C_DNN):
+
+    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
+
+    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train, parametres_DNN, dimension_DNN, C_DNN, alpha)
+    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test, parametres_DNN, dimension_DNN, C_DNN, alpha)
+
+    train_loss.append(tl)
+    train_lear.append(tdx)
+    train_accu.append(ta)
+    train_conf.append(tc)
+
+    test_loss.append(vl)
+    test_lear.append(vdx)
+    test_accu.append(va)
+    test_conf.append(vc)
+    
+    if va > best_accu:
+        best_accu = va
+        print(f"\nNew accuracy: {va}")
+        print(f"New confidence score: {vc}")
+        print(f"New loss: {vl}")
+        print("")
+
+    return train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, best_accu
 
 
 def smooth_curve(values, window=10):
@@ -98,6 +128,49 @@ def plot_metrics(train_loss, test_loss, train_lear, test_lear,
     plt.tight_layout()
     plt.show(block=False)
 
+def deep_neuron_network_sequential_trainning(X_train, y_train, X_test, y_test,
+        nb_iteration, parametres_DNN, dimension_DNN,
+        alpha, learning_rate_DNN,
+        max_attempts, min_confidence_score, validation_size, validation_frequency):
+
+    C_DNN = len(dimension_DNN) 
+
+    # Suivi des métriques
+    train_loss, train_accu, train_lear, train_conf = [], [], [], []
+    test_loss, test_accu, test_lear, test_conf = [], [], [], []
+
+    best_accu = 0
+
+    train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, best_accu = eval_model(
+        X_train, y_train, X_test, y_test , parametres_DNN, dimension_DNN,
+        alpha, validation_size, best_accu,
+        train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, C_DNN)
+    
+    # Démarrer le chronomètre
+    start_time = time.time()
+    
+    k = 0
+    for _ in  tqdm(range(nb_iteration)):
+
+        parametres_DNN = train_one_sample( X_train, y_train, parametres_DNN, dimension_DNN, C_DNN, learning_rate_DNN, 
+                alpha, max_attempts, min_confidence_score)
+    
+        k += 1
+        if (k % validation_frequency == 0):
+
+            # Évaluation partielle
+            train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, best_accu = eval_model(
+            X_train, y_train, X_test, y_test, parametres_DNN, dimension_DNN,
+            alpha, validation_size, best_accu,
+            train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, C_DNN)
+
+    # Arrêter le chronomètre
+    end_time = time.time()
+
+    # Calcul du temps en minutes
+    elapsed_time_minutes = (end_time - start_time) / 60
+
+    return parametres_DNN, train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, elapsed_time_minutes
 
 
 def deep_neuron_network(
@@ -107,81 +180,13 @@ def deep_neuron_network(
         max_attempts, min_confidence_score, validation_size, validation_frequency
     ):
 
-    C_DNN = len(dimension_DNN) 
+    parametres_DNN, train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf, elapsed_time_minutes = deep_neuron_network_sequential_trainning(
+    X_train, y_train, X_test, y_test,
+    nb_iteration,parametres_DNN, dimension_DNN,
+    alpha, learning_rate_DNN,
+    max_attempts, min_confidence_score, validation_size, validation_frequency)
 
-    # Suivi des métriques
-    train_loss, train_accu, train_lear, train_conf = [], [], [], []
-    test_loss, test_accu, test_lear, test_conf = [], [], [], []
 
-    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
-    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
-
-    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train, parametres_DNN, dimension_DNN, C_DNN, alpha)
-    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test, parametres_DNN, dimension_DNN, C_DNN, alpha)
-
-    train_loss.append(tl)
-    train_lear.append(tdx)
-    train_accu.append(ta)
-    train_conf.append(tc)
-
-    test_loss.append(vl)
-    test_lear.append(vdx)
-    test_accu.append(va)
-    test_conf.append(vc)
-    
-    best_accu = va
-    print(f"\nInitial accurracy: {best_accu}")
-    print(f"Initial confidence score: {vc}")
-    print(f"Initial loss: {vl}")
-    print("")
-    best_model = {"DNN": None}
-
-    # Démarrer le chronomètre
-    start_time = time.time()
-    
-    k = 0
-    for epoch in range(nb_iteration):
-        for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
-
-            parametres_DNN = train_one_sample( X_train[j], y_train[j], parametres_DNN, dimension_DNN, C_DNN, learning_rate_DNN, 
-                alpha, max_attempts, min_confidence_score)
-
-            k += 1
-            if (k % validation_frequency == 0):
-                # Évaluation partielle
-                rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
-                rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
-
-                tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train, parametres_DNN, dimension_DNN, C_DNN, alpha)
-                vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test, parametres_DNN, dimension_DNN, C_DNN, alpha)
-
-                train_loss.append(tl)
-                train_lear.append(tdx)
-                train_accu.append(ta)
-                train_conf.append(tc)
-
-                test_loss.append(vl)
-                test_lear.append(vdx)
-                test_accu.append(va)
-                test_conf.append(vc)
-
-                if va > best_accu:
-                    best_accu = va
-                    print(f"\nNew accuracy: {va}")
-                    print(f"New confidence score: {vc}")
-                    print(f"New loss: {vl}")
-                    print("")
-                    best_model["DNN"] = deepcopy(parametres_DNN)
-
-    # Arrêter le chronomètre
-    end_time = time.time()
-
-    # Calcul du temps en minutes
-    elapsed_time_minutes = (end_time - start_time) / 60
-
-    if (best_model["DNN"] == None):
-        best_model["DNN"] = deepcopy(parametres_DNN)
-        
     # Résultats finaux
     print(f"\n🚂💰 Coût final - Train          : {train_loss[-1]:.5f}")
     print(f"🧪💰 Coût final - Test             : {test_loss[-1]:.5f}")
@@ -202,4 +207,4 @@ def deep_neuron_network(
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
 
-    return best_model["DNN"], test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes
+    return deepcopy(parametres_DNN), test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes

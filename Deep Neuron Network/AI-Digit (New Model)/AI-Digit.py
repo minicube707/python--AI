@@ -4,10 +4,6 @@ import os
 import sys
 
 from datetime import datetime
-from pathlib import Path
-
-# Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from System.Preprocessing import preprocessing, handle_key, show_information_setting
 from System.Mathematical_function import softmax
@@ -48,17 +44,17 @@ else:
 #         PARAMÈTRES
 # ============================
 
-nb_iteration = 20
+nb_iteration = 10000
 max_attempts = 1
 min_confidence_score = 0
 validation_size = 1000
 ratio_test = 0.2
-validation_frequency = 10_000
+validation_frequency = 10
 
 # Paramètres d'apprentissage
 
 # DNN
-learning_rate_DNN = 0.001
+learning_rate_DNN = 0.0001
 alpha = 0.001
 
 
@@ -69,6 +65,9 @@ X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, input_shape,
 
 if (validation_size > len(y_test)):
     validation_size = len(y_test)
+
+if (validation_frequency > nb_iteration):
+    validation_frequency = nb_iteration 
 
 show_information_setting(nb_iteration, max_attempts, min_confidence_score,  alpha, learning_rate_DNN, validation_size, ratio_test)
 
@@ -83,9 +82,9 @@ if mode in {1}:
 
     # Structure DNN : (number of neurone, activations) 
     dimensions_DNN = {
-        "1": (124, "relu"),
-        "2": (64, "relu"),
-        "3": (64, "relu"),
+        "1": (124, "tanh"),
+        "2": (64, "tanh"),
+        "3": (64, "tanh"),
         "4": (0,  "relu")
     }
 
@@ -93,7 +92,7 @@ if mode in {1}:
     padding_mode = "auto"
 
     #Initialisation
-    parametres_DNN = initialisation_DNN(dimensions_DNN, side**2, y_train.shape[1])
+    parametres_DNN = initialisation_DNN(dimensions_DNN,  X_train.shape[1], y_train.shape[1])
 
 else:
     # ============================
