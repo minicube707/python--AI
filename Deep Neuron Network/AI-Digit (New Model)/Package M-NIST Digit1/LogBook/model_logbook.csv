@@ -1,2 +1,7 @@
-name;date;training_time_(min);nb_epoch;max_attempts;min_confidence_score;alpha;cost_loss;accuracy;confidence_score;learning_rate_DNN;neurons_number;activation_function_DNN;Size_training_set;Size_test_set;Size_validation;Based_model;Number_fine_tunning
-DM(0,93600)(0,89783)(17-10-2025).pickle;17/10/2025;21.360740129152934;10;1;0;0.001;0.2399534768119021;0.936;0.8978315458488983;0.001;124,64,64,10;relu,relu,relu,relu;43200;4800;500;X;0
+name;date;training_time_(min);nb_epoch;max_attempts;min_confidence_score;alpha;cost_loss;accuracy;confidence_score;learning_rate_DNN;neurons_number;activation_function_DNN;Size_training_set;Size_test_set;Size_validation;Based_model;Number_fine_tunning;Ratio_train/test;Validation_frequency
+DM(0,93600)(0,89783)(17-10-2025).pickle;17/10/2025;21.360740129152934;10;1;0;0.001;0.2399534768119021;0.936;0.8978315458488983;0.001;124,64,64,10;relu,relu,relu,relu;43200;4800;500;X;0;;10000.0
+DM(0,95300)(0,92473)(09-11-2025).pickle;09/11/2025;17.44424829085668;20;1;0;0.001;0.1515810760119935;0.953;0.924726697644614;0.001;124,64,64,10;relu,relu,relu,relu;38400;9600;1000;X;0;0.2;10000.0
+DM(0,93400)(0,89618)(09-11-2025).pickle;09/11/2025;16.711013642946877;20;1;0;0.001;0.2064897432687005;0.934;0.8961764592479097;0.001;124,64,64,10;tanh,tanh,tanh,relu;38400;9600;1000;X;0;0.2;10000.0
+DM(0,09700)(0,09696)(23-11-2025).pickle;23/11/2025;0.2641372561454773;10;1;0;0.001;2.366391950651723;0.097;0.0969570471967735;0.0001;124,64,64,10;tanh,tanh,tanh,relu;38400;9600;1000;X;0;0.2;1.0
+DM(0,09300)(0,10042)(23-11-2025).pickle;23/11/2025;2.595154372851054;100;1;0;0.001;2.331880735750131;0.093;0.1004243364677867;0.0001;124,64,64,10;tanh,tanh,tanh,relu;38400;9600;1000;X;0;0.2;1.0
+DM(0,06300)(0,09846)(23-11-2025).pickle;23/11/2025;2.6950270613034566;100;1;0;0.001;2.343801768667061;0.063;0.0984634842168987;0.0001;124,64,64,10;tanh,tanh,tanh,relu;38400;9600;1000;X;0;0.2;1.0
