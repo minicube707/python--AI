@@ -58,10 +58,10 @@ if (X is not None and y is not None):
 nb_iteration = 5
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 1_000
+validation_size = 5_000
 ratio_test = 0.2
-validation_frequency = 300
-dataset_size = 1_000
+validation_frequency = -1
+dataset_size = 50_000
 
 # Paramètres d'apprentissage
 # CNN
@@ -83,6 +83,8 @@ if (X is not None and y is not None):
     if (validation_size > len(y_test)):
         validation_size = len(y_test)
 
+    if (validation_frequency == -1):
+        validation_frequency = X_train.shape[0]
 
     show_information_setting(nb_iteration, max_attempts, min_confidence_score, 
                          learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN, validation_size, ratio_test, dataset_size)
