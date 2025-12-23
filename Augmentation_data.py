@@ -11,6 +11,8 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 
+module_dir = os.path.dirname(__file__)
+os.chdir(module_dir)
 
 # ==============================
 #  Fonctions utilitaires
@@ -138,9 +140,9 @@ def augment_mnist(dataset_path, selected_file, save_path=None):
 # ==============================
 
 if __name__ == "__main__":
-    dataset_path = r"C:\Users\flore\Desktop\Document\Programmation\Python\python--AI\Dataset"
+    dataset_path = r"Dataset"
     selected_file = "Dataset M-NIST Digit1.npz"
-    save_path = r"C:\Users\flore\Desktop\Document\Programmation\Python\python--AI\Dataset\Dataset M-NIST Digit2.npz"
+    save_path = r"Dataset\Dataset M-NIST Digit2.npz"
 
     full_path = os.path.join(dataset_path, selected_file)
     print("Trying to open:", full_path)
