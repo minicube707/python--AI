@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 
 def sigmoide(X):
@@ -122,15 +122,18 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A1, A2 = forward_propagation(X[i], W1, B1, W2, B2)
 
+        sum_log += log_loss(A2.flatten(), y[i])
+        sum_dx_log += dx_log_loss(y[i], A2.flatten())
+
         if (j % 50 == 0):
-            log.append(log_loss(A2.flatten(), y[i]))
-            dx_log.append(dx_log_loss(y[i], A2.flatten()))
-            
             # Enregistrement des valeurs à chaque époque
             historique_W1.append(W1.copy())     # .copy() est important pour éviter des effets de référence
             historique_b1.append(B1.copy())
@@ -140,12 +143,19 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W1, B1, W2, B2 = backward_propagation(X[i], y[i], A1, A2, W1, B1, W2, B2, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
 
+#Prediction final 
 A1, A2 = forward_propagation(X[0], W1, B1, W2, B2)
+
 print("Loss final ", log_loss(A2, y[0]))
 print("y: ", y[0])
 print("ACTIVATION final", A2)
+
+#Prediction final 
 A1, A2 = forward_propagation(X[1], W1, B1, W2, B2)
+
 print("Loss final ", log_loss(A2, y[1]))
 print("y: ", y[1])
 print("ACTIVATION final", A2)
@@ -175,15 +185,18 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A1, A2 = forward_propagation(X[i], W1, B1, W2, B2)
 
+        sum_log += log_loss(A2.flatten(), y[i])
+        sum_dx_log += dx_log_loss(y[i], A2.flatten())
+
         if (j % 50 == 0):
-            log.append(log_loss(A2.flatten(), y[i]))
-            dx_log.append(dx_log_loss(y[i], A2.flatten()))
-            
             # Enregistrement des valeurs à chaque époque
             historique_W1.append(W1.copy())     # .copy() est important pour éviter des effets de référence
             historique_b1.append(B1.copy())
@@ -193,11 +206,19 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W1, B1, W2, B2 = backward_propagation(X[i], y[i], A1, A2, W1, B1, W2, B2, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+#Prediction final 
 A1, A2 = forward_propagation(X[0], W1, B1, W2, B2)
+
 print("Loss final ", log_loss(A2, y[0]))
 print("y: ", y[0])
 print("ACTIVATION final", A2)
+
+#Prediction final 
 A1, A2 = forward_propagation(X[1], W1, B1, W2, B2)
+
 print("Loss final ", log_loss(A2, y[1]))
 print("y: ", y[1])
 print("ACTIVATION final", A2)

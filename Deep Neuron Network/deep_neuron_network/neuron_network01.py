@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a * x + b

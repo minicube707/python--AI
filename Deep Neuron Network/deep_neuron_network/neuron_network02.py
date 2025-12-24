@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a * x + b
@@ -47,27 +47,36 @@ print("Loss", log_loss(A, y))
 print("ACTIVATION", A)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for _ in tqdm(range(nb_iteraton)):
     
-    for i in range(X.size):
+    sum_log = 0
+    sum_dx_log = 0
+
+    sum_dW = 0
+    sum_db = 0
+
+    for j in range(X.size):
 
         #Foreward propagation
-        Z = algebre(X[i], W, B)
+        Z = algebre(X[j], W, B)
         A = sigmoide(Z)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A, y[i]))
-            dx_log.append(dx_log_loss(y[i], A))
-
-            W_log.append(W.copy())
-            B_log.append(B.copy())
-
+        sum_log += log_loss(A, y[j])
+        sum_dx_log += dx_log_loss(y[j], A)
+        
         #Backpropagation
-        dZ = A - y[i]       #dL/dZ
-        dW = X[i] * dZ      #dL/dW
-        db = dZ             #dL/dB
-        W -= dW * learning_rate
-        B -= db * learning_rate
+        dZ = A - y[j]          #dL/dZ
+        sum_dW += X[j] * dZ     #dL/dW
+        sum_db += dZ            #dL/dB
+
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+    W_log.append(W.copy())
+    B_log.append(B.copy())
+    
+    W -= sum_dW * learning_rate
+    B -= sum_db * learning_rate
 
 
 print("")
@@ -114,27 +123,36 @@ print("Loss", log_loss(A, y))
 print("ACTIVATION", A)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for _ in tqdm(range(nb_iteraton)):
     
-    for i in range(X.size):
+    sum_log = 0
+    sum_dx_log = 0
+
+    sum_dW = 0
+    sum_db = 0
+
+    for j in range(X.size):
 
         #Foreward propagation
-        Z = algebre(X[i], W, B)
+        Z = algebre(X[j], W, B)
         A = sigmoide(Z)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A, y[i]))
-            dx_log.append(dx_log_loss(y[i], A))
-
-            W_log.append(W.copy())
-            B_log.append(B.copy())
-
+        sum_log += log_loss(A, y[j])
+        sum_dx_log += dx_log_loss(y[j], A)
+        
         #Backpropagation
-        dA = A - y[i]
-        dW = X[i] * dA
-        db = dA
-        W -= dW * learning_rate
-        B -= db * learning_rate
+        dZ = A - y[j]          #dL/dZ
+        sum_dW += X[j] * dZ     #dL/dW
+        sum_db += dZ            #dL/dB
+
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+    W_log.append(W.copy())
+    B_log.append(B.copy())
+    
+    W -= sum_dW * learning_rate
+    B -= sum_db * learning_rate
 
 
 print("")

@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a* x  + b
@@ -102,14 +102,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A11, A12, A21 = forward_propagation(X[i], W11, B11, W12, B12, W21, W22, B21)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A21, y[i]))
-            dx_log.append(dx_log_loss(y[i], A21))
+        sum_log +=  log_loss(A21, y[i])
+        sum_dx_log += dx_log_loss(y[i], A21)
 
         # Sauvegarde des poids et biais
         W11_log.append(W11.copy())
@@ -123,7 +125,10 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W11, B11, W12, B12, W21, W22, B21 = backward_propagation(X[i], y[i], A11, A12, A21, W11, B11, W12, B12, W21, W22, B21, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
 
+#Prediction final
 A11, A12, A21 = forward_propagation(X, W11, B11, W12, B12, W21, W22, B21)
 
 print("")
@@ -180,14 +185,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A11, A12, A21 = forward_propagation(X[i], W11, B11, W12, B12, W21, W22, B21)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A21, y[i]))
-            dx_log.append(dx_log_loss(y[i], A21))
+        sum_log +=  log_loss(A21, y[i])
+        sum_dx_log += dx_log_loss(y[i], A21)
 
         # Sauvegarde des poids et biais
         W11_log.append(W11.copy())
@@ -201,7 +208,13 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W11, B11, W12, B12, W21, W22, B21 = backward_propagation(X[i], y[i], A11, A12, A21, W11, B11, W12, B12, W21, W22, B21, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+#Prediction final
 A11, A12, A21 = forward_propagation(X, W11, B11, W12, B12, W21, W22, B21)
+
+
 print("")
 print(f"{'W11:':<6} {W11[0]:>10.6f}   {'B11:':<6} {B11[0]:>10.6f}")
 print(f"{'W12:':<6} {W12[0]:>10.6f}   {'B12:':<6} {B12[0]:>10.6f}")

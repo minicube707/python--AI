@@ -11,7 +11,7 @@ def log_loss(A, y):
 
 def dx_log_loss(y_true, y_pred):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return - 1/y_true.size * y_true/(y_pred + epsilon) - (1 - y_true)/(1 - y_pred + epsilon)
+    return - 1/y_true.size * y_true/(y_pred + epsilon) + (1 - y_true)/(1 - y_pred + epsilon)
 
 def sigmoide(X):
     X = np.clip(X, -100, 100)

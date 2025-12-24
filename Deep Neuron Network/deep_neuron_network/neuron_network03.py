@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a * x + b
@@ -78,14 +78,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A1, A2 = forward_propagation(X[i], W1, B1, W2, B2)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A2, y[i]))
-            dx_log.append(dx_log_loss(y[i], A2))
+        sum_log += log_loss(A2, y[i])
+        sum_dx_log +=  dx_log_loss(y[i], A2)
 
         # Sauvegarde des poids et biais
         W1_log.append(W1.copy())
@@ -96,7 +98,12 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W1, B1, W2, B2 = backward_propagation(X[i], y[i], A1, A2, W1, B1, W2, B2, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+#Prediction final
 A1, A2 = forward_propagation(X, W1, B1, W2, B2)
+
 print("")
 print(f"{'W1:':<6} {W1[0]:>10.6f}   {'B1:':<6} {B1[0]:>10.6f}")
 print(f"{'W2:':<6} {W2[0]:>10.6f}   {'B2:':<6} {B2[0]:>10.6f}")
@@ -146,14 +153,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A1, A2 = forward_propagation(X[i], W1, B1, W2, B2)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A2, y[i]))
-            dx_log.append(dx_log_loss(y[i], A2))
+        sum_log += log_loss(A2, y[i])
+        sum_dx_log +=  dx_log_loss(y[i], A2)
 
         # Sauvegarde des poids et biais
         W1_log.append(W1.copy())
@@ -164,6 +173,8 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W1, B1, W2, B2 = backward_propagation(X[i], y[i], A1, A2, W1, B1, W2, B2, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
 
 A1, A2 = forward_propagation(X, W1, B1, W2, B2)
 print("")

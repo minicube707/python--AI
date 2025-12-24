@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a * x + b
@@ -136,9 +136,6 @@ print("B: ", B)
 print("Loss final ", log_loss(A, y))
 print("y: ", y)
 print("ACTIVATION final", sigmoide(algebre(X, W, B)))
-
-# Créer une figure avec deux sous-graphes côte à côte
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1 ligne, 2 colonnes
 
 # Créer une figure avec deux sous-graphes côte à côte
 fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1 ligne, 2 colonnes

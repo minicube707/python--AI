@@ -8,7 +8,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def algebre(x, a, b):
     return a* x  + b
@@ -146,14 +146,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A11, A12, A21, A22, A31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A31, y[i]))
-            dx_log.append(dx_log_loss(y[i], A31))
+        sum_log += log_loss(A31, y[i])
+        sum_dx_log += dx_log_loss(y[i], A31)
 
         # Sauvegarde des poids et biais
         W11_log.append(W11.copy())
@@ -173,7 +175,10 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate)
 
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
 
+#Prediction final
 A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 )
 
 print("")
@@ -238,14 +243,16 @@ print("")
 
 for j in tqdm(range(nb_iteraton)):
     
+    sum_log = 0
+    sum_dx_log = 0
+
     for i in range(X.size):
 
         #Foreward propagation
         A11, A12, A21, A22, A31 = forward_propagation(X[i], W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
 
-        if (j % 50 == 0):
-            log.append(log_loss(A31, y[i]))
-            dx_log.append(dx_log_loss(y[i], A31))
+        sum_log += log_loss(A31, y[i])
+        sum_dx_log += dx_log_loss(y[i], A31)
 
         # Sauvegarde des poids et biais
         W11_log.append(W11.copy())
@@ -265,7 +272,12 @@ for j in tqdm(range(nb_iteraton)):
         #Backpropagation
         W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 = backward_propagation(X[i], y[i], A11, A12, A21, A22, A31, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31, learning_rate)
 
-A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31)
+    log.append(sum_log)
+    dx_log.append(sum_dx_log)
+
+#Prediction final
+A11, A12, A21, A22, A31 = forward_propagation(X, W11, W12, B11, B12, W21, W22, W23, W24, B21, B22, W31, W32, B31 )
+
 print("")
 print(f"{'W11:':<6} {W11[0]:>10.6f}   {'B11:':<6} {B11[0]:>10.6f}")
 print(f"{'W12:':<6} {W12[0]:>10.6f}   {'B12:':<6} {B12[0]:>10.6f}")

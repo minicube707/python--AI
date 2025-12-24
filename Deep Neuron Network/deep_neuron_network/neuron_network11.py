@@ -10,7 +10,7 @@ def log_loss(A, y):
     return  - y * np.log(A + epsilon) - (1-y) * np.log(1-A + epsilon)
 
 def dx_log_loss(y_true, y_pred):
-    return - y_true/y_pred - (1 - y_true)/(1 - y_pred)
+    return - y_true/y_pred + (1 - y_true)/(1 - y_pred)
 
 def sigmoide(X):
     return 1/(1 + np.exp(-X))
@@ -133,23 +133,20 @@ print("ACTIVATION", activation["A" + str(C)])
 print("ERREEUR   ", activation["A" + str(C)] - y)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for i in tqdm(range(nb_iteraton)):
     
-    for i in range(X.shape[0]):
+    #Foreward propagation
+    activation = forward_propagation(X, parametres)
 
-        #Foreward propagation
-        activation = forward_propagation(X, parametres)
-
-        if (j % 50 == 0):
-            log.append(log_loss(activation["A" + str(C)].flatten(), y))
-            dx_log.append(dx_log_loss(y, activation["A" + str(C)].flatten()))
+    log.append(log_loss(activation["A" + str(C)].flatten(), y))
+    dx_log.append(dx_log_loss(y, activation["A" + str(C)].flatten()))
 
 
-        #Backpropagation
-        gradients = backward_propagation(y, activation, parametres)
-        parametres = update(gradients, parametres, learning_rate)
+    #Backpropagation
+    gradients = backward_propagation(y, activation, parametres)
+    parametres = update(gradients, parametres, learning_rate)
 
-
+#Prediction final 
 activation = forward_propagation(X, parametres)
 print("y: ", y)
 print("Loss      ", log_loss(activation["A" + str(C)], y))
@@ -172,22 +169,20 @@ print("ACTIVATION", activation["A" + str(C)])
 print("ERREEUR   ", activation["A" + str(C)] - y)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
+for i in tqdm(range(nb_iteraton)):
     
-    for i in range(X.shape[0]):
+    #Foreward propagation
+    activation = forward_propagation(X, parametres)
 
-        #Foreward propagation
-        activation = forward_propagation(X, parametres)
+    log.append(log_loss(activation["A" + str(C)].flatten(), y))
+    dx_log.append(dx_log_loss(y, activation["A" + str(C)].flatten()))
 
-        if (j % 50 == 0):
-            log.append(log_loss(activation["A" + str(C)].flatten(), y))
-            dx_log.append(dx_log_loss(y, activation["A" + str(C)].flatten()))
-            
 
-        #Backpropagation
-        gradients = backward_propagation(y, activation, parametres)
-        parametres = update(gradients, parametres, learning_rate)
+    #Backpropagation
+    gradients = backward_propagation(y, activation, parametres)
+    parametres = update(gradients, parametres, learning_rate)
 
+#Prediction final 
 activation = forward_propagation(X, parametres)
 print("y: ", y)
 print("Loss      ", log_loss(activation["A" + str(C)], y))
