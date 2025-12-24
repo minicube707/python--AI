@@ -1,7 +1,7 @@
 
 import os
 import sys
-import  numpy as np
+import numpy as np
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)

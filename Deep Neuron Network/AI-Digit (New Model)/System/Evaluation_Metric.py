@@ -1,5 +1,5 @@
 
-import  numpy as np
+import numpy as np
 
 from .Mathematical_function import softmax
 from .Deep_Neuron_Network import foward_propagation_DNN
