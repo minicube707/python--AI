@@ -57,7 +57,12 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
         indices = np.where(y == cls)[0][:15]  # 15 premières images
         for i, idx in enumerate(indices):
             plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
-            plt.imshow(X[idx].reshape(input_shape[1], input_shape[2]), cmap="gray")
+
+            if (input_shape[0] == 1):
+                plt.imshow(X[idx].reshape(input_shape[1], input_shape[2]), cmap="gray")
+            else:
+                plt.imshow(X[idx].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
             plt.title(f"{y[idx]}")
             plt.axis("off")
 
@@ -117,7 +122,12 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     fig.suptitle("Train Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+
+        if (input_shape[0] == 1):
+            plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+        else:
+            plt.imshow(New_X_train[i].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
         plt.title(str(np.argmax(y_train[i])))
         plt.axis("off")
     plt.tight_layout()    
@@ -130,7 +140,12 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     fig.suptitle("Test Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+
+        if (input_shape[0] == 1):
+            plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
+        else:
+            plt.imshow(New_X_test[i].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
         plt.title(str(np.argmax(y_test[i])))
         plt.axis("off")
     plt.tight_layout()    

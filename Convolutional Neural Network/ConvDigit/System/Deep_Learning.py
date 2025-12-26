@@ -14,16 +14,16 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
                      dimensions_CNN, tuple_size_activation, C_CNN, 
                      dimensions_DNN, C_DNN,
                      learning_rate_CNN, learning_rate_DNN, beta1, beta2, alpha,
-                     max_attempts, min_confidence_score):
+                     max_attempts, min_confidence_score, input_shape):
 
     for _ in range(max_attempts):
         # Forward
         activations_CNN, activations_DNN = forward_propagation(
-            X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+            X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
 
         # Backward
         gradients_DNN, gradients_CNN = back_propagation(
-            activations_DNN, activations_CNN, parametres_DNN, parametres_CNN,
+            activations_DNN, activations_CNN,   parametres_DNN, parametres_CNN,
             dimensions_CNN, tuple_size_activation, dimensions_DNN, C_DNN, y, alpha)
 
         # Update
@@ -32,7 +32,7 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
             parametres_grad, learning_rate_CNN, learning_rate_DNN, dimensions_DNN, beta1, beta2, C_CNN)
 
         # Prediction
-        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha)
+        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape)
 
         if accuracy_score(y, pred) > 0 and confidence_score(y, pred) >= min_confidence_score:
             break
@@ -41,14 +41,14 @@ def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
 
 
 def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
-                    tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha):
+                    tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape):
     loss = 0
     dx_l = 0
     accu = 0
     conf = 0
     for idx in indices:
         pred = activation(X[idx], parametres_CNN, parametres_DNN,
-                          tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha)
+                          tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape)
         loss += log_loss(y[idx], pred)
         dx_l += dx_log_loss(y[idx], pred)
         accu += accuracy_score(y[idx], pred)
@@ -118,7 +118,8 @@ def convolution_neuron_network(
         dimensions_CNN, dimension_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size, validation_frequency
+        max_attempts, min_confidence_score, validation_size, validation_frequency,
+        input_shape
     ):
 
     C_CNN = len(dimensions_CNN)
@@ -135,11 +136,13 @@ def convolution_neuron_network(
 
     tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                     parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                    input_shape)
     
     vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
                                     parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                    input_shape)
     train_loss.append(tl)
     train_lear.append(tdx)
     train_accu.append(ta)
@@ -168,7 +171,7 @@ def convolution_neuron_network(
                 dimensions_CNN, tuple_size_activation, C_CNN, 
                 dimension_DNN, C_DNN,
                 learning_rate_CNN, learning_rate_DNN, beta1, beta2, alpha,
-                max_attempts, min_confidence_score
+                max_attempts, min_confidence_score, input_shape
             )
 
             k += 1
@@ -179,11 +182,13 @@ def convolution_neuron_network(
 
                 tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                                 parametres_CNN, parametres_DNN,
-                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                                input_shape)
 
                 vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
                                                 parametres_CNN, parametres_DNN,
-                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                                input_shape)
 
                 train_loss.append(tl)
                 train_lear.append(tdx)
@@ -211,11 +216,13 @@ def convolution_neuron_network(
 
     tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
                                     parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                    input_shape)
 
     vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
                                     parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha)
+                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
+                                    input_shape)
 
     train_loss.append(tl)
     train_lear.append(tdx)

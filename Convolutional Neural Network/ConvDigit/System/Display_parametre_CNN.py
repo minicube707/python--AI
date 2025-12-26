@@ -80,7 +80,7 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
 def display_activation(X, y, 
         parametres_CNN, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha):
+        tuple_size_activation, alpha, input_shape):
 
     print("")
     number_wanted = int(input("Which number do want ?\n"))
@@ -92,7 +92,11 @@ def display_activation(X, y,
     index_choisi = np.random.choice(indices)
 
     # Afficher l'image
-    plt.imshow(X[index_choisi].reshape(28, 28), cmap='gray')
+    if (input_shape[0] == 1):
+        plt.imshow(X[index_choisi].reshape(28, 28), cmap='gray')
+    else:
+        plt.imshow(X[index_choisi].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
     plt.title(f"Chiffre: {y[index_choisi]}")
     plt.axis('off')
     plt.show()
@@ -101,7 +105,7 @@ def display_activation(X, y,
     C_DNN = len(parametres_DNN) // 2
 
     activations_CNN, _ = forward_propagation(
-        X[index_choisi], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+        X[index_choisi], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
 
     for i in range(1, len(dimensions_CNN)-1):
             display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i+1)][0], dimensions_CNN[str(i+1)][1]),
@@ -195,7 +199,7 @@ void
 def display_kernel_and_biais(X, y, 
         parametres_CNN, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha):
+        tuple_size_activation, alpha, input_shape):
 
     def set_mode():
         while(1):
@@ -237,7 +241,7 @@ def display_kernel_and_biais(X, y,
         display_activation(X, y, 
         parametres_CNN, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha)
+        tuple_size_activation, alpha, input_shape)
         return
     
     for key, value in parametres_CNN.items():

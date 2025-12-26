@@ -4,13 +4,9 @@ import  numpy as np
 from .Deep_Neuron_Network import foward_propagation_DNN, back_propagation_DNN, update_DNN
 from .Convolution_Neuron_Network import foward_propagation_CNN, back_propagation_CNN, update_CNN, add_padding, reshape
 
-def forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha):
+def forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape):
     
-     #Ajout une dimmension pour chaque image fasse 1*n*n
-    N = X.size  # Nombre total d'éléments dans le vecteur
-    sqrt_N = int(np.sqrt(N))
-    shape = (1, sqrt_N, sqrt_N)
-    X = X.reshape(shape)
+    X = X.reshape(input_shape)
 
     new_X = []
     if len(dimensions_CNN) > 1:

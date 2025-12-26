@@ -13,8 +13,8 @@ Evaluation Metrics Function
 def dx_log_loss(y_true, y_pred):
     return - np.mean(np.sum(y_true - y_pred))
 
-def activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha):
-    _, activation_DNN = forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+def activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape):
+    _, activation_DNN = forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
     A = softmax(activation_DNN["A" + str(C_DNN)])
     return A.flatten()
 

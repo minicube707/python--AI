@@ -34,18 +34,26 @@ module_dir = os.path.join(module_dir, dir_name)
 
 if (X is not None and y is not None):
 
-    # Forme d'entrée (canaux, hauteur, largeur)
-    if X.ndim == 3:
+    # Forme d'entrée (nb_data, hauteur * largeur)
+    if X.ndim == 2:
+        _, n_features = X.shape
+        side = int(np.sqrt(n_features))
+        input_shape = (1, side, side)
+        print("Input shappe: ", input_shape)
+
+    # Forme d'entrée (nb_data, hauteur, largeur)
+    elif X.ndim == 3:
         _, side, _ = X.shape
         input_shape = (1, X.shape[1],X.shape[2] )
         print("Input shappe: ", input_shape)
         X = X.reshape(X.shape[0], -1)
 
-    elif X.ndim == 2:
-        n_samples, n_features = X.shape
-        side = int(np.sqrt(n_features))
-        input_shape = (1, side, side)
+    # Forme d'entrée (nb_data, hauteur, largeur, cannaux)
+    elif X.ndim == 4:
+        _, side, _, channel = X.shape
+        input_shape = (channel, X.shape[1], X.shape[2] )
         print("Input shappe: ", input_shape)
+        X = X.reshape(X.shape[0], -1)
 
     else:
         raise ValueError(f"Unsupported input dimension: {X.ndim}")
@@ -55,23 +63,23 @@ if (X is not None and y is not None):
 #         PARAMÈTRES
 # ============================
 
-nb_iteration = 5
+nb_iteration = 1
 max_attempts = 1
 min_confidence_score = 0
-validation_size = 5_000
+validation_size = 1_000
 ratio_test = 0.2
 validation_frequency = -1
-dataset_size = 50_000
+dataset_size = 60_000
 
 # Paramètres d'apprentissage
 # CNN
-learning_rate_CNN = 0.01
+learning_rate_CNN = 0.001
 beta1 = 0.9
 beta2 = 0.999
 alpha = 0.001
 
 # DNN
-learning_rate_DNN = 0.01
+learning_rate_DNN = 0.001
 
 
 # ============================
@@ -95,14 +103,14 @@ mode = set_mode()
 if mode in {4}:
     model, model_info = select_model(module_dir, "LogBook/model_logbook.csv")
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = load_model(module_dir, model)
-    tuple_size_activation = create_tuple_size((1, 28,28), dimensions_CNN)
+    tuple_size_activation = create_tuple_size((3, 32, 32), dimensions_CNN)
 
     print("")
     show_all_info_model(model_info)
     display_kernel_and_biais(X, y, 
         parametres_CNN, parametres_DNN,
         dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha)
+        tuple_size_activation, alpha, input_shape)
     exit(0)
 
 elif (X is None and y is None):
@@ -118,11 +126,11 @@ if mode in {1}:
 
     # Structure CNN : (kernel_size, stride, padding, nb_kernels, type_layer, activation)
     dimensions_CNN = {
-        "1": (5, 1, 0, 32, "kernel", "tanh"),
+        "1": (5, 1, 0, 32, "kernel", "relu"),
         "2": (2, 2, 0, 1, "pooling", "max"),
-        "3": (3, 1, 0, 64, "kernel", "tanh"),
+        "3": (3, 1, 0, 64, "kernel", "relu"),
         "4": (2, 2, 0, 1, "pooling", "max"),
-        "5": (3, 1, 0, 64, "kernel", "tanh")
+        "5": (3, 1, 0, 64, "kernel", "relu")
     }
     
     # Structure DNN : (number of neurone, activations) 
@@ -175,7 +183,8 @@ if mode in {1, 2}:
         dimensions_CNN, dimensions_DNN,
         tuple_size_activation,
         learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size, validation_frequency
+        max_attempts, min_confidence_score, validation_size, validation_frequency,
+        input_shape
     )
 
     # ============================
@@ -244,13 +253,18 @@ fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de
 for i in range(1,16):
 
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+    _, activation_DNN = forward_propagation(X_test[i], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)])
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
 
     plt.subplot(4,5, i)
-    plt.imshow(X_test[i].reshape(side, side), cmap="gray")
+
+    if (input_shape[0] == 1):
+        plt.imshow(X_test[i].reshape(side, side), cmap="gray")
+    else:
+        plt.imshow(X_test[i].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
     plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
     plt.tight_layout()
     plt.axis("off")
@@ -279,7 +293,7 @@ for i in range(nb_test):
         break
     
     # Prédiction des probabilités avec softmax
-    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+    _, activation_DNN = forward_propagation(X_test[index], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
     probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
     pred = np.argmax(probabilities)
     porcent = np.max(probabilities)
@@ -289,7 +303,11 @@ for i in range(nb_test):
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
     
     # Affichage de l'image
-    axs[0].imshow(X_test[index].reshape(side, side), cmap="gray")
+    if (input_shape[0] == 1):
+        axs[0].imshow(X_test[index].reshape(side, side), cmap="gray")
+    else:
+        axs[0].imshow(X_test[index].reshape(input_shape[1], input_shape[2], input_shape[0]))
+
     axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 

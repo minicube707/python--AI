@@ -88,14 +88,15 @@ def research(grid, parametres, model_info):
 
     grid = grid.reshape((1, 64))
 
+    input_shape = (1, 8, 8)
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
-    tuple_size_activation = create_tuple_size((1, 8, 8), dimensions_CNN)
+    tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
     alpha = model_info["alpha"]
 
     C_CNN = len(dimensions_CNN)
     C_DNN = len(dimensions_DNN)
 
-    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha)
+    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
     
     # Prédiction des probabilités avec softmax
     probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
