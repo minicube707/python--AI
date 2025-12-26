@@ -7,7 +7,7 @@ dataset_path = "Dataset"
 os.makedirs(dataset_path, exist_ok=True)
 
 # Nom du fichier de sortie
-selected_file = "iris_dataset.npz"
+selected_file = "CIRFA10.npz"
 file_path = os.path.join(dataset_path, selected_file)
 
 # Chargement du dataset Iris depuis sklearn
@@ -16,7 +16,7 @@ iris = load_iris()
 # Sauvegarde dans un fichier .npz
 np.savez(file_path, data=iris.data, target=iris.target)
 
-print(f"✅ Dataset Iris enregistré dans : {file_path}")
+print(f"✅ Dataset enregistré dans : {file_path}")
 
 # --- Exemple de rechargement (comme ton code) ---
 with np.load(os.path.join(dataset_path, selected_file)) as f:
