@@ -31,5 +31,5 @@ DNN:
 Les dépendance sont décrites dans chaque project.
 
 Se référer au README du project concerné :  
-    - 'CNN/README.md'  
-    - 'DNN/README.md'  
+    - `CNN/README.md`  
+    - `DNN/README.md`  
