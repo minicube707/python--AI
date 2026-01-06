@@ -213,7 +213,18 @@ def calcul_output_shape(input_size, k_size, stride, padding):
     return np.int8((input_size - k_size + padding) / stride +1)
 
 
+"""
+create_tuple_size:
+=========DESCRIPTION=========
+Create a tuple with all the original shape of the activation (no more calculation)
 
+=========INPUT=========
+tuple           X_shape  :      tuple with the dimension of the input
+dict            dimensions :    all the information on how is built the CNN
+
+=========OUTPUT=========
+tuple           tuple containe all the dimension of the input and activation
+"""
 def create_tuple_size(X_shape, dimensions):
 
     tuple_size = []
@@ -1205,7 +1216,7 @@ def main():
     display_info_learning(l_array, a_array, d_array)
 
     #Display kernel & biais
-    display_kernel_and_biais(parametres)
+    #display_kernel_and_biais(parametres)
 
     #Display target vs prediction
     y_pred = activations["A" + str(C_CNN)]

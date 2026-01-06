@@ -213,7 +213,18 @@ def calcul_output_shape(input_size, k_size, stride, padding):
     return np.int8((input_size - k_size + padding) / stride +1)
 
 
+"""
+create_tuple_size:
+=========DESCRIPTION=========
+Create a tuple with all the original shape of the activation (no more calculation)
 
+=========INPUT=========
+tuple           X_shape  :      tuple with the dimension of the input
+dict            dimensions :    all the information on how is built the CNN
+
+=========OUTPUT=========
+tuple           tuple containe all the dimension of the input and activation
+"""
 def create_tuple_size(X_shape, dimensions):
 
     tuple_size = []
@@ -1215,6 +1226,7 @@ def main():
 
     #X = np.random.rand(x_shape, x_shape)
     #X = np.random.rand(x_shape * x_shape).reshape(x_shape, x_shape)
+    #Create a cross to calibrate the model 
     X = np.zeros((x_shape, x_shape))
     X[:, 8:16] = 1
     X[8:16, :] = 1

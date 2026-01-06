@@ -370,9 +370,12 @@ def initialisation_kernel(parametres, parametres_grad, list_size_activation, k_s
     nb_layer =  list_size_activation[i-1][0]
     o_size = list_size_activation[i][1]
 
+    #Set every kernel to zero, exept the center to 1
     parametres["K" + str(i)] = np.zeros((nb_kernel, nb_layer, k_size**2, 1))
     center_index = (k_size**2) // 2  # ex: pour 3x3 → 9//2 = 4
     parametres["K" + str(i)][:, :, center_index, 0] = 1
+
+    #Put biais to zero to vanish them
     parametres["b" + str(i)] = np.zeros((nb_kernel, o_size**2, 1)).astype(np.float16)
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
@@ -1091,6 +1094,7 @@ def main():
 
     x_shape = 28
     #X = np.random.rand(x_shape, x_shape)
+    #Create a cross to calibrate the model
     X = np.zeros((x_shape, x_shape), dtype=int)
     middle_index = x_shape // 2
     X[middle_index, :] = 1
