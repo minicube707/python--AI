@@ -42,7 +42,7 @@ Ces scripts montrent comment un modèle apprend avec un ou deux points de donné
 - Modèle avec **trois neurones**, deux entrées et une sortie, deux variables, fonction Sigmoïde.
 
 ## 5. neuron_network05.py
-- Modèle avec **cinq neurones**, deux entrées, **deux neurones cachés**, deux sorties, fonction Sigmoïde.
+- Modèle avec **cinq neurones**, deux entrées, **deux neurones cachés**, une sortie, fonction Sigmoïde.
 
 ## 6. neuron_network06.py
 - Comme neuron_network05.py mais **activation LeakyReLU** pour la couche cachée.  
