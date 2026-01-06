@@ -1,14 +1,8 @@
-import pickle
+
 import numpy as np
 import pygame
 import matplotlib.pyplot as plt
 import os
-import sys
-
-from pathlib import Path
-
-# Ajouter le dossier parent de Data1/ (donc C:/) à sys.path
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from System.Mathematical_function import softmax
 from System.Propagation import forward_propagation
@@ -90,18 +84,37 @@ def delete_node (width, rows, grid):
         pos = pygame.mouse.get_pos()
         if (0 <= pos[0] <= width)  and (0 <= pos[1] <= width):
             row, col = get_clicked_pos(pos, rows, width)
-            if (grid[row, col] == 1):
+            if (grid[row, col] != 0):
                 grid[row, col] = 0
             
 
     return grid
 
-def research(grid, parametres, model_info):
+def pooling(grid, kernel_size):
 
-    grid = grid.reshape((1, 784))
+    # Nombre de blocs dans chaque dimension
+    out_shape = (grid.shape[0] // kernel_size, grid.shape[1] // kernel_size)
+
+    # Initialisation de la matrice résultat
+    new_grid = np.zeros(out_shape)
+
+    # Max pooling manuel avec un pas de kernel_size
+    for i in range(0, grid.shape[0], kernel_size):
+        for j in range(0, grid.shape[1], kernel_size):
+            new_grid[i // kernel_size, j // kernel_size] = np.mean(grid[i:i + kernel_size, j:j + kernel_size])
+
+    return new_grid
+
+def research(grid, parametres, model_info, rows, str_pooling):
+
+    if (str_pooling == "true"):
+        grid = pooling(grid, kernel_size=2)
+        rows = int(rows/2)
+
+    grid = grid.reshape((1, rows**2))
     grid /= 255
     
-    input_shape = (1, 28, 28)
+    input_shape = (1, rows, rows)
     parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
     tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
     alpha = model_info["alpha"]
@@ -121,7 +134,7 @@ def research(grid, parametres, model_info):
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     # Affichage de l'image
-    axs[0].imshow(grid.reshape((28, 28)), cmap="gray")
+    axs[0].imshow(grid.reshape((rows, rows)), cmap="gray")
     axs[0].set_title(f"Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
@@ -140,9 +153,12 @@ def lister_dossiers():
     # Récupère le chemin du répertoire courant
     repertoire_courant = os.getcwd()
     
-    # Liste uniquement les dossiers
-    dossiers = [d for d in os.listdir(repertoire_courant) if os.path.isdir(d)]
-    
+    # Liste uniquement les dossiers qui contient des models
+    dossiers = [
+    d for d in os.listdir(repertoire_courant)
+    if os.path.isdir(os.path.join(repertoire_courant, d)) and "Package" in d
+    ]
+            
     if not dossiers:
         print("Aucun dossier trouvé dans le répertoire courant.")
         return None
@@ -160,8 +176,13 @@ def lister_dossiers():
                 dossier_choisi = dossiers[choix - 1]
                 print(f"\nVous avez choisi : {dossier_choisi}")
                 return dossier_choisi
+            
+            elif choix == 0:
+                exit(1)
+
             else:
                 print("Numéro invalide, réessayez.")
+
         except ValueError:
             print("Veuillez entrer un nombre valide.")
 
@@ -173,7 +194,12 @@ def main (win , width):
     model, model_info = select_model(dir_name, "LogBook/model_logbook.csv")
     parametres = load_model(dir_name, model)
 
-    rows = int(input("Grid size ?"))
+    rows = int(input("What is the input size ?\n"))
+    brush_size = int(input("What is the brush size ?\n"))
+    str_pooling = input("Do want to use pooling ?\n")
+
+    if (str_pooling == "true"):
+        rows*=2
     grid = np.zeros((rows, rows))
 
     run = True
@@ -189,12 +215,12 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres, model_info)
+                    research(grid, parametres, model_info, rows, str_pooling)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
 
-        grid = add_node (width, rows, grid, 2)
+        grid = add_node (width, rows, grid, brush_size)
         grid = delete_node (width, rows, grid)
         draw(win, rows, width, grid)
 
