@@ -1,6 +1,8 @@
 
 import numpy as np
 import pygame
+import matplotlib
+matplotlib.use("TkAgg")  # Issue on linux PC 42
 import matplotlib.pyplot as plt
 import os
 
