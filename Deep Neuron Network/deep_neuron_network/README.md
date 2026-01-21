@@ -5,6 +5,30 @@ Ce dossier présente étape par étape **la construction d’un DNN from scratch
 
 ---
 
+## Dépendances / Packages requis
+
+Ce projet nécessite les packages Python suivants :
+
+```python
+numpy
+tqdm
+matplotlib
+```
+
+### Installation des dépendances
+
+Avec pip :
+
+```bash
+pip install numpy tqdm matplotlib
+```
+
+Avec uv :
+
+```bash
+uv add numpy tqdm matplotlib
+```
+
 ## Lancer le code
 
 - Avec **pip** :  

@@ -17,32 +17,3 @@ Le dossier `AI-Digit (New Model)` contient :
 
 **C'est la version recommandée pour l'exécution.**
 
----
-
-## Dépendances
-
-Ce projet utilise uniquement des bibliothèques Python **installables via pip**.  
-Pour installer toutes les dépendances, exécute :
-
-```bash
-pip install numpy tqdm matplotlib scikit-learn pandas seaborn scipy pygame
-```
-
----
-Pour gérer les dépendances avec **UV**, procédez comme suit :
-
-1. Installer UV si ce n’est pas déjà fait :
-
-```bash
-pip install uv
-```
-
-2. Ensuite initialiser **uv** dans dossier :
-```bash
-uv init
-```
-
-3. Ajouter les dépendances du projet :
-```bash
-uv add numpy tqdm matplotlib scikit-learn pandas seaborn scipy pygame
-```
