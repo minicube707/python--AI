@@ -122,7 +122,7 @@ def update_graph(
 # ========
 
 learning_rate = 0.1
-nb_iteraton = 2000
+nb_iteraton = 1000
 
 W = np.random.rand(1) * 2 - 1
 B = np.random.rand(1) * 2 - 1

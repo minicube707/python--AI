@@ -112,7 +112,7 @@ def update_graph(
 # ========
 
 learning_rate = 0.1
-nb_iteraton = 3000
+nb_iteraton = 1000
 
 W = np.random.rand(1) * 2 - 1
 B = np.random.rand(1) * 2 - 1
@@ -225,7 +225,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,  line_error,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
@@ -285,7 +285,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
@@ -345,7 +345,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
@@ -404,7 +404,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
@@ -464,7 +464,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
@@ -524,7 +524,7 @@ for i in tqdm(range(nb_iteraton)):
         axes,
         line_log, line_dx,
         line_W, line_B,
-        line_model, scatter_target,
+        line_model, scatter_target, line_error,
         log, dx_log,
         W_log, B_log,
         X_vis, X, y, W, B,
