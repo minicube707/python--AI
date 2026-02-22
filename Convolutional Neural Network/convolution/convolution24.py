@@ -416,7 +416,7 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
         # Default to small random values
         K = np.random.randn(*shape).astype(np.float32) * 0.01
 
-    b_shape = (nb_kernel, o_size**2, 1)
+    b_shape = (nb_kernel, np.int64(o_size)**2, 1) #np.int64 avoid overflow with o_size**2
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
 
     parametres["K" + str(i)] = K
@@ -877,7 +877,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
                 new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = calcul_output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape(X.shape[0], (o_size)**2, k_size)
+    return new_X.reshape(X.shape[0], np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2
 
 
 """
@@ -895,7 +895,7 @@ numpy.array      :             the activation matrice
 """
 def deshape(X, k_size_sqrt, stride):
 
-    input_size = np.int8(np.sqrt(X.shape[1]*X.shape[2]))
+    input_size = np.int64(np.sqrt(X.shape[1]*X.shape[2]))
     new_X = np.array([])
     
     step1 = input_size // stride
@@ -906,7 +906,7 @@ def deshape(X, k_size_sqrt, stride):
             for k in range(0, X.shape[2], step2):
                 new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
 
-    new_X = new_X.reshape((X.shape[0], input_size ,input_size))
+    new_X = new_X.reshape((X.shape[0], input_size, input_size))
     return new_X
 
 

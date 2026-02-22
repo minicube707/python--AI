@@ -219,7 +219,7 @@ dict    parametres_grad :   containt all the information for the update operatio
 def initialisation_kernel(parametres, parametres_grad, k_size, o_size, nb_kernel, type_layer, fonction, i):
 
     parametres["K" + str(i)] = np.random.randn(nb_kernel, k_size**2, 1)
-    parametres["b" + str(i)] = np.random.randn(nb_kernel, o_size**2, 1)
+    parametres["b" + str(i)] = np.random.randn(np.int64(o_size)**2, 1) #np.int64 avoid overflow with o_size**2
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
@@ -614,7 +614,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
                 new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = ouput_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape(X.shape[0], (o_size)**2, k_size)
+    return new_X.reshape(X.shape[0], np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2
 
 
 """
@@ -632,7 +632,7 @@ numpy.array      :             the activation matrice
 """
 def deshape(X, k_size_sqrt, stride):
 
-    input_size = np.int8(np.sqrt(X.shape[1]*X.shape[2]))
+    input_size = np.int64(np.sqrt(X.shape[1]*X.shape[2]))
     new_X = np.array([])
     
     step1 = input_size//stride
@@ -643,7 +643,7 @@ def deshape(X, k_size_sqrt, stride):
             for k in range(0, X.shape[2], step2):
                 new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
 
-    new_X = new_X.reshape((1, input_size ,input_size))
+    new_X = new_X.reshape((1, input_size, input_size))
     return new_X
 
 
@@ -682,7 +682,95 @@ def accuracy_score(y_pred, y_true):
     y_pred = np.round(y_pred, 2)
     return np.count_nonzero(y_pred == y_true) / y_true.size
 
+"""
+Affiche les couches d'un array 3D par lots (max 20 par display).
+    
+Arguments :
+- array_3d : array NumPy 3D (forme : (couches, H, W))
+- type : type de couche (string)
+- stage : étape/nom de traitement (string)
+- max_par_fig : nombre maximum de couches par figure
+"""
+def afficher_couches(array_3d, type, stage, max_par_fig=12):
 
+    
+    if not isinstance(array_3d, np.ndarray) or array_3d.ndim != 3:
+        raise ValueError("Entrée invalide : un array NumPy à 3 dimensions est requis.")
+    
+    total = array_3d.shape[0]
+    
+    for start in range(0, total, max_par_fig):
+        end = min(start + max_par_fig, total)
+        batch = array_3d[start:end]
+
+        n = batch.shape[0]
+        cols = min(4, n)
+        rows = (n + cols - 1) // cols
+
+        plt.figure(figsize=(cols * 4, rows * 3))
+        for i in range(n):
+            plt.subplot(rows, cols, i + 1)
+            plt.imshow(batch[i], cmap='gray')
+            plt.title(f'{type} Couche {stage}: {start + i}')
+            plt.axis('off')
+            plt.colorbar()
+
+        plt.suptitle(f'{type} - {stage} (couches {start} à {end - 1})', fontsize=14)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])  # Laisser de l’espace pour le suptitle
+        plt.show()
+
+
+
+def afficher_couches_comparaison(y, y_pred, max_par_fig=12):
+    """
+    Affiche chaque couche de deux tableaux 3D (y et y_pred) côte à côte,
+    répartis sur plusieurs figures si nécessaire (max_par_fig par figure).
+    """
+
+    if y.shape != y_pred.shape or y.ndim != 3:
+        raise ValueError("y et y_pred doivent être des arrays 3D de même forme (D, H, W)")
+
+    total_couches = y.shape[0]
+
+    for start in range(0, total_couches, max_par_fig):
+        end = min(start + max_par_fig, total_couches)
+        n = end - start
+
+        cols = min(4, n)  # 4 paires par ligne
+        rows = np.int8(np.ceil(n / cols))
+
+        fig, axes = plt.subplots(rows, cols * 2, figsize=(4 * cols, 3 * rows))
+
+        # Assurer que axes est 2D même pour une seule ligne
+        if rows == 1:
+            axes = np.expand_dims(axes, 0)
+
+        for i in range(n):
+            layer_idx = start + i
+            row = i // cols
+            col = i % cols
+
+            ax_y = axes[row, col * 2]
+            ax_pred = axes[row, col * 2 + 1]
+
+            ax_y.imshow(y[layer_idx], cmap='gray')
+            ax_y.set_title(f'Y - Couche {layer_idx}')
+            ax_y.axis('off')
+
+            ax_pred.imshow(y_pred[layer_idx], cmap='gray')
+            ax_pred.set_title(f'Prediction - Couche {layer_idx}')
+            ax_pred.axis('off')
+
+        # Masquer les axes inutilisés
+        total_axes = rows * cols * 2
+        for j in range(n * 2, total_axes):
+            row = j // (cols * 2)
+            col = j % (cols * 2)
+            axes[row, col].axis('off')
+
+        plt.suptitle(f'Couches {start} à {end - 1}', fontsize=14)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+        plt.show()
 
 def main():
     #Initialisation
@@ -791,57 +879,21 @@ def main():
             kernel_count += value[3]
             keys_with_kernel.append(key)
 
+    
+    for key, value in parametres.items():
+        if isinstance(value, np.ndarray):
 
-    plt.figure(figsize=(16, 8))
-    # Compteur global pour les sous-graphes
-    subplot_index = 1
+            sqrt = np.int8(np.sqrt(value.shape[1]))
+            value = value.reshape(value.shape[0], sqrt, sqrt)
+            if key.startswith('K'):
+                afficher_couches(value, "Kernel", key[-1])
 
-    for i in range(1, layer_kernel_count + 1):
-        a = keys_with_kernel[i - 1]  # Nom/clé de la couche, ex: 1, 2, etc.
-
-        kernels = parametres["K" + str(a)]
-        num_kernels = kernels.shape[0]
-
-        for x in range(num_kernels):
-            # Calculer la taille de l'image du noyau (supposée carrée)
-            kernel_size = int(np.sqrt(kernels[x].size))
-            plt.subplot(1, layer_kernel_count + num_kernels, subplot_index)
-            plt.imshow(kernels[x].reshape(kernel_size, kernel_size), cmap="gray")
-            plt.title(f"Kernel {a} : {x}")
-            plt.axis("off")
-            plt.colorbar()
-            subplot_index += 1
-
-    plt.tight_layout()
-    plt.show()
-
-
-    plt.figure(figsize=(16, 8))
-    # Compteur global pour les sous-graphes
-    subplot_index = 1
-
-    for i in range(1, layer_kernel_count + 1):
-        a = keys_with_kernel[i - 1]  # Nom/clé de la couche, ex: 1, 2, etc.
-
-        kernels = parametres["b" + str(a)]
-        num_kernels = kernels.shape[0]
-
-        for x in range(num_kernels):
-            # Calculer la taille de l'image du noyau (supposée carrée)
-            kernel_size = int(np.sqrt(kernels[x].size))
-            plt.subplot(1, layer_kernel_count + num_kernels, subplot_index)
-            plt.imshow(kernels[x].reshape(kernel_size, kernel_size), cmap="gray")
-            plt.title(f"Biais {a} : {x}")
-            plt.axis("off")
-            plt.colorbar()
-            subplot_index += 1
-
-    plt.tight_layout()
-    plt.show()
-
-
-    plt.figure(figsize=(16, 8))
-
+            elif key.startswith('b'):
+                afficher_couches(value, "Biais", key[-1])
+        
+   # Nombre de couches
+    y_pred = activations["A" + str(C)]
+    
     # ---- Affichage de la prédiction ----
     plt.subplot(1, 2, 1)
     plt.title("Y prediction")

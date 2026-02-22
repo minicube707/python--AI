@@ -106,7 +106,7 @@ def initialisation_pooling(parametres, k_size, type_layer, fonction, i):
 def initialisation_kernel(parametres, parametres_grad, k_size, o_size, type_layer, fonction, i):
 
     parametres["K" + str(i)] = np.random.randn(k_size**2, 1)
-    parametres["b" + str(i)] = np.random.randn(o_size**2, 1)
+    parametres["b" + str(i)] = np.random.randn(np.int64(o_size)**2, 1) #np.int64 avoid overflow with o_size**2
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
@@ -306,12 +306,12 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
             new_X = np.append(new_X, X[i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = ouput_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape((o_size)**2, k_size)
+    return new_X.reshape(np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2
 
 #Is the inverse function of reshape. Allow to pass axb to nxn
 def deshape(X, k_size_sqrt, stride):
 
-    input_size = np.int8(np.sqrt(X.size))
+    input_size = np.int64(np.sqrt(X.size))
     new_X = np.array([])
     
     step1 = input_size//stride
@@ -320,7 +320,7 @@ def deshape(X, k_size_sqrt, stride):
         for j in range(0, X.shape[1], step2):
             new_X = np.append(new_X, X[i:i + step1, j:j + step2])
 
-    new_X = new_X.reshape((input_size,input_size))
+    new_X = new_X.reshape((input_size, input_size))
 
     return new_X
 

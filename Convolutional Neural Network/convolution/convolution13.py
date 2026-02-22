@@ -68,7 +68,7 @@ def initialisation(X, dimension, padding):
         type_layer = dimension[str(i)][2]
         fonction = dimension[str(i)][3]
 
-        o_size = ouput_shape(input_size, k_size, padding, stride)
+        o_size = np.int64(ouput_shape(input_size, k_size, padding, stride)) #np.int64 avoid overflow with o_size**2
         previ_input_size = input_size
         input_size = o_size
 
@@ -238,12 +238,12 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride):
             new_X = np.append(new_X, X[i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = ouput_shape(x_size_sqrt, k_size_sqrt, 0, stride)
-    return new_X.reshape((o_size)**2, k_size)
+    return new_X.reshape(np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2
 
 #Is the inverse function of reshape. Allow to pass axb to nxn
 def deshape(X, k_size_sqrt, stride):
 
-    input_size = np.int8(np.sqrt(X.size))
+    input_size = np.int64(np.sqrt(X.size))
     new_X = np.array([])
     
     step1 = input_size//stride
@@ -252,7 +252,7 @@ def deshape(X, k_size_sqrt, stride):
         for j in range(0, X.shape[1], step2):
             new_X = np.append(new_X, X[i:i + step1, j:j + step2])
 
-    return new_X.reshape((input_size,input_size))
+    return new_X.reshape((input_size, input_size))
 
 
 

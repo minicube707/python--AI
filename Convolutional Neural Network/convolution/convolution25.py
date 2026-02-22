@@ -1023,7 +1023,8 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
 
     # Afficher l'image y
     plt.subplot(1, 2, 2)
-    plt.imshow(y, cmap='gray')
+    y_reduced = np.sum(y, axis=0)
+    plt.imshow(y_reduced, cmap='gray')
     plt.axis('off')
     plt.title("Image y")
 
@@ -1076,7 +1077,7 @@ def main():
     beta1 = 0.9
     beta2 = 0.99
     alpha = 0.001
-    nb_iteration = 1_000
+    nb_iteration = 2_000
 
     x_shape = 28
     input_shape = (1, x_shape, x_shape)

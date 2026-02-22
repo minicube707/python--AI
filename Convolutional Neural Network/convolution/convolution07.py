@@ -22,7 +22,7 @@ def initialisation(X, dimension, padding, stride):
     for i in range(1, len(dimension)+1):
 
         k_size = dimension[str(i)][0]
-        o_size = ouput_shape(input_size, k_size, padding, stride)
+        o_size = np.int64(ouput_shape(input_size, k_size, padding, stride)) #np.int64 avoid overflow with o_size**2
         input_size = o_size
 
         parametres["K" + str(i)] = np.random.randn(k_size**2, 1)

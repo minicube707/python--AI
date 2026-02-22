@@ -416,7 +416,7 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
         # Default to small random values
         K = np.random.randn(*shape).astype(np.float32) * 0.01
 
-    b_shape = (nb_kernel, o_size**2, 1)
+    b_shape = (nb_kernel, np.int64(o_size)**2, 1) #np.int64 avoid overflow with o_size**2
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
 
     parametres["K" + str(i)] = K
@@ -874,7 +874,7 @@ def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
                 new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
 
     o_size = calcul_output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape(X.shape[0], (o_size)**2, k_size)
+    return new_X.reshape(X.shape[0], np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2 
 
 
 """
@@ -1151,7 +1151,9 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
         plt.show()
 
 
-def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
+def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha, y_shape):
+
+    C_CNN = len(dimensions_CNN.keys())
 
     # Affichage côte à côte
     plt.figure(figsize=(10, 5))
@@ -1164,13 +1166,12 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
 
     # Afficher l'image y
     plt.subplot(1, 2, 2)
-    plt.imshow(y, cmap='gray')
+    y_reduced = np.sum(y, axis=0)
+    plt.imshow(y_reduced, cmap='gray')
     plt.axis('off')
     plt.title("Image y")
 
     plt.show()
-
-    C_CNN = len(dimensions_CNN.keys())
 
     tuple_size_activation = create_tuple_size((1, 28, 28), dimensions_CNN)
     activations_CNN = foward_propagation(X, parametres_CNN, tuple_size_activation, dimensions_CNN, alpha)
@@ -1299,6 +1300,6 @@ def main():
     y_pred = activations["A" + str(C_CNN)]
     display_comparaison_layer(y, y_pred)
 
-    display_activation(X, y, parametres, dimensions, alpha)
+    display_activation(X, y, parametres, dimensions, alpha, y_shape)
     
 main()

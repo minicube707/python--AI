@@ -25,7 +25,7 @@ def initialisation(X, dimension, padding, stride):
         print(f"{input_size}->", end="")
         
         k_size = dimension[str(i)][0]
-        o_size = ouput_shape(input_size, k_size, padding, stride)
+        o_size = np.int64(ouput_shape(input_size, k_size, padding, stride)) #np.int64 avoid overflow with o_size**2
         input_size = o_size
 
         parametres["K" + str(i)] = np.random.randn(k_size**2, 1)
@@ -123,7 +123,7 @@ def reshape(X, K):
         for j in range(0, X.shape[1]-k_size_sqrt+1):
             new_X = np.append(new_X, X[i:i + k_size_sqrt, j:j + k_size_sqrt])
 
-    return new_X.reshape((x_size_sqrt-k_size_sqrt+1)**2, k_size)
+    return new_X.reshape(np.int64(x_size_sqrt-k_size_sqrt+1)**2, k_size) #np.int64 avoid overflow with (x_size_sqrt-k_size_sqrt+1)**2
 
 def accuracy_score(y_pred, y_true):
     y_true = np.round(y_true, 3)
