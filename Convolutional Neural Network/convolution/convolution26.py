@@ -1145,7 +1145,7 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
         plt.show()
 
 
-def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha, y_shape):
+def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
 
     C_CNN = len(dimensions_CNN.keys())
 
@@ -1311,6 +1311,6 @@ def main():
     y_pred = activations["A" + str(C_CNN)]
     #display_comparaison_layer(y, y_pred)
 
-    display_activation(X, y_pred, parametres, dimensions, alpha, y_shape)
+    display_activation(X, y_pred, parametres, dimensions, alpha)
     
 main()
