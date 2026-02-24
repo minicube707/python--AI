@@ -1178,7 +1178,7 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha, y_shape):
 
     for i in range(1, len(dimensions_CNN)):
         display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i+1)][0],  dimensions_CNN[str(i+1)][1]),
-                                   activations_CNN["Z" +str(i)])
+                                   activations_CNN["Z" + str(i)])
 
 
 """
