@@ -179,6 +179,18 @@ Découpage de l’initialisation en plusieurs fonctions :
 
 ---
 
+### `convolution26.py`
+- CNN avec inputs déformés
+- Tests pour vérifier si le modèle est correctement calibré sur les différents channels
+
+---
+
+### `convolution26b.py`
+- CNN avec channel sans déformé
+- Tests pour vérifier si le modèle est correctement calibré sur les différents channels
+
+---
+
 ## Objectif du projet
 
 - Comprendre en profondeur le fonctionnement interne des CNN  
