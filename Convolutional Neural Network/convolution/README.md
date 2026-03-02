@@ -191,6 +191,18 @@ Découpage de l’initialisation en plusieurs fonctions :
 
 ---
 
+### `convolution27.py`
+- CNN boost avec numba
+- Tests pour vérifier si le modèle est correctement calibré sur les différents channels
+
+---
+
+### `convolution28.py`
+- CNN boost avec numba
+- Essai d'entrainement d'un CNN (plus long que sans numba)
+
+---
+
 ## Objectif du projet
 
 - Comprendre en profondeur le fonctionnement interne des CNN  
