@@ -168,12 +168,11 @@ Do the full convolution of two arrays
 =========INPUT=========
 numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
 numpy.array     K :             the kernel matrice
-int             k_size_sqrt :   the size in row of the kernel
 
 =========OUTPUT=========
 numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
-def convolution(dZ, K, k_size_sqrt):
+def convolution(dZ, K):
      
     # Sortie (nb_layers, 4, 4)
     root = np.int8(np.sqrt(K.shape[2] ))
@@ -702,7 +701,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         dZ *= dA
 
         # Apply convolution
-        dZ = convolution(dZ, parametres["K" + str(c)], dim[0])
+        dZ = convolution(dZ, parametres["K" + str(c)])
 
     return gradients, dZ
 

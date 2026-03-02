@@ -176,13 +176,12 @@ Do the full convolution of two arrays
 =========INPUT=========
 numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
 numpy.array     K :             the kernel matrice
-int             k_size_sqrt :   the size in row of the kernel
 
 =========OUTPUT=========
 numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
-def convolution(dZ, K, k_size_sqrt):
-     
+def convolution(dZ, K):
+    
     # Sortie (nb_layers, 4, 4)
     root = np.int8(np.sqrt(K.shape[2] ))
     K = K.reshape(K.shape[0], K.shape[1], root, root)
@@ -710,7 +709,6 @@ Evalaute the difference between the target and the resultat got for the layer ke
 =========INPUT=========
 dict            activation :    containt all the activation during the foreward propagation
 dict            parametres :    containt all the information for the kernel operation
-dict            dimensions :    all the information on how is built the CNN
 dict            gradients  :    containt all the information for the update
 numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
 int             c  :            which stage we are in backpropagatioin 
@@ -719,7 +717,7 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     containt all the gradient need for the update
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha):
+def back_propagation_kernel(activation, parametres, gradients, dZ, c, alpha):
         
     #Create a table for each dx of the kernel
     L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
@@ -756,7 +754,7 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         dZ *= dA
 
         # Apply convolution
-        dZ = convolution(dZ, parametres["K" + str(c)], dimensions[str(c)][0])
+        dZ = convolution(dZ, parametres["K" + str(c)])
 
     return gradients, dZ
 
@@ -793,7 +791,7 @@ def back_propagation_CNN(activation, parametres, dimensions, y, tuple_size_activ
            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
 
         elif parametres["l" + str(c)] == "kernel":
-            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha)
+            gradients, dZ = back_propagation_kernel(activation, parametres, gradients, dZ, c, alpha)
 
     return gradients
 
