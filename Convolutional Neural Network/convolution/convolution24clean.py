@@ -3,6 +3,7 @@ import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from scipy.signal import correlate2d
+from numpy.lib.stride_tricks import as_strided
 
 #Allow to show all tab with numpy
 np.set_printoptions(linewidth=200, threshold=np.inf)
@@ -58,7 +59,7 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def relu(X, alpha):
-    return np.where(X < 0, alpha*X, X)
+    return np.maximum(X, 0) + alpha * np.minimum(X, 0)
 
 
 """
@@ -85,7 +86,9 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def dx_relu(X, alpha):
-    return np.where(X < 0, alpha, 1)
+    dx = np.ones_like(X)
+    dx[X < 0] = alpha
+    return dx
 
 
 def tanh(X):
@@ -107,9 +110,10 @@ numpy.array     X :     the activation matrice
 =========OUTPUT=========
 numpy.array     x :     array containe the next activation
 """
-def max_pooling(X):
-    a = np.int8(np.sqrt(X.shape[1]))
-    return np.max(X, axis=2).reshape((X.shape[0], a, a))
+def max_pooling(X, x_size):
+    n, m, _ = X.shape
+    return np.max(X, axis=2).reshape(n, x_size, x_size)
+
 
 
 
@@ -180,19 +184,22 @@ numpy.array     K :             the kernel matrice
 =========OUTPUT=========
 numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
-def convolution(dZ, K):
+def convolution(dZ, K, k_size, dZ_dim1, dZ_dim2):
      
-    # Sortie (nb_layers, 4, 4)
-    root = np.int8(np.sqrt(K.shape[2] ))
-    K = K.reshape(K.shape[0], K.shape[1], root, root)
-    output = np.zeros((K.shape[1], dZ.shape[1] + K.shape[2] - 1, dZ.shape[2] + K.shape[3] - 1))
+    # Sortie (nb_kernel, nb_layers, k_size, k_size)
+    K_dim0, K_dim1, K_dim2, K_dim3 = K.shape
 
+    K = K.reshape(K_dim0, K_dim1, k_size, k_size)
+    output = np.zeros((K_dim1, dZ_dim1 + k_size - 1, dZ_dim2 + k_size - 1))
+    
     # Convolution pleine pour chaque filtre et chaque canal
-    for i in range(K.shape[0]):  # nb_filters
-        for c in range(K.shape[1]):  # nb_layers (canaux de sortie)
-            output[c] += correlate2d(dZ[i], K[i, c], mode='full')
+    for i, dz in enumerate(dZ):  # nb_filters
+        kernels = K[i]
 
-    return (output)
+        for c, kernel in enumerate(kernels): # nb_layers (canaux de sortie
+            output[c] += correlate2d(dz, kernel, mode="full")
+
+    return output
 
 """
 ouput_shape:
@@ -357,19 +364,19 @@ def initialisation_kernel(parametres, parametres_grad, k_size, fonction, i, list
     nb_layer =  list_size_activation[i-1][0]
     o_size = list_size_activation[i][1]
 
-    shape = (nb_kernel, nb_layer, k_size**2, 1)
+    k_shape = (nb_kernel, nb_layer, k_size**2, 1)
 
     if fonction == "relu":
         std = np.sqrt(2 / (nb_layer * k_size**2))
-        K = np.random.randn(*shape).astype(np.float32) * std
+        K = np.random.randn(*k_shape).astype(np.float32) * std
 
     elif fonction == "tanh" or  fonction == "sigmoide":
         limit = np.sqrt(6 / (nb_layer + nb_kernel))
-        K = (np.random.rand(*shape).astype(np.float32) * 2 - 1) * limit
+        K = (np.random.rand(*k_shape).astype(np.float32) * 2 - 1) * limit
 
     else:
         # Default to small random values
-        K = np.random.randn(*shape).astype(np.float32) * 0.01
+        K = np.random.randn(*k_shape).astype(np.float32) * 0.01
 
     b_shape = (nb_kernel, np.int64(o_size)**2, 1) #np.int64 avoid overflow with o_size**2
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
@@ -377,8 +384,8 @@ def initialisation_kernel(parametres, parametres_grad, k_size, fonction, i, list
     parametres["K" + str(i)] = K
     parametres["b" + str(i)] = b
 
-    parametres_grad["m" + str(i)] = np.zeros(shape).astype(np.float32)
-    parametres_grad["v" + str(i)] = np.zeros(shape).astype(np.float32)
+    parametres_grad["m" + str(i)] = np.zeros(k_shape).astype(np.float32)
+    parametres_grad["v" + str(i)] = np.zeros(k_shape).astype(np.float32)
 
     return parametres, parametres_grad
 
@@ -454,18 +461,27 @@ def initialisation_affectation(dimensions, x_shape, list_size_activation):
 
     nb_layer = x_shape[0]
     o_size = np.int32(x_shape[1])
+    C = len(dimensions)
 
-    for i in range(1, len(dimensions)+1):
+    for i in range(1, C + 1):
         k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
         o_size = np.int32(calcul_output_shape(o_size, dimensions[str(i)][0], dimensions[str(i)][1], dimensions[str(i)][2]))
 
-        # function: 0 = relu, 1 = sigmoide, 2 = tanh
+        if (i < C):
+            o_size += dimensions[str(i+1)][2]
+
+        # function: 0 = relu, 1 = sigmoide, 2 = tanh, 3 = max
         if fonction == "relu":
             fonction = 0
+
         elif fonction == "sigmoide":
             fonction = 1
-        else:
+
+        elif fonction == "tanh":
             fonction = 2
+
+        elif fonction == "max":
+            fonction = 3
 
         # mode: 0 = kernel, 1 = pooling
         if type_layer == "kernel":
@@ -519,8 +535,8 @@ numpy.array     A :                 the activation matrice
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def pooling_activation(A):
-    Z = max_pooling(A)
+def pooling_activation(A, x_size):
+    Z = max_pooling(A, x_size)
     return Z
 
 
@@ -576,9 +592,8 @@ def foward_propagation(X, parametres, tuple_mode_info, alpha):
     for c in range(1, C+1):
         A = activation["A" + str(c-1)]
 
-        type_layer = tuple_mode_info[c-1][0]
-        mode       = tuple_mode_info[c-1][1]
-        x_size     = tuple_mode_info[c-1][2]
+        current_tuple = tuple_mode_info[c-1]
+        type_layer, mode, x_size = current_tuple[:3]
 
         k_size = -1
         stride = 1
@@ -587,8 +602,7 @@ def foward_propagation(X, parametres, tuple_mode_info, alpha):
         #This part is to get data for the reshape
         #There is no information for the last reshape
         if c < C:
-            k_size = tuple_mode_info[c][3]
-            stride = tuple_mode_info[c][4]
+            k_size, stride = tuple_mode_info[c][3:5]
         
         #The information for the padding is at the next step
         if c+1 < C:
@@ -599,17 +613,18 @@ def foward_propagation(X, parametres, tuple_mode_info, alpha):
             K = parametres["K" + str(c)]
             b = parametres["b" + str(c)]
             A, Z = kernel_activation(A, K, b, x_size, mode, alpha)
+            
 
         else:
-            A = pooling_activation(A)
+            A = pooling_activation(A, x_size)
             Z = None
 
         #Activation are in square format
         A = add_padding(A, padding)
 
         if k_size != -1:
-            A = reshape(A, k_size , x_size, stride, padding)  
-        
+            A = reshape(A, k_size, stride, padding)  
+
         activation["A" + str(c)] = A 
         activation["Z" + str(c)] = Z
 
@@ -624,12 +639,11 @@ Evalaute the difference between the target and the resultat got for the layer po
 dict            activation :    containt all the activation during the foreward propagation
 dict            dimensions :    all the information on how is built the CNN
 numpy.array     DZ :            the derivated of the previous activation (what should be the activation)
-int             c  :            which stage we are in backpropagatioin 
 
 =========OUTPUT=========
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_pooling(A, k_size, stride, dZ):
+def back_propagation_pooling(A, o_size, k_size, stride, dZ):
     
     # Trouve les valeurs maximales et leurs indices le long de l'axe 2
     #Reshape dz to (A,BxC)
@@ -649,7 +663,7 @@ def back_propagation_pooling(A, k_size, stride, dZ):
     result[batch_indices, row_indices, max_indices] = max_dZ
 
     # Affichage
-    dZ = deshape(result, k_size, stride)
+    dZ = deshape(result, k_size, stride, o_size*2)
 
     return dZ
 
@@ -671,13 +685,14 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     containt all the gradient need for the update
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, K, activation_fonction, k_size, stride, gradients, dZ, c, alpha):
+def back_propagation_kernel(activation, K, activation_fonction, k_size, gradients, dZ, c, alpha):
         
     #Create a table for each dx of the kernel
     L_A, NB_Dot_Product, K_Size = activation["A" + str(c-1)].shape
     NB_K, L_K, K_Size, one  = K.shape
+    dZ_dim0, dZ_dim1, dZ_dim2 = dZ.shape
 
-    dK = np.zeros(K.shape)
+    dK = np.zeros((NB_K, L_K, K_Size, one))
     
     #For each kernel
     for i in range(NB_K):
@@ -693,7 +708,7 @@ def back_propagation_kernel(activation, K, activation_fonction, k_size, stride, 
 
     #Add the result in the dictionary
     gradients["dK" + str(c)] = dK
-    gradients["db" + str(c)]  = dZ.reshape((dZ.shape[0], dZ.shape[1] * dZ.shape[2], 1))
+    gradients["db" + str(c)]  = dZ.reshape((dZ_dim0, dZ_dim1 * dZ_dim2, 1))
             
     if c > 1:
 
@@ -705,11 +720,10 @@ def back_propagation_kernel(activation, K, activation_fonction, k_size, stride, 
         elif activation_fonction == 2:
             dA = dx_tanh(activation["A" + str(c)])
 
-        dA = deshape(dA,  k_size, stride)
         dZ *= dA
 
         # Apply convolution
-        dZ = convolution(dZ, K)
+        dZ = convolution(dZ, K, k_size, dZ_dim1, dZ_dim2)
 
     return gradients, dZ
 
@@ -746,6 +760,7 @@ def back_propagation_CNN(activation, parametres, gradients, tuple_mode_info, y, 
         if mode == 1:
            dZ = back_propagation_pooling(
                 activation["A" + str(c-1)],
+                tuple_mode_info[c-1][2],
                 tuple_mode_info[c-1][3],
                 tuple_mode_info[c-1][4],
                 dZ
@@ -753,7 +768,11 @@ def back_propagation_CNN(activation, parametres, gradients, tuple_mode_info, y, 
 
         elif mode == 0:
             gradients, dZ = back_propagation_kernel(
-                activation, parametres["K" + str(c)], tuple_mode_info[c-1][1], tuple_mode_info[c-1][3], tuple_mode_info[c-1][4], gradients, dZ, c, alpha)
+                activation, 
+                parametres["K" + str(c)], 
+                tuple_mode_info[c-1][1], 
+                tuple_mode_info[c-1][3],  
+                gradients, dZ, c, alpha)
 
 
 """
@@ -776,17 +795,23 @@ dict            parametres :        containt all the information for the kernel 
 def update(gradients, parametres, parametres_grad, tuple_mode_info, learning_rate, beta1, beta2, C):
         
     epsilon = 1e-8 #Pour empecher les log(0) = /0
+    one_minus_beta1 = 1 - beta1
+    one_minus_beta2 = 1 - beta2
+
+    one_minus_expo_beta1 = (1 - beta1 + epsilon)
+    one_minus_expo_beta2 = (1 - beta2 + epsilon)
+
     #Adam (Adaptativ Momentum)
     for c in range(1, C+1):
         if tuple_mode_info[c-1][0] == 0:
 
             #Update moment
-            parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + (1 - beta1) * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
-            parametres_grad["v" + str(c)] = beta2 * parametres_grad["v" + str(c)] + (1 - beta2) * gradients["dK" + str(c)]**2  # Deuxième estimation des moments (moyenne des carrés des gradients)
+            parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + one_minus_beta1 * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
+            parametres_grad["v" + str(c)] = beta2 * parametres_grad["v" + str(c)] + one_minus_beta2 * gradients["dK" + str(c)]**2  # Deuxième estimation des moments (moyenne des carrés des gradients)
 
             #Biais correction
-            m_hat = parametres_grad["m" + str(c)] / (1 - beta1**(c+1))
-            v_hat = parametres_grad["v" + str(c)] / (1 - beta2**(c+1))
+            m_hat = parametres_grad["m" + str(c)] / one_minus_expo_beta1
+            v_hat = parametres_grad["v" + str(c)] / one_minus_expo_beta2
 
             #Update weights
             parametres["K" + str(c)] = parametres["K" + str(c)] - (learning_rate * m_hat) / (np.sqrt(v_hat) + epsilon)
@@ -806,25 +831,35 @@ Allow to pass nxn grid to axb with a the number of placement and b the size of t
 =========INPUT=========
 numpy.array     X :             the activation matrice
 int             k_size_sqrt :   the size in row of the kernel
-int             x_size_sqrt :   the size in row of the activation matrice
 int             stride :        how many pixel the kernel move  
 int             padding :       how many pixel we add to the border of the activation
 
 =========OUTPUT=========
 numpy.array      :             the activation matrice
 """
-def reshape(X, k_size_sqrt, x_size_sqrt, stride, padding):
+def reshape(X, k_size_sqrt, stride, padding):
+    """
+    X: (batch, H, W)
+    k_size_sqrt: taille du kernel (ex: 2 pour 2x2)
+    stride: pas du kernel
+    padding: int
+    """
 
-    k_size = k_size_sqrt**2
-    new_X = np.array([])
-    
-    for k in range(X.shape[0]):
-        for i in range(0, X.shape[1]-k_size_sqrt+1, stride):
-            for j in range(0, X.shape[2]-k_size_sqrt+1, stride):
-                new_X = np.append(new_X, X[k, i:i + k_size_sqrt, j:j + k_size_sqrt])
+    batch, H, W = X.shape
+    k = k_size_sqrt
+    out_h = (H - k)//stride + 1
+    out_w = (W - k)//stride + 1
 
-    o_size = calcul_output_shape(x_size_sqrt, k_size_sqrt, stride, padding)
-    return new_X.reshape(X.shape[0], np.int64(o_size)**2, k_size) #np.int64 avoid overflow with (o_size)**2
+    # Calcul des strides pour créer les patches
+    shape = (batch, out_h, out_w, k, k)
+    strides = (X.strides[0], X.strides[1]*stride, X.strides[2]*stride, X.strides[1], X.strides[2])
+
+    patches = as_strided(X, shape=shape, strides=strides)
+
+    # Reformat pour im2col (batch, out_h*out_w, k*k)
+    patches = patches.reshape(batch, out_h*out_w, k*k)
+
+    return patches
 
 
 """
@@ -840,20 +875,30 @@ int             stride :        how many pixel the kernel move
 =========OUTPUT=========
 numpy.array      :             the activation matrice
 """
-def deshape(X, k_size_sqrt, stride):
+def deshape(X, k, stride, input_size):
+    """
+    X: (batch, n_patches, k*k)
+    Retourne: (batch, input_size, input_size)
+    """
+    batch, n_patches, k_flat = X.shape
+    H = W = input_size
 
-    input_size = np.int64(np.sqrt(X.shape[1]*X.shape[2]))
-    new_X = np.array([])
-    
-    step1 = input_size // stride
-    step2 = k_size_sqrt
+    # Dimensions de sortie par patch
+    out_h = (H - k)//stride + 1
+    out_w = (W - k)//stride + 1
 
-    for i in range(0, X.shape[0]):
-        for j in range(0, X.shape[1], step1):
-            for k in range(0, X.shape[2], step2):
-                new_X = np.append(new_X, X[i, j:j + step1, k:k + step2])
+    # Reshape X pour séparer le patch 2D
+    patches = X.reshape(batch, out_h, out_w, k, k)
 
-    new_X = new_X.reshape((X.shape[0], input_size, input_size))
+    # Calcul des strides pour placer les patches
+    new_X = np.zeros((batch, H, W), dtype=X.dtype)
+
+    # Accumulation vectorisée avec einsum
+    # On fait: pour chaque patch, on ajoute k*k éléments au bon endroit
+    for i in range(k):
+        for j in range(k):
+            new_X[:, i:i + stride*out_h:stride, j:j + stride*out_w:stride] += patches[:, :, :, i, j]
+
     return new_X
 
 
@@ -870,6 +915,10 @@ int             padding :       how many pixel we add to the border of the activ
 numpy.array      :             the activation matrice
 """
 def add_padding(X, padding):
+
+    if padding == 0:
+        return X 
+    
     return np.pad(X, pad_width=((0, 0), (0, padding), (0, padding)), mode='constant', constant_values=0)
 
 
@@ -1132,10 +1181,10 @@ def main():
 
     if len(dimensions) > 1:
         X = add_padding(X, dimensions["2"][2])
-        X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], dimensions["2"][2])
+        X = reshape(X, dimensions["1"][0], dimensions["1"][1], dimensions["2"][2])
 
     else:
-         X = reshape(X, dimensions["1"][0], x_shape, dimensions["1"][1], 0)
+         X = reshape(X, dimensions["1"][0], dimensions["1"][1], 0)
 
     l_array = np.array([])
     a_array = np.array([])
@@ -1147,7 +1196,7 @@ def main():
     #the gradient are vector
     gradients = {}
 
-    for _ in tqdm(range(nb_iteration)):
+    for i in tqdm(range(nb_iteration)):
         
         activations = foward_propagation(X, parametres, tuple_mode_info, alpha)
         back_propagation_CNN(activations, parametres, gradients, tuple_mode_info, y, alpha)
