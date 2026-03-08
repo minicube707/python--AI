@@ -12,11 +12,6 @@ np.set_printoptions(linewidth=200, threshold=np.inf)
 ========Documentation=======
 ============================
 
-Le but de ce CNN est de transforme les activation en matrice
-Allow to pass AxNxN grid to AxBxC with A the number of layer, B the number of pixel and C the size of the kernel. To do cross product
-The kernel are shaped AxBxC A the number of layer, B the size of the kernel (ex:3*3=9) and C = 1.
-The biais are shaped AxBxC A the number of layer, B the size of the output (ex:3*3=9) and C = 1. To do cross product
-
 A : Activation in memory (Always in line format)
 K : Kernel
 b : bias 
@@ -363,22 +358,23 @@ int     i :                 the stage of the CNN
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size):
-    shape = (nb_kernel, nb_layer, k_size, k_size)
+def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size, padding):
+
+    k_shape = (nb_kernel, nb_layer, k_size, k_size)
 
     if fonction == "relu":
         std = np.sqrt(2 / (nb_layer * k_size**2))
-        K = np.random.randn(*shape).astype(np.float32) * std
+        K = np.random.randn(*k_shape).astype(np.float32) * std
 
     elif fonction == "tanh" or  fonction == "sigmoide":
         limit = np.sqrt(6 / (nb_layer + nb_kernel))
-        K = (np.random.rand(*shape).astype(np.float32) * 2 - 1) * limit
+        K = (np.random.rand(*k_shape).astype(np.float32) * 2 - 1) * limit
 
     else:
         # Default to small random values
-        K = np.random.randn(*shape).astype(np.float32) * 0.01
+        K = np.random.randn(*k_shape).astype(np.float32) * 0.01
 
-    b_shape = (nb_kernel, o_size, o_size)
+    b_shape = (nb_kernel, o_size + padding, o_size + padding)
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
 
     parametres["K" + str(i)] = K
@@ -386,8 +382,8 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
     parametres["l" + str(i)] = type_layer
     parametres["f" + str(i)] = fonction
 
-    parametres_grad["m" + str(i)] = np.zeros(shape).astype(np.float32)
-    parametres_grad["v" + str(i)] = np.zeros(shape).astype(np.float32)
+    parametres_grad["m" + str(i)] = np.zeros(k_shape).astype(np.float32)
+    parametres_grad["v" + str(i)] = np.zeros(k_shape).astype(np.float32)
 
     return parametres, parametres_grad
 
@@ -462,13 +458,18 @@ def initialisation_affectation(dimensions, x_shape, list_size_activation):
 
     nb_layer = x_shape[0]
     o_size = x_shape[1]
-
-    for i in range(1, len(dimensions)+1):
+    C = len(dimensions)
+    
+    for i in range(1, C + 1):
         k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
         o_size = calcul_output_shape(o_size, dimensions[str(i)][0], dimensions[str(i)][1], dimensions[str(i)][2])
 
+        padding = 0
+        if (i < C):
+           padding = dimensions[str(i+1)][2]
+
         if type_layer == "kernel":
-            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size)
+            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size, padding)
 
         elif type_layer == "pooling":
             parametres = initialisation_pooling(parametres, k_size, type_layer, fonction, i)
@@ -478,7 +479,7 @@ def initialisation_affectation(dimensions, x_shape, list_size_activation):
     return parametres, parametres_grad
 
 
-"""
+""""
 initialisation:
 =========DESCRIPTION=========
 Set all the value to built the CNN
@@ -704,12 +705,13 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         # Chose the correct derivative
         if activation_fonction == "relu":
             dA = dx_relu(activation["Z" + str(c)], alpha)
+
         elif activation_fonction == "sigmoide":
             dA = dx_sigmoide(activation["A" + str(c)])
+
         elif activation_fonction == "tanh":
             dA = dx_tanh(activation["A" + str(c)])
 
-        #dA = deshape(dA, dim[0], dim[1])
         dZ *= dA
 
         # Apply convolution
@@ -742,11 +744,10 @@ def back_propagation_CNN(activation, parametres, dimensions, y, tuple_size_activ
     
     for c in reversed(range(1, C+1)):
 
-        #Remove the padding
         #Activation are in square format
-        dZ = dZ[:,:tuple_size_activation[c-1], :tuple_size_activation[c-1]]
-        
         if parametres["l" + str(c)] == "pooling":
+            #Remove the padding
+            dZ = dZ[:,:tuple_size_activation[c-1], :tuple_size_activation[c-1]]
             dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
            
         elif parametres["l" + str(c)] == "kernel":
@@ -1079,13 +1080,13 @@ def main():
     alpha = 0.001
     nb_iteration = 2_000
 
-    x_shape = 28
+    x_shape = 30
     input_shape = (1, x_shape, x_shape)
 
-    #X = np.random.rand(x_shape * x_shape).reshape(x_shape, x_shape)
-    X = np.zeros((x_shape, x_shape))
-    X[:, 8:16] = 1
-    X[8:16, :] = 1
+    X = np.random.rand(x_shape * x_shape).reshape(x_shape, x_shape)
+    #X = np.zeros((x_shape, x_shape))
+    #X[:, 8:16] = 1
+    #X[8:16, :] = 1
 
     if len(X.shape) == 2:
         X = X.reshape(1, X.shape[0], X.shape[1])
