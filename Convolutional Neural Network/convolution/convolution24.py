@@ -227,11 +227,17 @@ tuple           tuple containe all the dimension of the input and activation
 def create_tuple_size(X_shape, dimensions):
 
     tuple_size = []
-
+    C = len(dimensions)
     outout_shape = X_shape[1]
-    for i in range(len(dimensions)):
+
+    for i in range(C):
+
         outout_shape = calcul_output_shape(outout_shape, dimensions[str(i+1)][0], dimensions[str(i+1)][1], dimensions[str(i+1)][2])
-        tuple_size.append(outout_shape)
+
+        padding = 0
+        if i < C-1:
+            padding = dimensions[str(i+2)][2]
+        tuple_size.append(outout_shape + padding)
 
     return (tuple_size)
 
@@ -499,10 +505,16 @@ def initialisation_affectation(dimensions, x_shape, list_size_activation):
 
     nb_layer = x_shape[0]
     o_size = x_shape[1]
+    C = len(dimensions)
 
-    for i in range(1, len(dimensions)+1):
+    for i in range(1, C + 1):
         k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
         o_size = calcul_output_shape(o_size, dimensions[str(i)][0], dimensions[str(i)][1], dimensions[str(i)][2])
+
+        padding = 0
+        if (i < C):
+            padding = dimensions[str(i+1)][2]
+            o_size += padding
 
         if type_layer == "kernel":
             parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size)
@@ -756,12 +768,13 @@ def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c
         # Chose the correct derivative
         if activation_fonction == "relu":
             dA = dx_relu(activation["Z" + str(c)], alpha)
+
         elif activation_fonction == "sigmoide":
             dA = dx_sigmoide(activation["A" + str(c)])
+
         elif activation_fonction == "tanh":
             dA = dx_tanh(activation["A" + str(c)])
 
-        dA = deshape(dA, dim[0], dim[1])
         dZ *= dA
 
         # Apply convolution
