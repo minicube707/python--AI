@@ -173,9 +173,19 @@ Découpage de l’initialisation en plusieurs fonctions :
 
 ---
 
+### `convolution24clean.py`
+- Pareil que `convolution24.py` mais version optimisé pour les performances
+
+---
+
 ### `convolution25.py`
 - Tentative de création d’un CNN avec une **vraie convolution**
 - Sans déformation des inputs
+
+---
+
+### `convolution25_clean.py`
+- Pareil que `convolution25.py` mais version optimisé pour les performances
 
 ---
 
