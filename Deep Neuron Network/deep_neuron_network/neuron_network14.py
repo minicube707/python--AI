@@ -1,0 +1,288 @@
+
+import numpy as np
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelBinarizer
+from itertools import product
+
+np.set_printoptions(precision=2, suppress=True)
+
+np.set_printoptions(
+    threshold=np.inf,       # Affiche tout
+    linewidth=200,          # Largeur max avant saut de ligne
+    edgeitems=10,           # Combien d’éléments afficher en début/fin si tronqué
+    precision=3,            # Nombre de décimales
+    suppress=True           # Ne pas utiliser la notation scientifique
+)
+
+def log_loss(A, y):
+    epsilon = 1e-15 #Pour empecher les log(0) = -inf
+    return  np.mean(- y * np.log(A + epsilon), axis=1)
+
+def dx_log_loss(y_true, y_pred):
+    epsilon = 1e-15 #Pour empecher les log(0) = -inf
+    return  np.mean(- y_true/(y_pred + epsilon), axis=1)
+
+def sigmoide(X):
+    X = np.clip(X, -100, 100)
+    return 1/(1 + np.exp(-X))
+
+def dx_sigmoide(X):
+    return X * (1 - X)
+
+def tanh(X):
+    return np.tanh(X)
+
+def dx_tanh(X):
+    return (1 - X**2)
+
+def relu(X, alpha):
+    return np.where(X < 0, alpha*X, X)
+
+def dx_relu(X, alpha):
+    return np.where(X < 0, alpha, 1)
+
+def softmax(X):
+    res = np.array([])
+    for i in range(X.shape[0]):
+        x = np.clip(X[i,:], -100, 100)
+        res = np.append(res, np.exp(x) / np.sum(np.exp(x)))
+         
+    return res.reshape((X.shape))
+
+def initialisation(X, y, dimension):
+
+    parametres ={}
+    C = len(dimension)
+
+    dimension[str(C)] = (y.shape[1], dimension[str(C)][1])
+    nb_activation = X.shape[1]
+
+    for i in range(1, C+1):
+        nb_neuron = dimension[str(i)][0]
+        parametres["W" + str(i)] = np.random.rand(nb_activation, nb_neuron) * 2 -1
+        parametres["B" + str(i)] = np.random.rand(1, nb_neuron) * 2 -1
+        nb_activation = nb_neuron
+        
+        print("W" + str(i), ":", parametres["W" + str(i)].shape, dimension[str(i)][1])
+        print("B" + str(i), ":", parametres["B" + str(i)].shape)
+
+    print("")
+    for c in range(1, C+1):
+        print(dimension[str(c)][0], end="")
+        if c < C:
+            print("->", end="")
+    print("\n")
+
+    return parametres
+
+def grah(log, dx_log):
+
+    log = np.array(log)
+    dx_log = np.array(dx_log)
+
+    # Créer une figure avec deux sous-graphes côte à côte
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))  # 1 ligne, 2 colonnes
+    # Courbes et légende dynamiques pour log
+    axes[0].plot(log, label=f"Logloss")
+    axes[0].set_title("Log")
+    axes[0].legend()
+
+    # Courbes et légende dynamiques pour dx_log
+    axes[1].plot(dx_log, label=f"dLogloss")
+    axes[1].set_title("dLog")
+    axes[1].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+
+class DNN():
+
+    def __init__(self, X, y, dimensions):
+        parametres = initialisation(X, y, dimensions)
+
+        self.dimensions = dimensions
+        self.parametres = parametres
+        self.activation = {}
+        self.gradients = {}
+
+    def forward_propagation(self, X, alpha):
+
+        dimensions = self.dimensions
+        parametres = self.parametres
+    
+        if X.ndim == 1:
+            X = X.reshape(1, -1)
+
+        activation = {"A0" : X}
+        C = len(dimension)
+
+        for i in range(1, C+1):
+            Z = np.dot(activation["A" + str(i-1)], parametres["W" + str(i)]) + parametres["B" + str(i)]
+            activation["Z" + str(i)] = Z
+
+            if dimension[str(i)][1] == "sigmoide":
+                activation["A" + str(i)] =  sigmoide(Z)
+
+            elif dimension[str(i)][1] == "tanh":
+                activation["A" + str(i)] =  tanh(Z)
+                
+            elif dimension[str(i)][1] == "relu":
+                activation["A" + str(i)] =  relu(Z, alpha)
+
+        self.activation = activation
+
+    def backward_propagation(self, y, alpha):
+        
+        activation = self.activation
+        dimensions = self.dimensions
+        parametres = self.parametres
+
+        if y.ndim == 1:
+            m = y.size  
+        else:
+            m = y.shape[1]    
+        
+        C = len(dimension)
+        gradients = {}  
+
+        dZ = softmax(activation["A" + str(C)]) - y     
+
+        for i in reversed(range(1, C+1)):
+            gradients["dW" + str(i)] = 1/m * np.dot(activation["A" + str(i-1)].T, dZ)
+            gradients["dB" + str(i)] = 1/m * np.mean(dZ, axis=0, keepdims=True)
+
+            dA = np.dot(dZ, parametres["W" + str(i)].T)
+            dA = np.clip(dA, -100, 100)
+
+            if i > 1:
+                if dimension[str(i)][1] == "sigmoide":
+                    dZ = dA * dx_sigmoide(activation["A" + str(i-1)])
+
+                elif dimension[str(i)][1] == "tanh":
+                    dZ = dA * dx_tanh(activation["A" + str(i-1)])
+
+                elif dimension[str(i)][1] == "relu":
+                    dZ = dA * dx_relu(activation["Z" + str(i-1)], alpha)
+
+        self.gradients = gradients 
+
+    def update(self, learning_rate):
+        
+        parametres = self.parametres
+        gradients = self.gradients
+
+        C = len(dimension)
+
+        for c in range(1, C+1):
+            parametres["W" + str(c)] = parametres["W" + str(c)] - learning_rate * gradients["dW" + str(c)]
+            parametres["B" + str(c)] = parametres["B" + str(c)] - learning_rate * gradients["dB" + str(c)]
+        
+        self.parametres = parametres
+
+#INITIALISATION
+# Génération de toutes les combinaisons de 3 bits (0 et 1)
+n = 4
+combinations = list(product([0, 1], repeat=n))
+
+# Conversion en tableau numpy
+X = np.array(combinations)
+y = np.arange(np.power(2, n))
+
+transformer=LabelBinarizer()
+transformer.fit(y)
+y = transformer.transform(y.reshape((-1, 1)))
+
+learning_rate = 0.001
+nb_iteraton = 10_000
+alpha = 0.01
+
+dimension = {
+    "1" : (16, "relu"),
+    "2" : (16, "relu"),
+    "3" : (0, "relu")
+}
+
+log = []
+dx_log = []
+C = len(dimension)
+
+model = DNN(X, y, dimension)
+
+#PREMIER PASSAGE
+model.forward_propagation(X, alpha)
+res = softmax(model.activation["A" + str(C)])
+
+print("")
+print("Premier apprentissage")
+print("X\n", X)
+print("y\n", y)
+print("Loss\n", log_loss(res, y))
+print("ACTIVATION\n", res)
+print("ERREEUR\n", res - y)
+print("")
+
+for j in tqdm(range(nb_iteraton)):
+    
+    #Foreward propagation
+    model.forward_propagation(X, alpha)
+    res = softmax(model.activation["A" + str(C)])
+
+    if (j % 50 == 0):
+        log.append(log_loss(res, y))
+        dx_log.append(dx_log_loss(y, res))
+
+
+    #Backpropagation
+    model.backward_propagation(y, alpha)
+    model.update(learning_rate)
+
+
+model.forward_propagation(X, alpha)
+res = softmax(model.activation["A" + str(C)])
+print("y\n", y)
+print("Loss\n", log_loss(res, y))
+print("ACTIVATION\n", res)
+print("ERREEUR\n", res - y)
+
+grah(log, dx_log)
+
+
+#DEUXIEME PASSAGE
+model.forward_propagation(X, alpha)
+y = np.rot90(y)
+
+print("")
+print("Deuxieme apprentissage")
+print("X\n", X)
+print("y\n", y)
+print("Loss\n", log_loss(res, y))
+print("ACTIVATION\n", res)
+print("ERREEUR\n", res - y)
+print("")
+
+for j in tqdm(range(nb_iteraton)):
+    
+    #Foreward propagation
+    model.forward_propagation(X, alpha)
+    res = softmax(model.activation["A" + str(C)])
+
+    if (j % 50 == 0):
+        log.append(log_loss(res, y))
+        dx_log.append(dx_log_loss(y, res))
+        
+
+    #Backpropagation
+    model.backward_propagation(y, alpha)
+    model.update(learning_rate)
+
+model.forward_propagation(X, alpha)
+res = softmax(model.activation["A" + str(C)])
+print("y\n", y)
+print("Loss\n", log_loss(res, y))
+print("ACTIVATION\n", res)
+print("ERREEUR\n", res - y)
+
+grah(log, dx_log)
+
