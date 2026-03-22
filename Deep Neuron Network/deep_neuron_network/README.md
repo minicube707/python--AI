@@ -96,3 +96,21 @@ Ces scripts montrent comment un modèle apprend avec un ou deux points de donné
 
 ## 13. neuron_network13.py
 - Modèle modulaire pour **classer les nombres de 0 à 15** en binaire vers leur base décimale.
+
+## 14. neuron_network14.py
+- Ajout d'un class DNN pour commencer a faire de l'orienté object
+
+## 15. neuron_network15.py
+- Changement d'optimiseur, passe sur Adam
+
+## 16. neuron_network16.py
+- Ajout de dropout
+
+## 17. neuron_network17.py
+- Passe toute les fonctions d'activations en class Layer
+
+## 18. neuron_network18.py
+- Ajout de la batch norm
+
+## 19. neuron_network19.py
+- Passe l'optimiseur Adam en class
