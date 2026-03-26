@@ -63,8 +63,27 @@ class Layer(ABC):
     def backward(self, dA):
         pass
 
+class Softmax(Layer):
 
+    def forward(self, X):
+        X_shifted = X - np.max(X, axis=1, keepdims=True)
+        exp_X = np.exp(X_shifted)
+        return exp_X / np.sum(exp_X, axis=1, keepdims=True)
+
+    def backward(self, dA):
+        return dA
+
+class Linear(Layer):
+
+    def forward(self, X):
+        self.A = X
+        return X
+
+    def backward(self, dA):
+        return dA
+    
 class ReLU(Layer):
+
     def forward(self, X):
         self.X = X
         return np.maximum(0, X)
@@ -250,7 +269,7 @@ class Block(Layer):
     
 class DNN():
     
-    def __init__(self, X, y, dimensions, alpha, lr, beta1, beta2):
+    def __init__(self, X, y, dimensions, alpha, optimizer, output_layer, loss):
 
         self.dimensions = dimensions
         self.layers = []
@@ -259,7 +278,9 @@ class DNN():
 
         DNN.initialisation(self, X, y, alpha)
         
-        self.optimizer = Adam(lr, beta1, beta2)
+        self.optimizer = optimizer
+        self.output_layer = output_layer
+        self.loss = loss
 
     def initialisation(self, X, y, alpha):
 
@@ -296,7 +317,6 @@ class DNN():
             dropout = Dropout(dropout_per)
 
             self.layers.append(Block(dense, batchnorm, activation, dropout))
-
             nb_activation = nb_neuron
     
     def get_parameters(self):
@@ -311,7 +331,8 @@ class DNN():
         for block in self.layers:
             X = block.forward(X, training)
 
-        self.y_pred = X
+        self.y_pred = self.output_layer.forward(X)
+        self.loss.forward(self.y_pred, y)
 
     def backward_propagation(self, y):
         
@@ -320,7 +341,11 @@ class DNN():
         else:
             m = y.shape[1]    
 
-        dZ = softmax(self.y_pred) - y     
+        if isinstance(self.output_layer, Softmax) and isinstance(self.loss, CrossEntropy):
+            dZ = self.y_pred - self.loss.y_true
+        else:
+            dA = self.loss.backward()
+            dZ = self.output_layer.backward(dA)    
 
         for block in reversed(self.layers):
             dZ = block.backward(dZ)
@@ -349,9 +374,9 @@ class DNN():
 
 
         print("")
-        for block in self.layers:
-            print("W" + str(c), ":", block.dense.W.shape)
-            print("B" + str(c), ":", block.dense.b.shape)
+        for c, block in enumerate(self.layers):
+            print("W" + str(c + 1), ":", block.dense.W.shape)
+            print("B" + str(c + 1), ":", block.dense.b.shape)
          
 
         print("")
@@ -396,6 +421,30 @@ class Adam:
             self.state[key]["m"] = m
             self.state[key]["v"] = v
 
+
+class CrossEntropy:
+
+    def forward(self, y_pred, y_true):
+        self.y_pred = y_pred
+        self.y_true = y_true
+
+        epsilon = 1e-15
+        loss = -np.sum(y_true * np.log(y_pred + epsilon), axis=1)
+        return np.mean(loss)
+
+    def backward(self):
+        return self.y_pred - self.y_true
+
+class MSE:
+
+    def forward(self, y_pred, y_true):
+        self.y_pred = y_pred
+        self.y_true = y_true
+
+        return np.mean((y_pred - y_true) ** 2)
+
+    def backward(self):
+        return 2 * (self.y_pred - self.y_true) / self.y_true.shape[0]
     
 #INITIALISATION
 # Génération de toutes les combinaisons de 3 bits (0 et 1)
@@ -427,7 +476,10 @@ dimensions = {
 log = []
 dx_log = []
 
-model = DNN(X, y, dimensions, alpha, learning_rate, beta1, beta2)
+loss = CrossEntropy()
+output_layer = Softmax() 
+optimizer = Adam(learning_rate, beta1, beta2)
+model = DNN(X, y, dimensions, alpha, optimizer, output_layer, loss)
 model.print_info()
 
 #PREMIER PASSAGE

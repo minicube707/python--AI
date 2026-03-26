@@ -114,3 +114,6 @@ Ces scripts montrent comment un modèle apprend avec un ou deux points de donné
 
 ## 19. neuron_network19.py
 - Passe l'optimiseur Adam en class
+
+## 20. neuron_network20.py
+- Clean the code 

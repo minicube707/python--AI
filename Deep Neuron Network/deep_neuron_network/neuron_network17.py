@@ -319,9 +319,9 @@ class DNN():
 
 
         print("")
-        for block in self.layers:
-            print("W" + str(c), ":", block.dense.W.shape)
-            print("B" + str(c), ":", block.dense.b.shape)
+        for c, block in enumerate(self.layers):
+            print("W" + str(c + 1), ":", block.dense.W.shape)
+            print("B" + str(c + 1), ":", block.dense.b.shape)
          
 
         print("")
@@ -363,7 +363,7 @@ model = DNN(X, y, dimensions, alpha)
 model.print_info()
 
 #PREMIER PASSAGE
-model.forward_propagation(X, alpha, False)
+model.forward_propagation(X, False)
 res = softmax(model.y_pred)
 
 print("")
@@ -391,7 +391,7 @@ for j in tqdm(range(nb_iteraton)):
 
     #Backpropagation
     else:
-        model.backward_propagation(y, True)
+        model.backward_propagation(y)
         model.update(learning_rate, beta1, beta2, j)
 
 

@@ -24,15 +24,6 @@ def dx_log_loss(y_true, y_pred):
     epsilon = 1e-15 #Pour empecher les log(0) = -inf
     return  np.mean(- y_true/(y_pred + epsilon), axis=1)
 
-def softmax(X):
-    res = np.array([])
-    for i in range(X.shape[0]):
-        x = np.clip(X[i,:], -100, 100)
-        res = np.append(res, np.exp(x) / np.sum(np.exp(x)))
-         
-    return res.reshape((X.shape))
-
-
 def grah(log, dx_log):
 
     log = np.array(log)
@@ -55,6 +46,7 @@ def grah(log, dx_log):
 
 
 class Layer(ABC):
+
     @abstractmethod
     def forward(self, X):
         pass
@@ -63,8 +55,38 @@ class Layer(ABC):
     def backward(self, dA):
         pass
 
+class Softmax(Layer):
 
+    def forward(self, X):
+        # stabilité numérique
+        X_shifted = X - np.max(X, axis=1, keepdims=True)
+        exp_X = np.exp(X_shifted)
+        self.out = exp_X / np.sum(exp_X, axis=1, keepdims=True)
+        return self.out
+
+    def backward(self, dY):
+        # Jacobien complet (coûteux mais correct)
+        m, n = self.out.shape
+        dX = np.zeros_like(dY)
+
+        for i in range(m):
+            y = self.out[i].reshape(-1, 1)
+            jacobian = np.diagflat(y) - y @ y.T
+            dX[i] = jacobian @ dY[i]
+
+        return dX
+
+class Linear(Layer):
+
+    def forward(self, X):
+        self.A = X
+        return X
+
+    def backward(self, dA):
+        return dA
+    
 class ReLU(Layer):
+
     def forward(self, X):
         self.X = X
         return np.maximum(0, X)
@@ -115,9 +137,7 @@ class Dropout(Layer):
     def forward(self, A, training):
         
         self.training = training
-
-        if training or self.dropout_per > 0:
-            self.training = training
+        if training:
             self.M = (np.random.rand(*A.shape) > self.dropout_per).astype(A.dtype)
             return  self.M * A / (1 - self.dropout_per)
         
@@ -125,8 +145,10 @@ class Dropout(Layer):
             return A
     
     def backward(self, dZ):
+        
+        training = self.training
 
-        if self.training:
+        if training:
             return dZ * self.M / (1 - self.dropout_per)
         else:
             return dZ
@@ -138,69 +160,87 @@ class BatchNorm(Layer):
         self.momentum = momentum
         self.training = False
 
-        # learnable parameters
         self.gamma = np.ones((1, n_features))
         self.beta = np.zeros((1, n_features))
         
-        # global mean/variance
         self.running_mean = np.zeros((1, n_features))
         self.running_var = np.ones((1, n_features))
     
     def forward(self, X, training=True):
-        if training:
-            self.training = True
+
+        self.training = training
+
+        if self.training:
             self.mu = np.mean(X, axis=0, keepdims=True)
             self.var = np.var(X, axis=0, keepdims=True)
+
             self.X_centered = X - self.mu
-            self.std_inv = 1.0 / np.sqrt(self.var + self.eps)
+            self.var_eps = self.var + self.eps
+            self.std_inv = 1.0 / np.sqrt(self.var_eps)
             
-            # batch standardization
             self.X_hat = self.X_centered * self.std_inv
             
-            # average update/global variable
             self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * self.mu
             self.running_var  = self.momentum * self.running_var + (1 - self.momentum) * self.var
 
         else:
-            # inference: use running mean/var
             self.X_hat = (X - self.running_mean) / np.sqrt(self.running_var + self.eps)
         
         return self.gamma * self.X_hat + self.beta
 
 
     def backward(self, dY):
+
+        if not self.training:
+            raise RuntimeError("Backward appelé en mode inference")
+
         m = dY.shape[0]
         
         dX_hat = dY * self.gamma
-        dvar = np.sum(dX_hat * self.X_centered * -0.5 * (self.var + self.eps)**(-1.5), axis=0, keepdims=True)
-        dmu  = np.sum(dX_hat * -self.std_inv, axis=0, keepdims=True) + dvar * np.sum(-2 * self.X_centered, axis=0, keepdims=True) / m
+
+        dvar = np.sum(
+            dX_hat * self.X_centered * -0.5 * self.var_eps**(-1.5),
+            axis=0, keepdims=True
+        )
+
+        dmu = (
+            np.sum(dX_hat * -self.std_inv, axis=0, keepdims=True)
+            + dvar * np.sum(-2 * self.X_centered, axis=0, keepdims=True) / m
+        )
         
-        dX = dX_hat * self.std_inv + dvar * 2 * self.X_centered / m + dmu / m
+        dX = (
+            dX_hat * self.std_inv
+            + dvar * 2 * self.X_centered / m
+            + dmu / m
+        )
+
         self.dgamma = np.sum(dY * self.X_hat, axis=0, keepdims=True)
-        self.dbeta = np.sum(dY, axis=0, keepdims=True)
+        self.dbeta  = np.sum(dY, axis=0, keepdims=True)
         
         return dX
+
+    def get_params(self):
+        return [(self.gamma, self.dgamma), (self.beta, self.dbeta)]
 
 class Dense(Layer):
 
     def __init__(self, nb_activation, nb_neuron):
-        w_shpape = (nb_activation, nb_neuron)
+        w_shape = (nb_activation, nb_neuron)
         b_shape = (1, nb_neuron)
 
         #Parameters
-        self.W = np.random.randn(*w_shpape) * 0.01
+        self.W = np.random.randn(*w_shape) * 0.01
         self.b = np.zeros(b_shape)
         
         #Gradient
         self.dW = np.zeros_like(self.W)
         self.db = np.zeros_like(self.b)
 
-        self.Wm = np.zeros(w_shpape)
-        self.Wv = np.zeros(w_shpape)
+        self.Wm = np.zeros(w_shape)
+        self.Wv = np.zeros(w_shape)
 
         self.bm = np.zeros(b_shape)
         self.bv = np.zeros(b_shape)
-
 
     def forward(self, X):
         self.X = X
@@ -216,6 +256,9 @@ class Dense(Layer):
 
         return dA
 
+    def get_params(self):
+        return [(self.W, self.dW), (self.b, self.db)]
+    
 class Block(Layer):
 
     def __init__(self, dense, batchnorm, activation, dropout):
@@ -245,15 +288,16 @@ class Block(Layer):
     
 class DNN():
     
-    def __init__(self, X, y, dimensions, alpha):
+    def __init__(self, X, y, dimensions, alpha, optimizer):
 
         self.dimensions = dimensions
         self.layers = []
         self.C_DNN = len(dimensions)
-        self.y_pred = None
+        self.logits = None
 
         DNN.initialisation(self, X, y, alpha)
         
+        self.optimizer = optimizer
 
     def initialisation(self, X, y, alpha):
 
@@ -290,72 +334,30 @@ class DNN():
             dropout = Dropout(dropout_per)
 
             self.layers.append(Block(dense, batchnorm, activation, dropout))
-
             nb_activation = nb_neuron
-            
+    
+    def get_parameters(self):
+        params = []
+        for block in self.layers:
+            params += block.dense.get_params()
+            params += block.batchnorm.get_params()
+        return params
 
     def forward_propagation(self, X, training):
 
         for block in self.layers:
             X = block.forward(X, training)
 
-        self.y_pred = X
+        self.logits = X
 
-    def backward_propagation(self, y):
+    def backward_propagation(self, dZ):
         
-        if y.ndim == 1:
-            m = y.size  
-        else:
-            m = y.shape[1]    
-
-        dZ = softmax(self.y_pred) - y     
-
         for block in reversed(self.layers):
             dZ = block.backward(dZ)
 
-    def adam_weight(param, grad, m, v, lr, beta1, beta2, t, eps=1e-8):
-
-        # Update moments
-        m = beta1 * m + (1 - beta1) * grad
-        v = beta2 * v + (1 - beta2) * (grad * grad)
-
-        # Bias correction
-        bias_corr1 = max(1 - beta1**(t + 1), 1e-12)
-        bias_corr2 = max(1 - beta2**(t + 1), 1e-12)
-
-        m_hat = m / bias_corr1
-        v_hat = np.maximum(v / bias_corr2, 1e-12)
-        
-        # Update parameter
-        param = param - lr * m_hat / (np.sqrt(v_hat) + eps)
-
-        return param, m, v
-
-    def update(self, lr, beta1, beta2, t):
-
-        for block in self.layers:
-            
-            dense =  block.dense
-
-            # ----- Kernel -----
-            dense.W, dense.Wm, dense.Wv = DNN.adam_weight(
-                dense.W, 
-                dense.dW, 
-                dense.Wm, 
-                dense.Wv, 
-                lr, beta1, beta2, t
-            )
-
-            # ----- Bias -----
-            dense.b, dense.bm, dense.bv = DNN.adam_weight(
-                dense.b, 
-                dense.db, 
-                dense.bm, 
-                dense.bv, 
-                lr, beta1, beta2, t
-            )
-
-
+    def update(self):
+        params = self.get_parameters()
+        self.optimizer.update(params)
 
     def print_info(self):
 
@@ -388,6 +390,101 @@ class DNN():
             print(keys, values)
         print("")
 
+class Adam:
+
+    def __init__(self, lr, beta1, beta2):
+        self.lr = lr
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.t = 0
+        self.state = {}
+
+    def update(self, params):
+        self.t += 1
+
+        for param, grad in params:
+            key = id(param)
+
+            if key not in self.state:
+                self.state[key] = {
+                    "m": np.zeros_like(param),
+                    "v": np.zeros_like(param)
+                }
+
+            m = self.state[key]["m"]
+            v = self.state[key]["v"]
+
+            # update Adam
+            m = self.beta1 * m + (1 - self.beta1) * grad
+            v = self.beta2 * v + (1 - self.beta2) * (grad * grad)
+
+            m_hat = m / (1 - self.beta1**self.t)
+            v_hat = v / (1 - self.beta2**self.t)
+
+            param -= self.lr * m_hat / (np.sqrt(v_hat) + 1e-8)
+
+            self.state[key]["m"] = m
+            self.state[key]["v"] = v
+
+
+class CrossEntropyLoss:
+
+    def forward(self, y_pred, y_true):
+        """
+        y_pred : (batch, n_classes) -> probas (softmax)
+        y_true : one-hot
+        """
+        self.y_pred = y_pred
+        self.y_true = y_true
+        
+        eps = 1e-12
+        y_pred_clipped = np.clip(y_pred, eps, 1 - eps)
+
+        loss = -np.sum(y_true * np.log(y_pred_clipped)) / y_pred.shape[0]
+        return loss
+
+    def backward(self):
+        m = self.y_pred.shape[0]
+        return -(self.y_true / self.y_pred) / m
+    
+
+class MSE:
+
+    def forward(self, y_pred, y_true):
+        self.y_pred = y_pred
+        self.y_true = y_true
+
+        return np.mean((y_pred - y_true) ** 2)
+
+    def backward(self):
+        return 2 * (self.y_pred - self.y_true) / self.y_true.shape[0]
+
+
+def training_model(model, output_layer, loss, X, y, log, dx_log):
+
+    for j in tqdm(range(nb_iteraton)):
+    
+        #Foreward propagation
+        model.forward_propagation(X, True)
+        res = output_layer.forward(model.logits)
+
+        #Backpropagation
+        if isinstance(output_layer, Softmax) and isinstance(loss, CrossEntropyLoss):
+            dZ = res - y
+
+        else:
+            loss.forward(res, y)
+            dA = loss.backward()
+            dZ = output_layer.backward(dA)
+
+        model.backward_propagation(dZ)
+        model.update()
+
+        if (j % 50 == 0):
+            model.forward_propagation(X, False)
+            res = output_layer.forward(model.logits)
+            log.append(log_loss(res, y))
+            dx_log.append(dx_log_loss(y, res))
 
 #INITIALISATION
 # Génération de toutes les combinaisons de 3 bits (0 et 1)
@@ -403,7 +500,7 @@ transformer.fit(y)
 y = transformer.transform(y.reshape((-1, 1)))
 
 learning_rate = 0.001
-nb_iteraton = 1_000
+nb_iteraton = 300
 alpha = 0.01
 beta1 = 0.9
 beta2 = 0.99
@@ -419,12 +516,15 @@ dimensions = {
 log = []
 dx_log = []
 
-model = DNN(X, y, dimensions, alpha)
+loss = CrossEntropyLoss()
+output_layer = Softmax() 
+optimizer = Adam(learning_rate, beta1, beta2)
+model = DNN(X, y, dimensions, alpha, optimizer)
 model.print_info()
 
 #PREMIER PASSAGE
 model.forward_propagation(X, False)
-res = softmax(model.y_pred)
+res = output_layer.forward(model.logits)
 
 print("")
 print("Premier apprentissage")
@@ -435,27 +535,11 @@ print("ACTIVATION\n", res)
 print("ERREEUR\n", res - y)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
-    
-    #Foreward propagation
-    model.forward_propagation(X, True)
-    res = softmax(model.y_pred)
-
-    if (j % 50 == 0):
-        model.forward_propagation(X, False)
-        res = softmax(model.y_pred)
-        log.append(log_loss(res, y))
-        dx_log.append(dx_log_loss(y, res))
-
-
-    #Backpropagation
-    else:
-        model.backward_propagation(y)
-        model.update(learning_rate, beta1, beta2, j)
+training_model(model, output_layer, loss, X, y, log, dx_log)
 
 
 model.forward_propagation(X, False)
-res = softmax(model.y_pred)
+res = output_layer.forward(model.logits)
 print("y\n", y)
 print("Loss\n", log_loss(res, y))
 print("ACTIVATION\n", res)
@@ -477,27 +561,11 @@ print("ACTIVATION\n", res)
 print("ERREEUR\n", res - y)
 print("")
 
-for j in tqdm(range(nb_iteraton)):
-
-    #Foreward propagation
-    model.forward_propagation(X, True)
-    res = softmax(model.y_pred)
-
-    if (j % 50 == 0):
-        model.forward_propagation(X, False)
-        res = softmax(model.y_pred)
-        log.append(log_loss(res, y))
-        dx_log.append(dx_log_loss(y, res))
-        
-
-    #Backpropagation
-    else:
-        model.backward_propagation(y)
-        model.update(learning_rate, beta1, beta2, j)
+training_model(model, output_layer, loss, X, y, log, dx_log)
 
 
 model.forward_propagation(X, False)
-res = softmax(model.y_pred)
+res = output_layer.forward(model.logits)
 print("y\n", y)
 print("Loss\n", log_loss(res, y))
 print("ACTIVATION\n", res)
