@@ -126,18 +126,68 @@ x_size (int): Size of the spatial dimension of the activation
 =========OUTPUT=========
 Z_concat (np.ndarray): Next activation array (shape: [out_channels, x_size, x_size])
 """
-def op_correlate(A, K, B):
+def op_correlate(A, K, stride):
+    # A : (C, H, W)
+    # K : (N, C, Kh, Kw)
 
-    nb_kernel, nb_layer, K_height, K_width = K.shape
-    new_X = np.zeros(B.shape)
+    C, H, W = A.shape
+    N, _, Kh, Kw = K.shape
 
-    # Corrélation multi-canal (sans padding, stride=1)
-    for k in range(nb_kernel):                # Pour chaque filtre
-        for c in range(nb_layer):             # Pour chaque canal
-            new_X[k] += correlate(A[c], K[k, c], mode='valid')  # Corrélation 2D par canal
-    
-    new_X += B
-    return new_X
+    # Dimensions de sortie
+    H_out = (H - Kh) // stride + 1
+    W_out = (W - Kw) // stride + 1
+
+    # Output
+    out = np.zeros((N, H_out, W_out))
+
+    # Loop
+    for n in range(N):  # chaque filtre
+        for h in range(H_out):
+            for w in range(W_out):
+
+                h_start = h * stride
+                h_end   = h_start + Kh
+                w_start = w * stride
+                w_end   = w_start + Kw
+
+                # patch d'entrée
+                patch = A[:, h_start:h_end, w_start:w_end]  # (C, Kh, Kw)
+
+                # corrélation
+                out[n, h, w] = np.sum(patch * K[n])
+
+    return out
+
+
+def grad_kernel(A_prev, dZ, K, stride):
+    # A_prev : (C, H, W)
+    # dZ     : (N, H_out, W_out)
+    # K      : (N, C, Kh, Kw)
+
+    C, H, W = A_prev.shape
+    N, _, Kh, Kw = K.shape
+    H_out, W_out = dZ.shape[1], dZ.shape[2]
+
+    # Initialisation
+    dK = np.zeros_like(K)
+
+    # Loop
+    for n in range(N):  # chaque filtre
+        for h in range(H_out):
+            for w in range(W_out):
+
+                h_start = h * stride
+                h_end   = h_start + Kh
+                w_start = w * stride
+                w_end   = w_start + Kw
+
+                # patch d'entrée
+                patch = A_prev[:, h_start:h_end, w_start:w_end]  # (C, Kh, Kw)
+
+                # accumulation
+                dK[n] += patch * dZ[n, h, w]
+
+    return dK
 
 """
 convolution:
@@ -179,19 +229,6 @@ int             the number of pixel in row for the ouput
 """
 def calcul_output_shape(input_size, k_size, stride, padding):
     return np.int8((input_size - k_size + padding) / stride +1)
-
-
-
-def create_tuple_size(X_shape, dimensions):
-
-    tuple_size = []
-
-    outout_shape = X_shape[1]
-    for i in range(len(dimensions)):
-        outout_shape = calcul_output_shape(outout_shape, dimensions[str(i+1)][0], dimensions[str(i+1)][1], dimensions[str(i+1)][2])
-        tuple_size.append(outout_shape)
-
-    return (tuple_size)
 
 
 """
@@ -264,22 +301,22 @@ int         stride :            how many pixel the kernel move
 =========OUTPUT=========
 void
 """
-def error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride):
+def error_initialisation(dimensions, nb_activation, input_size, previ_input_size, type_layer, fonction, stride):
 
     if input_size < 1:
-        show_information(dimensions, input_size)
+        show_information(dimensions, (nb_activation, input_size, input_size))
         raise ValueError(f"ERROR: The current dimensions is {input_size}. Dimension can't be negatif")
         
     if previ_input_size % input_size != 0 and stride != 1:
-        show_information(dimensions, input_size)
+        show_information(dimensions, (nb_activation, input_size, input_size))
         raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
     
-    if type_layer not in ["kernel", "pooling"]:
-        show_information(dimensions, input_size)
-        raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pooling' or 'kernel'.")
+    if type_layer not in ["conv", "pool"]:
+        show_information(dimensions, (nb_activation, input_size, input_size))
+        raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pool' or 'conv'.")
     
     if fonction not in ["relu", "sigmoide", "max", "tanh"]:
-        show_information(dimensions, input_size)
+        show_information(dimensions, (nb_activation, input_size, input_size))
         raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu', 'sigmoide', 'max' ou 'tanh'.")
 
 
@@ -315,31 +352,6 @@ def initialisation_extraction(dimensions, i):
 
 
 """
-initialisation_pooling:
-=========DESCRIPTION=========
-Set the value for pooling operation
-
-=========INPUT=========
-dict    parametres :    dictionary to fill with the pooling operation
-int     k_size :        the size in row of the kernel
-string  type_layer :    the type of layer 
-string  fonction :      the type of function
-int     i :             the stage of the CNN
-
-=========OUTPUT=========
-dict    parametres :    containt all the information for the pooling operation
-"""
-def initialisation_pooling(parametres, k_size, type_layer, fonction, i):
-
-    parametres["K" + str(i)] = k_size
-    parametres["b" + str(i)] = None
-    parametres["l" + str(i)] = type_layer
-    parametres["f" + str(i)] = fonction
-    
-    return parametres
-
-
-"""
 initialisation_kernel:
 =========DESCRIPTION=========
 Set the value for kernel operation, the update operation
@@ -358,7 +370,7 @@ int     i :                 the stage of the CNN
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size, padding):
+def initialisation_kernel(parametres, parametres_grad, k_size, fonction, i, nb_kernel, nb_layer, o_size):
 
     k_shape = (nb_kernel, nb_layer, k_size, k_size)
 
@@ -366,7 +378,7 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
         std = np.sqrt(2 / (nb_layer * k_size**2))
         K = np.random.randn(*k_shape).astype(np.float32) * std
 
-    elif fonction == "tanh" or  fonction == "sigmoide":
+    elif fonction == "sigmoide" or  fonction == "tanh":
         limit = np.sqrt(6 / (nb_layer + nb_kernel))
         K = (np.random.rand(*k_shape).astype(np.float32) * 2 - 1) * limit
 
@@ -374,17 +386,15 @@ def initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonct
         # Default to small random values
         K = np.random.randn(*k_shape).astype(np.float32) * 0.01
 
-    b_shape = (nb_kernel, o_size + padding, o_size + padding)
+    b_shape = (nb_kernel, o_size, o_size)
     b = np.zeros(b_shape).astype(np.float32)  # Bias souvent initialisé à 0
 
     parametres["K" + str(i)] = K
     parametres["b" + str(i)] = b
-    parametres["l" + str(i)] = type_layer
-    parametres["f" + str(i)] = fonction
 
     parametres_grad["m" + str(i)] = np.zeros(k_shape).astype(np.float32)
     parametres_grad["v" + str(i)] = np.zeros(k_shape).astype(np.float32)
-
+    
     return parametres, parametres_grad
 
 
@@ -404,39 +414,37 @@ list    list_size_activation :     list of all activation shape with number of a
 """
 def initialisation_calcul(x_shape, dimensions, padding_mode):
 
-    list_size_activaton = []
-    list_size_activaton.append((x_shape[0], x_shape[1]))
-    nb_activation  = x_shape[0]
-    input_size =  x_shape[1]
+    nb_channel = x_shape[0]
+    input_size = x_shape[1]
+
     previ_input_size = input_size
+    previ_channel = nb_channel
+
     
     for i in range(1, len(dimensions)+1):
 
-        k_size, stride, padding, nb_channel, type_layer, fonction = initialisation_extraction(dimensions, i)
+        k_size, stride, padding, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
 
-        #If the input doesn't match perfectly with the kernel and padding and is in mode auto-correction, the system correct the mistake and add the right padding
+        #Add padding
         if input_size % stride != 0 and padding_mode == "auto":
-            padding = stride - input_size % stride
-            list_size_activaton[-1] = (list_size_activaton[-1][0], input_size + padding)
+            padding = int(stride - input_size % stride)
+            dimensions[str(i)] = (k_size, stride, padding, nb_kernel, type_layer, fonction)
+            
+        if type_layer == "conv":
+            nb_channel = nb_kernel
+            previ_channel = nb_channel
 
-        if (dimensions[str(i)][4] == "kernel"):
-            #Add the modificaton to the dict
-            dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
-        
-        else:
-            nb_channel = nb_activation
-            nb_channel = list_size_activaton[-1][0]
-            dimensions[str(i)] = k_size, stride, padding, nb_channel, type_layer, fonction
+        #Conserve the nb of channel
+        elif type_layer == "pool":
+            dimensions[str(i)] = (k_size, stride, padding, previ_channel, type_layer, fonction)
 
         o_size = calcul_output_shape(input_size, k_size, stride, padding)
-        previ_input_size = input_size + padding
         input_size = o_size
-        nb_activation = dimensions[str(i)][3]
-        
-        list_size_activaton.append((nb_channel, input_size))
-        error_initialisation(dimensions, input_size, previ_input_size, type_layer, fonction, stride)
+        previ_input_size = input_size
 
-    return dimensions, list_size_activaton
+        error_initialisation(dimensions, nb_channel, input_size, previ_input_size, type_layer, fonction, stride)
+
+    return dimensions
 
 """
 initialisation_affectation:
@@ -451,7 +459,7 @@ list    list_size_activation :     list of all activation shape with number of a
 dict    parametres :        containt all the information for the kernel operation
 dict    parametres_grad :   containt all the information for the update operation
 """
-def initialisation_affectation(dimensions, x_shape, list_size_activation):
+def initialisation_affectation(dimensions, x_shape):
 
     parametres = {}
     parametres_grad = {}
@@ -459,20 +467,20 @@ def initialisation_affectation(dimensions, x_shape, list_size_activation):
     nb_layer = x_shape[0]
     o_size = x_shape[1]
     C = len(dimensions)
-    
-    for i in range(1, C + 1):
-        k_size, _, _, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
+
+    for i in range(1, C +1):
+        k_size, _, padding, nb_kernel, type_layer, fonction = initialisation_extraction(dimensions, i)
         o_size = calcul_output_shape(o_size, dimensions[str(i)][0], dimensions[str(i)][1], dimensions[str(i)][2])
+    
+        if type_layer == "conv":
 
-        padding = 0
-        if (i < C):
-           padding = dimensions[str(i+1)][2]
+            if (i < C):
+                o_size = o_size + padding
 
-        if type_layer == "kernel":
-            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, type_layer, fonction, i, nb_kernel, nb_layer, o_size, padding)
+            parametres, parametres_grad = initialisation_kernel(parametres, parametres_grad, k_size, fonction, i, nb_kernel, nb_layer, o_size)
 
-        elif type_layer == "pooling":
-            parametres = initialisation_pooling(parametres, k_size, type_layer, fonction, i)
+        elif type_layer == "pool":
+            pass
 
         nb_layer = nb_kernel
 
@@ -497,8 +505,8 @@ tuple   list_size_activation:          tuple of all activation shape with number
 """
 def initialisation(x_shape, dimensions, padding_mode):
 
-    dimensions, list_size_activation = initialisation_calcul(x_shape, dimensions, padding_mode)
-    parametres, parametres_grad = initialisation_affectation(dimensions, x_shape, list_size_activation)
+    dimensions = initialisation_calcul(x_shape, dimensions, padding_mode)
+    parametres, parametres_grad = initialisation_affectation(dimensions, x_shape)
 
     return parametres, parametres_grad, dimensions
 
@@ -534,16 +542,20 @@ string          mode :              the type of activation function we use
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def kernel_activation(X, K, b, mode, alpha):
+def kernel_activation(X, K, b, mode, alpha, stride):
 
-    Z = op_correlate(X, K, b)
-
+    Z = op_correlate(X, K, stride)
+    Z += b
+    
     if mode == "relu":
         A = relu(Z, alpha)
+
     elif mode == "sigmoide":
         A = sigmoide(Z)
+
     elif mode == "tanh":
         A = tanh(Z)
+
     return A, Z 
 
 
@@ -566,19 +578,19 @@ int             padding :           how many pixel we add to the border of the a
 =========OUTPUT=========
 numpy.array     Z   : the resultat of the activation matrice after pass throw the activation function
 """
-def function_activation(X, K, b, mode, type_layer, stride, padding, alpha):
+def function_activation(X, K, b, mode, type_layer, k_size, stride, padding, alpha):
 
-    #Activation are in line format
-    if type_layer == "kernel":
-        A, Z = kernel_activation(X, K, b, mode, alpha)
-    else:
-        A = pooling_activation(X, K, stride)
+    # Padding
+    if padding > 0:
+        X = add_padding(X, padding)
+
+    if type_layer == "conv":
+        A, Z = kernel_activation(X, K, b, mode, alpha, stride)
+
+    elif type_layer == "pool":
+        A = pooling_activation(X, k_size, stride)
         Z = None
-        
-    #Activation are in square format
-    if padding != None:
-        A = add_padding(A, padding) 
-
+    
     return A, Z
 
 
@@ -596,30 +608,33 @@ dict            dimensions :                    all the information on how is bu
 =========OUTPUT=========
 dict            activation :     containt all the activation during the foreward propagation
 """
-def foward_propagation(X, parametres, dimensions, alpha):
+def foward_propagation(X, parameters, dimensions, alpha, C_CNN):
 
-    activation = {"A0" : X}
-    C = len(dimensions.keys())
+    activations = {"A0" : X}
 
-    for c in range(1, C+1):
-        A = activation["A" + str(c-1)]
-        K = parametres["K" + str(c)]
-        b = parametres["b" + str(c)]
-        mode = parametres["f" + str(c)]
-        type_layer = parametres["l" + str(c)]
-        padding = 0
+    for c in range(1, C_CNN + 1):
+        A_prev = activations[f"A{c-1}"]
 
-        if c < C:
-            stride = dimensions[str(c)][1]
+        type_layer, mode = dimensions[f"{c}"][4:6]
+        k_size, stride, padding = dimensions[f"{c}"][:3]
 
+        if type_layer == "conv":
+            K = parameters[f"K{c}"]
+            b = parameters[f"b{c}"]
+    
         #The information for the padding is at the next step
-        if c+1 < C:
-           padding = dimensions[str(c+2)][2] 
+        A, Z = function_activation(
+            A_prev, K, b,
+            mode, type_layer,
+            k_size,
+            stride, padding,
+            alpha
+        )
 
-        activation["A" + str(c)], activation["Z" + str(c)] = function_activation(A, K, b, mode, type_layer, stride, padding, alpha)
-        
+        activations[f"A{c}"] = A
+        activations[f"Z{c}"] = Z
 
-    return activation
+    return activations
 
 """
 back_propagation_pooling:
@@ -635,36 +650,40 @@ int             c  :            which stage we are in backpropagatioin
 =========OUTPUT=========
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_pooling(activation, dimensions, dZ, c):
-    
-    stride = dimensions[str(c)][1]
-    K = dimensions[str(c)][0]
-    A_prev = activation["A" + str(c - 1)]  # entrée de la couche pooling
-    m, H_prev, W_prev = A_prev.shape
-    _, H_out, W_out = dZ.shape
+def back_propagation_pooling(A_prev, k_size, stride, dZ, c):
+    """
+    A_prev : (C, H, W)
+    dZ     : (C, H_out, W_out)
+    """
+    C, H, W = A_prev.shape
+    H_out, W_out = dZ.shape[1], dZ.shape[2]
 
-    new_dZ = np.zeros(A_prev.shape)
+    dA_prev = np.zeros_like(A_prev)
 
-    for i in range(m):
+    # Loop
+    for c_idx in range(C):
         for h in range(H_out):
-            h_start = h * stride
-            h_end = h_start + K
-
             for w in range(W_out):
+
+                h_start = h * stride
+                h_end   = h_start + k_size
                 w_start = w * stride
-                w_end = w_start + K
+                w_end   = w_start + k_size
 
-                # Fenêtre courante de l’activation d’entrée
-                a_prev_slice = A_prev[i, h_start:h_end, w_start:w_end]
+                # patch
+                patch = A_prev[c_idx, h_start:h_end, w_start:w_end]
 
-                # Création du masque du max
-                mask = (a_prev_slice == np.max(a_prev_slice))
+                # max du patch
+                max_val = np.max(patch)
 
-                # Transmission du gradient uniquement au max
-                new_dZ[i, h_start:h_end, w_start:w_end] += mask * dZ[i, h, w]
+                # mask
+                mask = (patch == max_val)
 
+                # distribution du gradient
+                dA_prev[c_idx, h_start:h_end, w_start:w_end] += \
+                    mask * dZ[c_idx, h, w]
 
-    return new_dZ
+    return dA_prev
 
 
 """
@@ -684,38 +703,51 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     containt all the gradient need for the update
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha):
-        
-    #Create a table for each dx of the kernel
-    NB_K, L_K, K_height, K_witdth  = parametres["K" + str(c)].shape
-    
-    dK = np.zeros(parametres["K" + str(c)].shape)
+def back_propagation_kernel(activation, parameters, gradients,activation_function, stride, dZ, c, alpha):
 
-    #For each kernel
-    for i in range(NB_K):
-        dK[i] = correlate(dZ, activation["A" + str(c)], mode='valid')
+    K = parameters[f"K{c}"]              # (N, C, Kh, Kw)
+    A_prev = activation[f"A{c-1}"]       # (C, H, W)
 
-    #Add the result in the dictionary
-    gradients["dK" + str(c)] = dK
-    gradients["db" + str(c)]  = dZ
-            
+    N, H_out, W_out = dZ.shape
+    _, C, Kh, Kw = K.shape
+
+    # Gradient des kernels
+    dK = grad_kernel(A_prev, dZ, K, stride)
+    gradients[f"dK{c}"] = dK
+
+    # Gradient du biais
+    gradients[f"db{c}"] = dZ
+
+    # Backprop activation
     if c > 1:
-        activation_fonction = parametres["f" + str(c)]
 
-        # Chose the correct derivative
-        if activation_fonction == "relu":
-            dA = dx_relu(activation["Z" + str(c)], alpha)
+        if activation_function == "relu":
+            dA = dx_relu(activation[f"Z{c}"], alpha)
 
-        elif activation_fonction == "sigmoide":
-            dA = dx_sigmoide(activation["A" + str(c)])
+        elif activation_function == "sigmoide":
+            dA = dx_sigmoide(activation[f"A{c}"])
 
-        elif activation_fonction == "tanh":
-            dA = dx_tanh(activation["A" + str(c)])
+        elif activation_function == "tanh":
+            dA = dx_tanh(activation[f"A{c}"])
 
-        dZ *= dA
+        dZ = dZ * dA  # (N, H_out, W_out)
 
-        # Apply convolution
-        dZ = convolution(dZ, parametres["K" + str(c)])
+        # Propagation vers A_prev
+        dA_prev = np.zeros_like(A_prev)  # (C, H, W)
+
+        for n in range(N):  # chaque filtre
+            for h in range(H_out):
+                for w in range(W_out):
+
+                    h_start = h * stride
+                    h_end   = h_start + Kh
+                    w_start = w * stride
+                    w_end   = w_start + Kw
+
+                    dA_prev[:, h_start:h_end, w_start:w_end] += \
+                        K[n] * dZ[n, h, w]
+
+        dZ = dA_prev
 
     return gradients, dZ
 
@@ -735,23 +767,47 @@ tuple           list_size_activation:           tuple of all activation shape wi
 =========OUTPUT=========
 dict           gradients :     containt all the gradient need for the update
 """
-def back_propagation_CNN(activation, parametres, dimensions, y, tuple_size_activation, alpha):
+def back_propagation_CNN(activations, parameters, dimensions, y, alpha, C_CNN):
 
-    #Here the derivative activation are in shape nxn, then they are modify to work effectively with code
-    C = len(dimensions.keys())
     gradients = {}
-    dZ = activation["A" + str(C)] - y
-    
-    for c in reversed(range(1, C+1)):
 
-        #Activation are in square format
-        if parametres["l" + str(c)] == "pooling":
-            #Remove the padding
-            dZ = dZ[:,:tuple_size_activation[c-1], :tuple_size_activation[c-1]]
-            dZ = back_propagation_pooling(activation, dimensions, dZ, c) 
-           
-        elif parametres["l" + str(c)] == "kernel":
-            gradients, dZ = back_propagation_kernel(activation, parametres, dimensions, gradients, dZ, c, alpha)
+    dZ = activations[f"A{C_CNN}"] - y
+
+    for c in range(C_CNN, 0, -1):
+
+        k_size, stride, padding, _, type_layer, activation_function = dimensions[f"{c}"]
+        A = activations[f"A{c-1}"]
+
+        # Padding
+        if padding > 0:
+            A = add_padding(A, padding)
+
+        # pooling
+        if type_layer == "pool":
+            dZ = back_propagation_pooling(
+                A,
+                k_size,
+                stride,
+                dZ,
+                c
+            )
+
+        # convolution
+        elif type_layer == "conv":
+            gradients, dZ = back_propagation_kernel(
+                activations,
+                parameters,
+                gradients,
+                activation_function,
+                stride,
+                dZ,
+                c,
+                alpha
+            )
+        
+        # Removal of padding
+        if padding > 0:
+            dZ = dZ[:, :-padding, :-padding]
 
     return gradients
 
@@ -773,12 +829,13 @@ int             C :                 constante the number of stage in CNN
 =========OUTPUT=========
 dict            parametres :        containt all the information for the kernel operation
 """
-def update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C):
+def update(gradients, parametres, parametres_grad, dimensions, learning_rate, beta1, beta2, C):
         
     epsilon = 1e-8 #Pour empecher les log(0) = /0
     #Adam (Adaptativ Momentum)
     for c in range(1, C+1):
-        if parametres["l" + str(c)] == "kernel":
+        
+        if dimensions[f"{c}"][4] == "conv":
 
             #Update moment
             parametres_grad["m" + str(c)] = beta1 * parametres_grad["m" + str(c)] + (1 - beta1) * gradients["dK" + str(c)]     # Première estimation des moments (moyenne des gradients)
@@ -1080,10 +1137,10 @@ def main():
     alpha = 0.001
     nb_iteration = 2_000
 
-    x_shape = 30
+    x_shape = 28
     input_shape = (1, x_shape, x_shape)
 
-    X = np.random.rand(x_shape * x_shape).reshape(x_shape, x_shape)
+    X = np.random.rand(*input_shape)
     #X = np.zeros((x_shape, x_shape))
     #X[:, 8:16] = 1
     #X[8:16, :] = 1
@@ -1094,17 +1151,16 @@ def main():
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
     dimensions = {
-        "1": (5, 1, 0, 32, "kernel", "relu"),
-        "2": (2, 2, 0, 1, "pooling", "max"),
-        "3": (3, 1, 0, 64, "kernel", "relu"),
-        "4": (2, 2, 0, 1, "pooling", "max"),
-        "5": (3, 1, 0, 64, "kernel", "relu")
+        "1": (5, 1, 0, 32, "conv", "relu"),
+        "2": (2, 2, 0, 1, "pool", "max"),
+        "3": (3, 1, 0, 64, "conv", "relu"),
+        "4": (2, 2, 0, 1, "pool", "max"),
+        "5": (3, 1, 0, 64, "conv", "relu")
     }
     
     padding_mode = "auto"
     parametres, parametres_grad, dimensions = initialisation (
     input_shape, dimensions, padding_mode)
-    tuple_size_activation = create_tuple_size(input_shape, dimensions)
 
     show_information(dimensions, input_shape)
 
@@ -1131,9 +1187,9 @@ def main():
 
     for _ in tqdm(range(nb_iteration)):
         
-        activations = foward_propagation(X, parametres, dimensions, alpha)
-        gradients = back_propagation_CNN(activations, parametres, dimensions, y, tuple_size_activation, alpha)
-        parametres = update(gradients, parametres, parametres_grad, learning_rate, beta1, beta2, C_CNN)
+        activations = foward_propagation(X, parametres, dimensions, alpha, C_CNN)
+        gradients = back_propagation_CNN(activations, parametres, dimensions, y, alpha, C_CNN)
+        parametres = update(gradients, parametres, parametres_grad, dimensions, learning_rate, beta1, beta2, C_CNN)
 
         l_array = np.append(l_array, log_loss(activations["A" + str(C_CNN)], y))
         a_array = np.append(a_array, accuracy_score(activations["A" + str(C_CNN)].flatten(), y.flatten()))
