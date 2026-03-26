@@ -189,6 +189,26 @@ Découpage de l’initialisation en plusieurs fonctions :
 
 ---
 
+### `convolution25_clean2.py`
+- Pareil que `convolution25_clean.py` mais avec des batch
+
+---
+
+### `convolution25_clean3.py`
+- Pareil que `convolution25_clean2.py` mais avec l'ajout de dropout
+
+---
+
+### `convolution25_clean4.py`
+- Pareil que `convolution25_clean3.py` mais avec une class CNN
+
+---
+
+### `convolution25_clean5.py`
+- Pareil que `convolution25_clean4.py` mais en full class
+
+---
+
 ### `convolution26.py`
 - CNN avec inputs déformés
 - Tests pour vérifier si le modèle est correctement calibré sur les différents channels

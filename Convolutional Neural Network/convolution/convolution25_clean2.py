@@ -105,8 +105,11 @@ numpy.array     X :     the activation matrice
 numpy.array     x :     array containe the next activation
 """
 def max_pooling(X, k_size, stride):
-    windows = np.lib.stride_tricks.sliding_window_view(X, (k_size, k_size), axis=(1, 2))
-    windows = windows[:, ::stride, ::stride, :, :]
+    # X : (batch, channels, height, width)
+    
+    windows = np.lib.stride_tricks.sliding_window_view(X, (k_size, k_size), axis=(2, 3))
+    windows = windows[:, :, ::stride, ::stride, :, :]
+    
     return windows.max(axis=(-1, -2))
 
 
@@ -125,58 +128,50 @@ x_size (int): Size of the spatial dimension of the activation
 Z_concat (np.ndarray): Next activation array (shape: [out_channels, x_size, x_size])
 """
 def op_correlate(A, K, stride):
-    # A : (C, H, W)
+    # A : (B, C, H, W)
     # K : (N, C, Kh, Kw)
 
-    C, H, W = A.shape
-    N, _, Kh, Kw = K.shape
+    B, C, H, W = A.shape
+    N, _, Kh, Kw   = K.shape
 
-    # Création des fenêtres glissantes
     windows = np.lib.stride_tricks.sliding_window_view(
-        A, (Kh, Kw), axis=(1, 2)
-    )
-
-    # Application du stride
-    windows = windows[:, ::stride, ::stride, :, :]
-
-    H_out, W_out = windows.shape[1], windows.shape[2]
-
-    # Convolution (corrélation)
-    # (N, H_out, W_out)
+        A, (Kh, Kw), axis=(2, 3)
+        )
+    
+    windows = windows[:, :, ::stride, ::stride, :, :]
+    
+    H_out, W_out = windows.shape[2], windows.shape[3]
+    
+    # (N, B, H_out, W_out)
     out = np.tensordot(
         K,
         windows,
-        axes=([1, 2, 3], [0, 3, 4])
-    )
+        axes=([1, 2, 3], [1, 4, 5])
+    )  
+    
+    # → (B, N, H_out, W_out)
+    out = np.moveaxis(out, 0, 1)
 
     return out
 
 
 def grad_kernel(A_prev, dZ, K, stride):
-    # A_prev : (C, H, W)
-    # dZ     : (N, H_out, W_out)
-    # K      : (N, C, Kh, Kw)
+    # A_prev : (B, C, H, W)
+    # dZ     : (B, N, Hout, Wout)
+    
+    N, _, Kh, Kw   = K.shape
 
-    N, _, Kh, Kw = K.shape
-
-    # Fenêtres glissantes
     windows = np.lib.stride_tricks.sliding_window_view(
-        A_prev, (Kh, Kw), axis=(1, 2)
+    A_prev, (Kh, Kw), axis=(2, 3)
     )
+    windows = windows[:, :, ::stride, ::stride, :, :]
 
-    # Application du stride
-    windows = windows[:, ::stride, ::stride, :, :]
-
-    # windows : (C, H_out, W_out, Kh, Kw)
-
-    # Calcul du gradient
     dK = np.tensordot(
         dZ,
         windows,
-        axes=([1, 2], [1, 2])
+        axes=([0, 2, 3], [0, 2, 3])
     )
 
-    # Résultat : (N, C, Kh, Kw)
     return dK
 
 
@@ -194,27 +189,26 @@ int             k_size_sqrt :   the size in row of the kernel
 numpy.array    next_dZ :       Array containe the derivated for the next layer
 """
 def convolution(dZ, K):
-    # dZ : (F, H, W)
+    # dZ : (B, F, H, W)
     # K  : (F, C, Kh, Kw)
 
-    F, H, W = dZ.shape
+    B, F, H, W = dZ.shape
     _, C, Kh, Kw = K.shape
 
     pad_h = Kh - 1
     pad_w = Kw - 1
 
-    # padding pour simuler mode='full'
-    padded = np.pad(dZ, ((0,0),(pad_h,pad_h),(pad_w,pad_w)))
+    padded = np.pad(dZ, ((0,0),(0,0),(pad_h,pad_h),(pad_w,pad_w)))
 
-    # extraction des fenêtres
-    windows = sliding_window_view(padded, (Kh, Kw), axis=(1,2))
-    # shape : (F, H+Kh-1, W+Kw-1, Kh, Kw)
+    # (B, F, H+Kh-1, W+Kw-1, Kh, Kw)
+    windows = sliding_window_view(padded, (Kh, Kw), axis=(2,3))
 
-    # produit tensoriel
-    out = np.tensordot(K, windows, axes=([0,2,3],[0,3,4]))
-    # shape : (C, H+Kh-1, W+Kw-1)
+    # (C, B, H+Kh-1, W+Kw-1)
+    out = np.tensordot(K, windows, axes=([0,2,3],[1,4,5]))
 
-    return out
+    # (B, C, H+Kh-1, W+Kw-1)
+    return np.moveaxis(out, 0, 1)
+    
 
 """
 ouput_shape:
@@ -270,7 +264,7 @@ def show_information(dimensions, input_size):
     print(f"{dimensions[str(i)][3]}")  
 
     print("\nPadding")
-    outpu_shape = input_size[1]
+    outpu_shape = input_size[2]
     for i in range(len(dimensions)):
         
         
@@ -559,7 +553,7 @@ def kernel_activation(X, K, b, mode, alpha, stride):
     elif mode == "tanh":
         A = tanh(Z)
 
-    return A, Z 
+    return A, Z
 
 
 """
@@ -655,41 +649,38 @@ numpy.array     DZ :            the derivated of this activation for the next st
 """
 def back_propagation_pooling(A_prev, k_size, stride, dZ, c):
     """
-    A_prev : (C, H, W)
-    dZ     : (C, H_out, W_out)
+    A_prev : (B, C, H, W)
+    dZ     : (B, C, H_out, W_out)
     """
-    C, H, W = A_prev.shape
-    H_out, W_out = dZ.shape[1], dZ.shape[2]
+    B, C, H, W = A_prev.shape
+    H_out, W_out = dZ.shape[2], dZ.shape[3]
 
-    # 🔹 Fenêtres glissantes
-    windows = sliding_window_view(A_prev, (k_size, k_size), axis=(1, 2))
-    # shape: (C, H_out, W_out, k, k)
+    # Sliding windows
+    windows = sliding_window_view(A_prev, (k_size, k_size), axis=(2,3))
+    # shape: (B, C, H_out, W_out, k, k)
 
-    windows = windows[:, ::stride, ::stride, :, :]
+    windows = windows[:, :, ::stride, ::stride, :, :]
 
-    # 🔹 Max pooling mask
     max_vals = windows.max(axis=(-1, -2), keepdims=True)
-    mask = windows == max_vals  # (C, H_out, W_out, k, k)
+    mask = windows == max_vals  # shape: (B, C, H_out, W_out, k, k)
 
-    # 🔹 Broadcast du gradient
-    dZ_expanded = dZ[:, :, :, None, None]  # (C, H_out, W_out, 1, 1)
-    dA_prev_local = mask * dZ_expanded     # (C, H_out, W_out, k, k)
+    # On broadcast dZ sur les k,k
+    dZ_expanded = dZ[:, :, :, :, None, None]
+    dA_prev = mask * dZ_expanded
+    
+    dA_prev_full = np.zeros_like(A_prev)
 
-    # 🔹 Reconstruction
-    dA_prev = np.zeros_like(A_prev)
+    H_out, W_out = dZ.shape[2], dZ.shape[3]
 
     for h in range(H_out):
         for w in range(W_out):
-
             h_start = h * stride
             h_end   = h_start + k_size
             w_start = w * stride
             w_end   = w_start + k_size
+            dA_prev_full[:, :, h_start:h_end, w_start:w_end] += dA_prev[:, :, h, w, :, :]
 
-            dA_prev[:, h_start:h_end, w_start:w_end] += \
-                dA_prev_local[:, h, w, :, :]
-
-    return dA_prev
+    return dA_prev_full
 
 
 """
@@ -709,24 +700,22 @@ int             c  :            which stage we are in backpropagatioin
 dict            gradients :     containt all the gradient need for the update
 numpy.array     DZ :            the derivated of this activation for the next step of backpropagation
 """
-def back_propagation_kernel(activation, parameters, gradients,activation_function, stride, dZ, c, alpha):
+def back_propagation_kernel(activation, parameters, gradients, activation_function, stride, dZ, c, alpha):
 
-    K = parameters[f"K{c}"]              # (N, C, Kh, Kw)
-    A_prev = activation[f"A{c-1}"]       # (C, H, W)
+    K = parameters[f"K{c}"]
+    A_prev = activation[f"A{c-1}"]
 
-    N, H_out, W_out = dZ.shape
-    _, C, Kh, Kw = K.shape
+    B, N, H_out, W_out = dZ.shape
+    _, C, Kh, Kw  = K.shape
 
-    # Gradient des kernels
+    #For each kernel
     dK = grad_kernel(A_prev, dZ, K, stride)
+
     gradients[f"dK{c}"] = dK
+    gradients[f"db{c}"] = np.sum(dZ, axis=0)
 
-    # Gradient du biais
-    gradients[f"db{c}"] = dZ
-
-    # Backprop activation
     if c > 1:
-
+        
         if activation_function == "relu":
             dA = dx_relu(activation[f"Z{c}"], alpha)
 
@@ -736,24 +725,25 @@ def back_propagation_kernel(activation, parameters, gradients,activation_functio
         elif activation_function == "tanh":
             dA = dx_tanh(activation[f"A{c}"])
 
-        dZ = dZ * dA  # (N, H_out, W_out)
+        dZ = dZ * dA
+        
+        # propagation vers la couche précédente
+        dZ = convolution(dZ, K)
 
-        # Propagation vers A_prev
-        dA_prev = np.zeros_like(A_prev)  # (C, H, W)
+        dZ_expanded = dZ[:, :, :, :, None, None]
+        new_dZ = np.zeros_like(A_prev)
 
-        for n in range(N):  # chaque filtre
-            for h in range(H_out):
-                for w in range(W_out):
+        for h in range(H_out):
+            for w in range(W_out):
+                h_start = h * stride
+                h_end   = h_start + Kh
 
-                    h_start = h * stride
-                    h_end   = h_start + Kh
-                    w_start = w * stride
-                    w_end   = w_start + Kw
+                w_start = w * stride
+                w_end   = w_start + Kw
 
-                    dA_prev[:, h_start:h_end, w_start:w_end] += \
-                        K[n] * dZ[n, h, w]
+                new_dZ[:, :, h_start:h_end, w_start:w_end] += dZ_expanded[:, :, h, w]
 
-        dZ = dA_prev
+        dZ = new_dZ
 
     return gradients, dZ
 
@@ -811,7 +801,7 @@ def back_propagation_CNN(activations, parameters, dimensions, y, alpha, C_CNN):
         
         # Removal of padding
         if padding > 0:
-            dZ = dZ[:, :-padding, :-padding]
+            dZ = dZ[:, :, :-padding, :-padding]
 
     return gradients
 
@@ -900,9 +890,12 @@ numpy.array      :             the activation matrice
 """
 
 def add_padding(X, padding):
-    C, H, W = X.shape
-    out = np.zeros((C, H + padding, W + padding), dtype=X.dtype)
-    out[:, :H, :W] = X
+    # X : (B, C, H, W)
+
+    B, C, H, W = X.shape
+    out = np.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
+
+    out[:, :, :H, :W] = X
     return out
 
 
@@ -1103,7 +1096,7 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12, label_A="A", label_Z="Z
         plt.show()
 
 
-def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
+def display_activation(X, y, activations_CNN, parametres_CNN, dimensions_CNN, alpha):
 
     # Affichage côte à côte
     plt.figure(figsize=(10, 5))
@@ -1124,10 +1117,7 @@ def display_activation(X, y, parametres_CNN, dimensions_CNN, alpha):
     plt.show()
 
     C_CNN = len(dimensions_CNN.keys())
-
-    activations_CNN = foward_propagation(X, parametres_CNN, dimensions_CNN, alpha, C_CNN)
-
-    for i in range(1, len(dimensions_CNN)):     
+    for i in range(1, C_CNN):     
         display_comparaison_layer(activations_CNN["A" +str(i)], activations_CNN["Z" +str(i)])
         
 
@@ -1170,18 +1160,21 @@ def main():
     beta1 = 0.9
     beta2 = 0.99
     alpha = 0.001
-    nb_iteration = 200
+    nb_iteration = 1000
 
     x_shape = 28
     input_shape = (1, x_shape, x_shape)
 
-    X = np.random.rand(*input_shape)
+    X1 = np.random.rand(*input_shape)
+    X2 = np.random.rand(*input_shape)
+    X = np.stack([X1, X2], axis=0)  # batch=2
+
     #X = np.zeros((x_shape, x_shape))
     #X[:, 8:16] = 1
     #X[8:16, :] = 1
 
     if len(X.shape) == 2:
-        X = X.reshape(1, X.shape[0], X.shape[1])
+        X = X.reshape(1, 1, X.shape[0], X.shape[1])
 
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function
@@ -1199,14 +1192,16 @@ def main():
 
     show_information(dimensions, input_shape)
 
-    input_size = X.shape[1]
+    input_size = X.shape[2]
     for val in dimensions.values():
         o_size = calcul_output_shape(input_size, val[0], val[1], val[2])
         input_size = o_size
 
     C_CNN = len(dimensions.keys())
     y_shape = o_size
-    y = np.random.rand(dimensions[str(C_CNN)][3], y_shape, y_shape)
+    y1 = np.random.rand(dimensions[str(C_CNN)][3], y_shape, y_shape)
+    y2 = np.random.rand(dimensions[str(C_CNN)][3], y_shape, y_shape)
+    y = np.stack([y1, y2], axis=0)  # batch=2
 
     l_array = np.array([])
     a_array = np.array([])
@@ -1237,9 +1232,9 @@ def main():
     #display_kernel_and_biais(parametres)
 
     #Display target vs prediction
-    y_pred = activations["A" + str(C_CNN)]
-    display_comparaison_layer(y, y_pred, label_A="Y", label_Z="Y Pred")
+    y_pred = activations["A" + str(C_CNN)][0]
+    display_comparaison_layer(y[0], y_pred, label_A="Y", label_Z="Y Pred")
     
-    display_activation(X, y, parametres, dimensions, alpha)
+    display_activation(X[0], y[0], activations, parametres, dimensions, alpha)
 
 main()
