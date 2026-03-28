@@ -1,118 +1,108 @@
 
-import numpy as np
+from .Mathematical_function import ReLU, LeakyReLU, Sigmoide, Tanh
+from .Layer import BatchNorm, Dropout, Block, Dense
 
-from .Mathematical_function import sigmoide, dx_sigmoide, relu, dx_relu, tanh, dx_tanh, softmax
-
-def show_information_DNN(parametres, dimensions):
-
-    C = len(parametres) // 2
-
-    print("\n============================")
-    print("    INITIALISATION DNN")
-    print("============================")
-
-    print("\nDétail du reseau de neuron")
-    for c in range(1, C+1):
-        print("W" + str(c), ":", parametres["W" + str(c)].shape)
-        print("B" + str(c), ":", parametres["B" + str(c)].shape)
-
-    for c in range(1, C+1):
-        print(parametres["W" + str(c)].shape[0], end="")
-        print("->", end="")
-    print(parametres["W" + str(c)].shape[1])
-
-    print("\n")
-    print("nb_neuron, function")
-    for keys, values in dimensions.items():
-        print(keys, values)
-    print("\n")
-
-
-def initialisation_DNN(dimension, input_shape, output_shape):
-
-    parametres ={}
-    C = len(dimension)
-
-    dimension[str(C)] = (output_shape, dimension[str(C)][1])
-    nb_activation = input_shape
-
-    #The weight and bias are initialise to bettween -1 and 1)
-    for i in range(1, C+1):
-        nb_neuron = dimension[str(i)][0]
-
-        # He initialization
-        if dimension[str(i)][1] == "relu":
-            std = np.sqrt(2. / nb_activation)
-            W = np.random.randn(nb_activation, nb_neuron) * std
-
-        # Xavier (Glorot) initialization
-        elif dimension[str(i)][1] in {"sigmoide", "tanh"}:
-            limit = np.sqrt(6. / (nb_activation + nb_neuron))
-            W = np.random.uniform(-limit, limit, size=(nb_activation, nb_neuron))
-
-        # Biais initialisé à 0 (standard)
-        B = np.zeros((1, nb_neuron))  
-        parametres["W" + str(i)] = W.astype(np.float32)
-        parametres["B" + str(i)] = B.astype(np.float32)
-        nb_activation = nb_neuron
-
-
-        if dimension[str(i)][1] not in {"sigmoide", "relu", "tanh"}:
-            show_information_DNN(parametres, dimension)
-            raise NameError(f"ERROR: Activation function '{dimension[str(i)][1]}' is not defined. Please correct with 'relu', 'sigmoide' ou 'tanh'.")
- 
-    return parametres
-
-
-def foward_propagation_DNN(A, Z, parametres, dimension, C, alpha):
-
-    activation = {"A0" : A, "Z0" : Z}
-    C = len(dimension)
-
-    for i in range(1, C+1):
-        Z = np.dot(activation["A" + str(i-1)], parametres["W" + str(i)]) + parametres["B" + str(i)]
-        activation["Z" + str(i)] = Z
-
-        if dimension[str(i)][1] == "sigmoide":
-            activation["A" + str(i)] =  sigmoide(Z)
-        elif dimension[str(i)][1] == "tanh":
-            activation["A" + str(i)] =  tanh(Z)
-        elif dimension[str(i)][1] == "relu":
-            activation["A" + str(i)] =  relu(Z, alpha)
-
-    return activation
-
-
-def back_propagation_DNN(activation, parametres, dimension, y_train, C, alpha):
-
-    m = y_train.size
-    dZ = softmax(activation["A" + str(C)]) - y_train
-    gradients = {}  
-
-    for i in reversed(range(1, C+1)):
-        gradients["dW" + str(i)] = 1/m * np.dot(activation["A" + str(i-1)].T, dZ)
-        gradients["dB" + str(i)] = 1/m * np.mean(dZ, axis=0, keepdims=True)    
-        dA = np.dot(dZ, parametres["W" + str(i)].T)
-        dA = np.clip(dA, -100, 100)
-
-        if dimension[str(i)][1] == "sigmoide":
-            dZ = dA * dx_sigmoide(activation["A" + str(i-1)])
-        elif dimension[str(i)][1] == "tanh":
-            dZ = dA * dx_tanh(activation["A" + str(i-1)])
-        elif dimension[str(i)][1] == "relu":
-            dZ = dA * dx_relu(activation["Z" + str(i-1)], alpha)
+class DNN():
     
-    return gradients, dZ
+    def __init__(self, y, x_shape, dimensions, alpha, optimizer):
 
+        self.dimensions = dimensions
+        self.layers = []
+        self.C_DNN = len(dimensions)
+        self.logits = None
 
-def update_DNN(gradients, parametres, learning_rate, dimension):
+        DNN.initialisation(self, y, x_shape, alpha)
+        
+        self.optimizer = optimizer
+
+    def initialisation(self, y, x_shape, alpha):
+
+        dimensions = self.dimensions
+        C_DNN = self.C_DNN
+        
+        dimensions[str(C_DNN)] = (y.shape[1], dimensions[str(C_DNN)][1], dimensions[str(C_DNN)][2])
+        nb_activation = x_shape
+
+        for i in range(1, C_DNN + 1):
+
+            nb_neuron, activation_function, dropout_per = dimensions[str(i)]
+
+            #Dense
+            dense = Dense(nb_activation, nb_neuron)
+
+            #Batchnorm
+            batchnorm =  BatchNorm(nb_neuron)
+
+            #Activation
+            if activation_function == "sigmoide":
+                activation = Sigmoide()
+            
+            elif activation_function == "tanh":
+                activation = Tanh()
+            
+            elif activation_function == "relu":
+                activation = ReLU()
+
+            elif activation_function == "leaky relu":
+                activation = LeakyReLU(alpha)
+
+            #Droout
+            dropout = Dropout(dropout_per)
+
+            self.layers.append(Block(dense, batchnorm, activation, dropout))
+            nb_activation = nb_neuron
     
-    C = len(dimension)
+    def get_parameters(self):
+        params = []
+        for block in self.layers:
+            params += block.dense.get_params()
+            params += block.batchnorm.get_params()
+        return params
 
-    for c in range(1, C+1):
-        parametres["W" + str(c)] = parametres["W" + str(c)] - learning_rate * gradients["dW" + str(c)]
-        parametres["B" + str(c)] = parametres["B" + str(c)] - learning_rate * gradients["dB" + str(c)]
+    def forward_propagation(self, X, training):
+
+        for block in self.layers:
+            X = block.forward(X, training)
+
+        self.logits = X
+
+    def backward_propagation(self, dZ):
+        
+        for block in reversed(self.layers):
+            dZ = block.backward(dZ)
+        return dZ
     
-    return parametres
+    def update(self):
+        params = self.get_parameters()
+        self.optimizer.update(params)
+
+    def show_information(self):
+
+        dimensions = self.dimensions
+        C_DNN = self.C_DNN
+
+        print("")
+        print("============================")
+        print("    INITIALISATION DNN")
+        print("============================")
+
+        print("\nDétail de la convolution :")
+        print("Nb activation")
+        for c in range(1, C_DNN + 1):
+            print(dimensions[str(c)][0], end="")
+            if c < C_DNN:
+                print("->", end="")
+        print("")
 
 
+        print("")
+        for c, block in enumerate(self.layers):
+            print("W" + str(c + 1), ":", block.dense.W.shape)
+            print("B" + str(c + 1), ":", block.dense.b.shape)
+         
+
+        print("")
+        print("nb neuron, function, dropout")
+        for keys, values in dimensions.items():
+            print(keys, values)
+        print("")

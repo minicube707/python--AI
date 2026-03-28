@@ -1,32 +1,60 @@
 
 import  numpy as np
 
-from .Mathematical_function import softmax
-from .Propagation import forward_propagation
-
 """
 ============================
 Evaluation Metrics Function
 ============================
 """
 
-def dx_log_loss(y_true, y_pred):
-    return - np.mean(np.sum(y_true - y_pred))
+class CrossEntropyLoss:
 
-def activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape):
-    _, activation_DNN = forward_propagation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
-    A = softmax(activation_DNN["A" + str(C_DNN)])
-    return A.flatten()
+    def forward(self, y_pred, y_true):
 
-def log_loss(y_true, y_pred):
-    epsilon = 1e-15 #Pour empecher les log(0) = -inf
-    return - np.mean(np.sum(y_true * np.log(y_pred + epsilon)))
+        self.y_pred = y_pred
+        self.y_true = y_true
+        
+        eps = 1e-12
+        y_pred_clipped = np.clip(y_pred, eps, 1 - eps)
+
+        loss = -np.sum(y_true * np.log(y_pred_clipped)) / y_pred.shape[0]
+        return loss
+
+    def backward(self):
+        m = self.y_pred.shape[0]
+        return -(self.y_true / self.y_pred) / m
+    
+
+class MSE:
+
+    def forward(self, y_pred, y_true):
+        self.y_pred = y_pred
+        self.y_true = y_true
+
+        return np.mean((y_pred - y_true) ** 2)
+
+    def backward(self):
+        return 2 * (self.y_pred - self.y_true) / self.y_true.shape[0]
+    
+
+def log_loss(y_pred, y_true):
+    eps = 1e-15
+    y_pred = np.clip(y_pred, eps, 1 - eps)
+    return -np.mean(y_true * np.log(y_pred) + (1-y_true) * np.log(1-y_pred))
+
+
+def dx_log_loss(y_pred, y_true):
+    eps = 1e-15
+    y_pred = np.clip(y_pred, eps, 1 - eps)
+    return -np.mean((y_true / y_pred - (1-y_true) / (1-y_pred)))
 
 
 def accuracy_score(y_true, y_pred):
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
-    return np.argmax(y_true) == np.argmax(y_pred)
+    y_true_labels = np.argmax(y_true, axis=1)
+    y_pred_labels = np.argmax(y_pred, axis=1)
+    return np.mean(y_true_labels == y_pred_labels)
+
 
 def confidence_score(y_true, y_pred):
-    return (y_pred[np.argmax(y_true)])
+    true_class_probs = y_pred[np.arange(y_true.shape[0]), np.argmax(y_true, axis=1)]
+    return np.mean(true_class_probs)

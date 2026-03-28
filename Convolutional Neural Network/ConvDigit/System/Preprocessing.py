@@ -6,10 +6,8 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.ensemble import IsolationForest
 
 from .Sklearn_tools import train_test_split, Label_binarizer
-from .Convolution_Neuron_Network import add_padding, reshape
 
-def show_information_setting(nb_iteration, max_attempts, min_confidence_score, learning_rate_CNN, beta1, beta2, alpha, 
-                             learning_rate_DNN, validation_size, ratio_test, dataset_size):
+def show_information_setting(nb_iteration, lr, beta1, beta2, alpha, validation_size, ratio_test, dataset_size):
 
     print("\n============================")
     print("         SETTING")
@@ -17,20 +15,18 @@ def show_information_setting(nb_iteration, max_attempts, min_confidence_score, l
 
     print("\nInfo Training")
     print("Nombre d'iteration: ", nb_iteration);
-    print("Max attempts: ", max_attempts)
-    print("Min confidence score: ", min_confidence_score)
     print("Validation_size: ", validation_size)
     print("Ratio trainset/testset: ", ratio_test)
     print("Dataset size: ", dataset_size)
     
     print("\nInfo CNN")
-    print("Learning rate: ", learning_rate_CNN)
+    print("Learning rate: ", lr)
     print("Beta1: ", beta1)
     print("Beta2: ", beta2)
     print("Alpha: ", alpha)
 
     print("\nInfo DNN")
-    print("Learning rate: ", learning_rate_DNN)
+    print("Learning rate: ", lr)
 
 
 def handle_key(event):
@@ -38,8 +34,9 @@ def handle_key(event):
         plt.close(event.canvas.figure)  # Ferme la fenêtre associée
 
 
-def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
+def preprocessing(X, y, dataset_size, test_size=0.1, contamination=0.2):
     
+    print("")
     print("Data shape")
     print("X:",X.shape)
     print("Y:",y.shape)
@@ -47,33 +44,30 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     """
     Affiche les 15 premières images de chaque classe du dataset.
     """
-    classes = np.unique(y)
-    for cls in classes:
-        fig = plt.figure(figsize=(16, 8))
-        fig.suptitle(f"Classe {cls}", fontsize=16)
-        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+    # classes = np.unique(y)
+    # for cls in classes:
+    #     fig = plt.figure(figsize=(16, 8))
+    #     fig.suptitle(f"Classe {cls}", fontsize=16)
+    #     fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
         
-        # Récupère les indices des images correspondant à la classe cls
-        indices = np.where(y == cls)[0][:15]  # 15 premières images
-        for i, idx in enumerate(indices):
-            plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
+    #     # Récupère les indices des images correspondant à la classe cls
+    #     indices = np.where(y == cls)[0][:15]  # 15 premières images
+    #     for i, idx in enumerate(indices):
+    #         plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
+    #          plt.imshow(X[idx])
 
-            if (input_shape[0] == 1):
-                plt.imshow(X[idx].reshape(input_shape[1], input_shape[2]), cmap="gray")
-            else:
-                plt.imshow(X[idx].reshape(input_shape[1], input_shape[2], input_shape[0]))
+    #         plt.title(f"{y[idx]}")
+    #         plt.axis("off")
 
-            plt.title(f"{y[idx]}")
-            plt.axis("off")
-
-        plt.tight_layout()
-        plt.show()
+    #     plt.tight_layout()
+    #     plt.show()
 
     #______________________________________________________________#
     #Remove the bad data
-    model=IsolationForest(contamination=0.2)
-    model.fit(X)
-    outlier = model.predict(X) == 1
+    X_dim2 = X.reshape(X.shape[0], -1)
+    model=IsolationForest(contamination=contamination)
+    model.fit(X_dim2)
+    outlier = model.predict(X_dim2) == 1
     X = X[outlier]
     y = y[outlier]
 
@@ -122,11 +116,7 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     fig.suptitle("Train Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-
-        if (input_shape[0] == 1):
-            plt.imshow(New_X_train.reshape((New_X_train.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        else:
-            plt.imshow(New_X_train[i].reshape(input_shape[1], input_shape[2], input_shape[0]))
+        plt.imshow(New_X_train[i], cmap="gray")
 
         plt.title(str(np.argmax(y_train[i])))
         plt.axis("off")
@@ -140,11 +130,8 @@ def preprocessing(X, y, input_shape, dataset_size, test_size=0.1,):
     fig.suptitle("Test Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-
-        if (input_shape[0] == 1):
-            plt.imshow(New_X_test.reshape((New_X_test.shape[0], input_shape[1], input_shape[2]))[i], cmap="gray")
-        else:
-            plt.imshow(New_X_test[i].reshape(input_shape[1], input_shape[2], input_shape[0]))
+        plt.imshow(New_X_test[i], cmap="gray")
+        
 
         plt.title(str(np.argmax(y_test[i])))
         plt.axis("off")

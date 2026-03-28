@@ -1,188 +1,119 @@
 
 import numpy as np
-from scipy.signal import correlate2d
+from abc import ABC, abstractmethod
+from numpy.lib.stride_tricks import sliding_window_view
 
-def tanh(X):
-    return np.tanh(X)
+class Layer(ABC):
 
-def dx_tanh(X):
-    return (1 - X**2)
-            
-"""
-============================
-==========Fonction==========
-============================
-"""
-"""
-sigmoïde:
-=========DESCRIPTION=========
-Apply the sigmoide function at the activation function
+    @abstractmethod
+    def forward(self, X):
+        pass
 
-=========INPUT=========
-numpy.array     X :     the activation matrice
+    @abstractmethod
+    def backward(self, dA):
+        pass
 
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def sigmoide(X):
-    return 1/(1 + np.exp(-X))
+class Softmax(Layer):
 
+    def forward(self, X):
+        # stabilité numérique
+        X_shifted = X - np.max(X, axis=1, keepdims=True)
+        exp_X = np.exp(X_shifted)
+        self.out = exp_X / np.sum(exp_X, axis=1, keepdims=True)
+        return self.out
 
-"""
-relu:
-=========DESCRIPTION=========
-Apply the relu function at the activation function
+    def backward(self, dY):
+        # Jacobien complet (coûteux mais correct)
+        m, n = self.out.shape
+        dX = np.zeros_like(dY)
 
-=========INPUT=========
-numpy.array     X :     the activation matrice
+        for i in range(m):
+            y = self.out[i].reshape(-1, 1)
+            jacobian = np.diagflat(y) - y @ y.T
+            dX[i] = jacobian @ dY[i]
 
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def relu(X, alpha):
-    return np.where(X < 0, alpha*X, X)
+        return dX
 
+class Linear(Layer):
 
-"""
-dx_sigmoïde:
-=========DESCRIPTION=========
-Apply the derivate sigmoide function at the activation function
-=========INPUT=========
-numpy.array     X :     the activation matrice
+    def forward(self, X, *args):
+        return X
 
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def dx_sigmoide(X):
-    return X * (1 - X)
-
-"""
-dx_relu:
-=========DESCRIPTION=========
-Apply the derivative relu function at the activation function
-=========INPUT=========
-numpy.array     X :     the activation matrice
-
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def dx_relu(X, alpha):
-    return np.where(X < 0, alpha, 1)
+    def backward(self, dA):
+        return dA
 
 
-"""
-max_pooling:
-=========DESCRIPTION=========
-Return the max of each row of the activation function
+class ReLU(Layer):
 
-=========INPUT=========
-numpy.array     X :     the activation matrice
+    def forward(self, X):
+        self.X = X
+        return np.maximum(0, X)
 
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def max_pooling(X):
-    a = np.int8(np.sqrt(X.shape[1]))
-    return np.max(X, axis=2).reshape((X.shape[0], a, a))
+    def backward(self, dA):
+        return dA * (self.X > 0)
 
 
-"""
-softmax:
-=========DESCRIPTION=========
-Apply the softmax function at the activation function
+class LeakyReLU(Layer):
 
-=========INPUT=========
-numpy.array     X :     the activation matrice
+    def __init__(self, alpha=0.01):
+        self.alpha = alpha
 
-=========OUTPUT=========
-numpy.array     x :     array containe the next activation
-"""
-def softmax(X):
+    def forward(self, X):
+        self.X = X
+        return np.maximum(X, 0) + self.alpha * np.minimum(X, 0)
 
-    X = np.clip(X, -64, 64)
-    X_max = np.max(X, axis=1, keepdims=True)
-    e_x = np.exp(X - X_max)
+    def backward(self, dA):
+        dx = np.ones_like(self.X)
+        dx[self.X < 0] = self.alpha
+        return dA * dx
+
+
+class Sigmoide(Layer):
+
+    def forward(self, X):
+        self.A = 1 / (1 + np.exp(-X))
+        return self.A
+
+    def backward(self, dA):
+        return dA * self.A * (1 - self.A)
+
+
+class Tanh(Layer):
     
-    return e_x / np.sum(e_x, axis=1, keepdims=True)
+    def forward(self, X):
+        self.A = np.tanh(X)
+        return self.A
 
-"""
-correlate
-=========DESCRIPTION=========
-Perform a correlation between two arrays (activation and kernel).
-
-=========INPUT=========
-A (np.ndarray): Activation matrix (shape: [in_channels, ...])
-K (np.ndarray): Kernel matrix (shape: [out_channels, kernel_size])
-b (np.ndarray): Bias vector (shape: [out_channels])
-x_size (int): Size of the spatial dimension of the activation
-
-=========OUTPUT=========
-Z_concat (np.ndarray): Next activation array (shape: [out_channels, x_size, x_size])
-"""
-def correlate(A, K, b, x_size):
-    """
-    A: (L_A, NB_Dot_Product, K_Size)
-    K: (NB_K, L_A, K_Size, one)
-    b: (NB_K,)
-    x_size: int, dimension spatiale finale
-    """
-
-    # On étend A pour avoir forme compatible
-    # A : (1, L_A, NB_Dot_Product, K_Size)
-    A_expanded = A[np.newaxis, :, :, :]  # ajout axe filtre NB_K
-
-    # K : (NB_K, L_A, K_Size, one)
-    # On veut multiplier A_expanded et K le long de K_Size
-
-    # Pour la multiplication matricielle batch on peut utiliser einsum:
-    # on veut multiplier pour chaque filtre i et chaque canal j :
-    # A_expanded shape: (1, L_A, NB_Dot_Product, K_Size)
-    # K shape:          (NB_K, L_A, K_Size, one)
-    #
-    # Produit sur K_Size: pour chaque (i, j), calculer (NB_Dot_Product, K_Size) dot (K_Size, one)
-    # Résultat: (NB_K, L_A, NB_Dot_Product, one)
+    def backward(self, dA):
+        return dA * (1 - self.A**2)
     
-    prod = np.einsum('nadk,nako->nado', A_expanded, K)
-    # prod shape: (NB_K, L_A, NB_Dot_Product, one)
 
-    # Somme sur les canaux (L_A)
-    Z = np.sum(prod, axis=1)  # shape (NB_K, NB_Dot_Product, one)
+def convolution(dZ, K):
+    # dZ : (B, F, H, W)
+    # K  : (F, C, Kh, Kw)
 
-    # Ajout biais, reshape pour broadcasting
-    Z += b
+    B, F, H, W = dZ.shape
+    _, C, Kh, Kw = K.shape
 
-    # reshape en output spatiale
-    Z = Z.reshape((Z.shape[0], x_size, x_size))
+    pad_h = Kh - 1
+    pad_w = Kw - 1
 
-    # Clipping pour stabilité numérique
-    Z = np.clip(Z, -88, 88)
+    padded = np.pad(dZ, ((0,0),(0,0),(pad_h,pad_h),(pad_w,pad_w)))
 
-    return Z
+    # (B, F, H+Kh-1, W+Kw-1, Kh, Kw)
+    windows = sliding_window_view(padded, (Kh, Kw), axis=(2,3))
 
+    # (C, B, H+Kh-1, W+Kw-1)
+    out = np.tensordot(K, windows, axes=([0,2,3],[1,4,5]))
 
-"""
-convolution:
-=========DESCRIPTION=========
-Do the full convolution of two arrays
+    # (B, C, H+Kh-1, W+Kw-1)
+    return np.moveaxis(out, 0, 1)
 
-=========INPUT=========
-numpy.array     dZ :            the derivated of the previous activation (what should be the activation)
-numpy.array     K :             the kernel matrice
-int             k_size_sqrt :   the size in row of the kernel
+def add_padding(X, padding):
+    # X : (B, C, H, W)
 
-=========OUTPUT=========
-numpy.array    next_dZ :       Array containe the derivated for the next layer
-"""
-def convolution(dZ, K, k_size_sqrt):
-     
-    # Sortie (nb_layers, 4, 4)
-    root = np.int8(np.sqrt(K.shape[2] ))
-    K = K.reshape(K.shape[0], K.shape[1], root, root)
-    output = np.zeros((K.shape[1], dZ.shape[1] + K.shape[2] - 1, dZ.shape[2] + K.shape[3] - 1))
+    B, C, H, W = X.shape
+    out = np.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
 
-    # Convolution pleine pour chaque filtre et chaque canal
-    for i in range(K.shape[0]):  # nb_filters
-        for c in range(K.shape[1]):  # nb_layers (canaux de sortie)
-            output[c] += correlate2d(dZ[i], K[i, c], mode='full')
-
-    return (output)
+    out[:, :, :H, :W] = X
+    return out

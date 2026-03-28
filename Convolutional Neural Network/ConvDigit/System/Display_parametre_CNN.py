@@ -1,10 +1,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from .Layer import Convolution
 from .Preprocessing import handle_key
-from .Propagation import forward_propagation
-from .Convolution_Neuron_Network import deshape
 
 def display_comparaison_layer(A, Z=None, max_par_fig=12):
     """
@@ -77,39 +75,31 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
 
 
 
-def display_activation(X, y, 
-        parametres_CNN, parametres_DNN,
-        dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha, input_shape):
+def display_activation(X, y, model):
 
-    print("")
-    number_wanted = int(input("Which number do want ?\n"))
+    # Affichage côte à côte
+    plt.figure(figsize=(10, 5))
 
-    # Trouver tous les index correspondant au chiffre voulu
-    indices = [i for i, label in enumerate(y) if label == number_wanted]
-
-    # Choisir un index aléatoire parmi ceux-là
-    index_choisi = np.random.choice(indices)
-
-    # Afficher l'image
-    if (input_shape[0] == 1):
-        plt.imshow(X[index_choisi].reshape(28, 28), cmap='gray')
-    else:
-        plt.imshow(X[index_choisi].reshape(input_shape[1], input_shape[2], input_shape[0]))
-
-    plt.title(f"Chiffre: {y[index_choisi]}")
+    # Afficher l'image X
+    plt.subplot(1, 2, 1)
+    X_reduced = np.sum(X[0], axis=0)
+    plt.imshow(X_reduced, cmap='gray')
     plt.axis('off')
+    plt.title("Image X")
+
+    # Afficher l'image y
+    plt.subplot(1, 2, 2)
+    y_reduced = np.sum(y[0], axis=0)
+    plt.imshow(y_reduced, cmap='gray')
+    plt.axis('off')
+    plt.title("Image y")
+
     plt.show()
-
-    C_CNN = len(dimensions_CNN.keys())
-    C_DNN = len(parametres_DNN) // 2
-
-    activations_CNN, _ = forward_propagation(
-        X[index_choisi], parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
-
-    for i in range(1, len(dimensions_CNN)-1):
-            display_comparaison_layer(deshape(activations_CNN["A" +str(i)], dimensions_CNN[str(i+1)][0], dimensions_CNN[str(i+1)][1]),
-                                    activations_CNN["Z" +str(i)])
+    
+    C = model.C_CNN
+    for i in range(C):  
+        A, Z =  model.get_activatoins(X, i)
+        display_comparaison_layer(A, Z)
 
 
 
@@ -196,10 +186,7 @@ dict    parametres :    containt all the information for the pooling operation
 =========OUTPUT=========
 void
 """
-def display_kernel_and_biais(X, y, 
-        parametres_CNN, parametres_DNN,
-        dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha, input_shape):
+def display_kernel_and_biais(X, y, model):
 
     def set_mode():
         while(1):
@@ -238,23 +225,16 @@ def display_kernel_and_biais(X, y,
         return
     
     if mode == 1:
-        display_activation(X, y, 
-        parametres_CNN, parametres_DNN,
-        dimensions_CNN, dimensions_DNN,
-        tuple_size_activation, alpha, input_shape)
+        display_activation(X, y, model)
         return
     
-    for key, value in parametres_CNN.items():
-        if isinstance(value, np.ndarray):
-
-            
-            if (key.startswith('K') and mode == 2 ):
-                sqrt = np.int8(np.sqrt(value.shape[2]))
-                K = value.reshape(value.shape[0], value.shape[1], sqrt, sqrt)
-                display_kernel(K, "Kernel", key[-1])
+    for i, block in enumerate(model.layers):
         
-            elif (key.startswith('b') and mode == 3 ):
-                sqrt = np.int8(np.sqrt(value.shape[1]))
-                B = value.reshape(value.shape[0], sqrt, sqrt)
-                display_biais(B, "Biais", key[-1])
+        if isinstance(block.dense, Convolution):
+
+            K = block.dense.K
+            b = block.dense.b
+
+            display_kernel(K, "Conv", i)
+            display_biais(b, "Biais", i)
 

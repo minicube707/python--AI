@@ -5,57 +5,8 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 import time
 
-from .Evaluation_Metric import activation, log_loss, accuracy_score, dx_log_loss, confidence_score
-from .Propagation import forward_propagation, back_propagation, update
+from .Evaluation_Metric import log_loss, accuracy_score, dx_log_loss, confidence_score
 from .Preprocessing import handle_key
-
-
-def train_one_sample(X, y, parametres_CNN, parametres_DNN, parametres_grad,
-                     dimensions_CNN, tuple_size_activation, C_CNN, 
-                     dimensions_DNN, C_DNN,
-                     learning_rate_CNN, learning_rate_DNN, beta1, beta2, alpha,
-                     max_attempts, min_confidence_score, input_shape):
-
-    for _ in range(max_attempts):
-        # Forward
-        activations_CNN, activations_DNN = forward_propagation(
-            X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
-
-        # Backward
-        gradients_DNN, gradients_CNN = back_propagation(
-            activations_DNN, activations_CNN,   parametres_DNN, parametres_CNN,
-            dimensions_CNN, tuple_size_activation, dimensions_DNN, C_DNN, y, alpha)
-
-        # Update
-        parametres_CNN, parametres_DNN = update(
-            gradients_CNN, gradients_DNN, parametres_CNN, parametres_DNN,
-            parametres_grad, learning_rate_CNN, learning_rate_DNN, dimensions_DNN, beta1, beta2, C_CNN)
-
-        # Prediction
-        pred = activation(X, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape)
-
-        if accuracy_score(y, pred) > 0 and confidence_score(y, pred) >= min_confidence_score:
-            break
-
-    return parametres_CNN, parametres_DNN
-
-
-def compute_metrics(X, y, indices, parametres_CNN, parametres_DNN,
-                    tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape):
-    loss = 0
-    dx_l = 0
-    accu = 0
-    conf = 0
-    for idx in indices:
-        pred = activation(X[idx], parametres_CNN, parametres_DNN,
-                          tuple_size_activation, dimensions_CNN, dimensions_DNN, C_CNN, C_DNN, alpha, input_shape)
-        loss += log_loss(y[idx], pred)
-        dx_l += dx_log_loss(y[idx], pred)
-        accu += accuracy_score(y[idx], pred)
-        conf += confidence_score(y[idx], pred)
-
-    n = len(indices)
-    return loss / n, dx_l / n, accu / n, conf / n
 
 def smooth_curve(values, window=10):
     """Calcule une moyenne glissante"""
@@ -109,40 +60,51 @@ def plot_metrics(train_loss, test_loss, train_lear, test_lear,
     plt.tight_layout()
     plt.show(block=False)
 
+def compute_metrics(model, X, y, indices, batch_size=32):
 
+    total_loss = 0.0
+    total_dx = 0.0
+    total_acc = 0.0
+    total_conf = 0.0
+    n_samples = len(indices)
 
-def convolution_neuron_network(
-        X_train, y_train, X_test, y_test,
-        nb_iteration,
-        parametres_CNN, parametres_grad, parametres_DNN,
-        dimensions_CNN, dimension_DNN,
-        tuple_size_activation,
-        learning_rate_CNN, beta1, beta2, alpha, learning_rate_DNN,
-        max_attempts, min_confidence_score, validation_size, validation_frequency,
-        input_shape
-    ):
+    for i in range(0, n_samples, batch_size):
+        batch_idx = indices[i:i + batch_size]
+        X_batch = X[batch_idx]
+        y_batch = y[batch_idx]
 
-    C_CNN = len(dimensions_CNN)
-    C_DNN = len(parametres_DNN) // 2
-    
+        if X_batch.ndim == 3:
+            X_batch = X_batch[:, None, :, :]
 
+        # forward batch
+        pred_batch = model.forward_propagation(X_batch, training=False)
 
-    # Suivi des métriques
+        total_loss += log_loss(pred_batch, y_batch) * len(batch_idx)
+        total_dx += dx_log_loss(pred_batch, y_batch) * len(batch_idx)
+        total_acc += accuracy_score(y_batch, pred_batch) * len(batch_idx)
+        total_conf += confidence_score(y_batch, pred_batch) * len(batch_idx)
+
+    total_loss /= n_samples
+    total_dx /= n_samples
+    total_acc /= n_samples
+    total_conf /= n_samples
+
+    return total_loss, total_dx, total_acc, total_conf
+
+def trainnig(model, 
+             X_train, y_train, X_test, y_test, batch_size,
+             nb_iteration, validation_size, validation_frequency):
+
+# Suivi des métriques
     train_loss, train_accu, train_lear, train_conf = [], [], [], []
     test_loss, test_accu, test_lear, test_conf = [], [], [], []
 
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
-                                    parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                    input_shape)
-    
-    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
-                                    parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                    input_shape)
+    tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
+    vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
+
     train_loss.append(tl)
     train_lear.append(tdx)
     train_accu.append(ta)
@@ -161,34 +123,29 @@ def convolution_neuron_network(
 
     # Démarrer le chronomètre
     start_time = time.time()
-    
-    k = 0
+    global_step = 0
+
     for epoch in range(nb_iteration):
-        for j in tqdm(range(X_train.shape[0]), desc=f"Époque {epoch + 1}/{nb_iteration}"):
+        for j in tqdm(range(0, X_train.shape[0], batch_size), desc=f"Époque {epoch + 1}/{nb_iteration}"):
+            
+            X_batch = X_train[j:j+batch_size]
+            y_batch = y_train[j:j+batch_size]
 
-            parametres_CNN, parametres_DNN = train_one_sample(
-                X_train[j], y_train[j], parametres_CNN, parametres_DNN, parametres_grad,
-                dimensions_CNN, tuple_size_activation, C_CNN, 
-                dimension_DNN, C_DNN,
-                learning_rate_CNN, learning_rate_DNN, beta1, beta2, alpha,
-                max_attempts, min_confidence_score, input_shape
-            )
+            if X_batch.ndim == 3:
+                X_batch = X_batch[:, None, :, :]
 
-            k += 1
-            if (k % validation_frequency == 0):
+            model.forward_propagation(X_batch, True)
+            model.backward_propagation(y_batch)
+            model.update()
+
+            global_step += 1
+            if (global_step % validation_frequency == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-                tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
-                                                parametres_CNN, parametres_DNN,
-                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                                input_shape)
-
-                vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
-                                                parametres_CNN, parametres_DNN,
-                                                tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                                input_shape)
+                tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
+                vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
 
                 train_loss.append(tl)
                 train_lear.append(tdx)
@@ -214,15 +171,10 @@ def convolution_neuron_network(
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    tl, tdx, ta, tc = compute_metrics(X_train, y_train, rand_idx_train,
-                                    parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                    input_shape)
 
-    vl, vdx, va, vc = compute_metrics(X_test, y_test, rand_idx_test,
-                                    parametres_CNN, parametres_DNN,
-                                    tuple_size_activation, dimensions_CNN, dimension_DNN, C_CNN, C_DNN, alpha,
-                                    input_shape)
+    tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
+    vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
+
 
     train_loss.append(tl)
     train_lear.append(tdx)
@@ -263,5 +215,3 @@ def convolution_neuron_network(
     print("")
 
     plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
-
-    return deepcopy(parametres_CNN), deepcopy(parametres_DNN), test_accu[-1], test_conf[-1], test_loss[-1], elapsed_time_minutes
