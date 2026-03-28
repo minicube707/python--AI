@@ -1153,7 +1153,7 @@ def main():
     beta1 = 0.9
     beta2 = 0.99
     alpha = 0.001
-    nb_iteration = 1_000
+    nb_iteration = 10_000
 
     x_shape = 28
     input_shape = (1, x_shape, x_shape)
@@ -1170,11 +1170,11 @@ def main():
     dimensions = {}
     #Kernel size, stride, padding, nb_kernel, type layer, function, dropout
     dimensions = {
-        "1": (5, 1, 0, 32, "conv", "sigmoide", 0.0),
+        "1": (5, 1, 0, 32, "conv", "leaky relu", 0.0),
         "2": (2, 2, 0, 1, "pool", "max", 0.0),
-        "3": (3, 1, 0, 64, "conv", "sigmoide", 0.0),
+        "3": (3, 1, 0, 64, "conv", "leaky relu", 0.0),
         "4": (2, 2, 0, 1, "pool", "max", 0.0),
-        "5": (3, 1, 0, 64, "conv", "sigmoide", 0.0)
+        "5": (3, 1, 0, 64, "conv", "leaky relu", 0.0)
     }
     
     padding_mode = "auto"
