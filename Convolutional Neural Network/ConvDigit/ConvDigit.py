@@ -6,10 +6,7 @@ matplotlib.use("TkAgg")  # Issue on linux PC 42
 import matplotlib.pyplot as plt
 import os
 
-from System.Mathematical_function import softmax
-from System.Propagation import forward_propagation
 from System.Manage_file import select_model, load_model
-from System.Convolution_Neuron_Network import create_tuple_size
 from System.Preprocessing import  handle_key
 
 module_dir = os.path.dirname(__file__)
@@ -107,29 +104,19 @@ def pooling(grid, kernel_size):
 
     return new_grid
 
-def research(grid, parametres, model_info, rows, str_pooling):
+def research(grid, model, rows, hyperparams, str_pooling):
 
     if (str_pooling == "true"):
         grid = pooling(grid, kernel_size=2)
-        rows = int(rows/2)
+        rows = int(rows / 2)
 
-    grid = grid.reshape((1, rows**2))
     grid /= 255
     
-    input_shape = (1, rows, rows)
-    parametres_CNN, dimensions_CNN, parametres_DNN, dimensions_DNN = parametres
-    tuple_size_activation = create_tuple_size(input_shape, dimensions_CNN)
-    alpha = model_info["alpha"]
-
-    C_CNN = len(dimensions_CNN)
-    C_DNN = len(dimensions_DNN)
-
-    _, activation_DNN = forward_propagation(grid.T, parametres_CNN, parametres_DNN, tuple_size_activation, dimensions_CNN, C_CNN, dimensions_DNN, C_DNN, alpha, input_shape)
-    
     # Prédiction des probabilités avec softmax
-    probabilities = softmax(activation_DNN["A" + str(C_DNN)]).flatten()
-    pred = np.argmax(probabilities)
-    porcent = np.max(probabilities)
+    y_pred = model.forward_propagation(grid[None, None, ...], False).flatten()
+
+    pred = np.argmax(y_pred)
+    porcent = np.max(y_pred)
     
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
@@ -141,8 +128,8 @@ def research(grid, parametres, model_info, rows, str_pooling):
     axs[0].axis("off")
 
     # Affichage de l'histogramme des probabilités
-    axs[1].bar(range(len(probabilities)), probabilities, color="blue")
-    axs[1].set_xticks(range(len(probabilities)))
+    axs[1].bar(range(len(y_pred)), y_pred, color="blue")
+    axs[1].set_xticks(range(len(y_pred)))
     axs[1].set_xlabel("Classes")
     axs[1].set_ylabel("Probability")
     axs[1].set_ylim(0, 1)
@@ -190,13 +177,13 @@ def lister_dossiers():
 
 
 #Main algorithm
-def main (win , width):
+def main (win, width):
 
-    dir_name = lister_dossiers() 
-    model, model_info = select_model(dir_name, "LogBook/model_logbook.csv")
-    parametres = load_model(dir_name, model)
+    module_dir = lister_dossiers() 
+    model_name = select_model(module_dir, "LogBook")
+    model, hyperparams, _, _, _, _ = load_model(module_dir, model_name)
 
-    rows = int(input("What is the input size ?\n"))
+    rows = hyperparams.input_shape[1]
     brush_size = int(input("What is the brush size ?\n"))
     str_pooling = input("Do want to use pooling ?\n")
 
@@ -217,7 +204,7 @@ def main (win , width):
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, parametres, model_info, rows, str_pooling)
+                    research(grid, model, rows, hyperparams, str_pooling)
                 
                 if event.key == pygame.K_c:
                     grid = np.zeros((rows, rows))
