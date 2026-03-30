@@ -120,6 +120,7 @@ else:
     # Chargement du modele existant
     model_name = select_model(module_dir, "LogBook")
     model, _, _, _, _, metadata_old = load_model(module_dir, model_name)
+    model.set_alpha(hyperparams.alpha)
 
 
 # ============================

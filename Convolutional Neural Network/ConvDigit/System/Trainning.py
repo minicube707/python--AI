@@ -31,8 +31,8 @@ def init_animation():
     for ax, (title, ylim) in zip(axs, metrics):
         line_train, = ax.plot([], [], label="Train", alpha=0.5)
         line_test, = ax.plot([], [], label="Test", alpha=0.5)
-        line_trend_train, = ax.plot([], [], color='fuchsia', linewidth=2)
-        line_trend_test, = ax.plot([], [], color='lime', linewidth=2)
+        line_trend_train, = ax.plot([], [], label="Trend Train", color='fuchsia', linewidth=2)
+        line_trend_test, = ax.plot([], [],  label="Trend Test", color='lime', linewidth=2)
 
         ax.set_title(title)
         if ylim:

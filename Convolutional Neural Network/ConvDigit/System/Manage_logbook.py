@@ -89,9 +89,15 @@ def show_info_main(json_path):
         "metadata_training_time_(min)",
         "performance_accuracy",
         "performance_confidence_score",
-        "metadata_Number_fine_tuning",
-        "metadata_Based_model"
     ]
+    
+    rename_columns = {
+    "metadata_name": "Name",
+    "metadata_date": "Date",
+    "metadata_training_time_(min)": "Training Time (min)",
+    "performance_accuracy": "Accuracy",
+    "performance_confidence_score": "Confidence Score",
+    }
     
     all_dfs = []
 
@@ -119,5 +125,8 @@ def show_info_main(json_path):
 
     final_df = pd.concat(all_dfs, ignore_index=True)
     final_df.index += 1  # index à partir de 1
+
+    final_df = final_df.rename(columns=rename_columns)
+
     print(final_df.to_string(index=True))
     return final_df

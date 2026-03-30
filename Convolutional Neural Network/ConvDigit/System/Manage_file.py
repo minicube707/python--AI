@@ -159,7 +159,7 @@ def select_model(path, json_dir):
     model_info_dict = selected_row.to_dict()
     
     # Extraire le nom du modèle à partir du dictionnaire
-    selected_model_name = model_info_dict["metadata_name"]
+    selected_model_name = model_info_dict["Name"]
 
     print(f"\nModèle sélectionné : {selected_model_name}")
 

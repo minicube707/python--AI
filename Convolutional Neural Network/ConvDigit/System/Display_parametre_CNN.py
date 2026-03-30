@@ -262,11 +262,11 @@ def display_first_picture(model, X_test, y_final):
         # Prédiction des probabilités avec softmax
         
         if X_test[i].ndim == 3:
-            y_pred = model.forward_propagation(X_test[i][None, ...], False)
+            y_pred = model.forward_propagation(X_test[i][None, ...], False).flatten()
             X_display = X_test[i].transpose(1, 2, 0)
 
         elif X_test[i].ndim == 2:
-            y_pred = model.forward_propagation(X_test[i][None, None, ...], False)
+            y_pred = model.forward_propagation(X_test[i][None, None, ...], False).flatten()
             X_display = X_test[i]
 
         pred = np.argmax(y_pred)
@@ -309,11 +309,11 @@ def display_dataset(model, X_test, y_final, nb_test):
 
         # Prédiction des probabilités avec softmax
         if X_test[index].ndim == 3:
-            y_pred = model.forward_propagation(X_test[index][None, ...], False)[0]
+            y_pred = model.forward_propagation(X_test[index][None, ...], False).flatten()
             X_display = X_test[index].transpose(1, 2, 0)
 
         elif X_test[index].ndim == 2:
-            y_pred = model.forward_propagation(X_test[index][None, None, ...], False)[0]
+            y_pred = model.forward_propagation(X_test[index][None, None, ...], False).flatten()
             X_display = X_test[index]
 
         pred = np.argmax(y_pred)

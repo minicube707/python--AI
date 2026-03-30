@@ -82,4 +82,8 @@ class FullModel():
     def load(self, parameters):
         
         self.cnn_model.set_parameters(parameters)
-        self.dnn_model.set_parameters(parameters)
+        self.dnn_model.set_parameters(parameters) 
+
+    def set_alpha(self, alpha):
+        self.cnn_model.set_alpha(alpha)
+        self.dnn_model.set_alpha(alpha)

@@ -74,7 +74,12 @@ class DNN():
             rv = parameters[f"DNN_rv{i}"]
             block.batchnorm.set_params(g, b, rm, rv)
 
+    def set_alpha(self, alpha):
 
+        for block in (self.layers):
+            if isinstance(block.activation, LeakyReLU):
+                block.activation.alpha = alpha
+                
     def forward_propagation(self, X, training):
 
         for block in self.layers:
