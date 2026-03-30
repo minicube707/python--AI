@@ -7,26 +7,35 @@ from sklearn.ensemble import IsolationForest
 
 from .Sklearn_tools import train_test_split, Label_binarizer
 
-def show_information_setting(nb_iteration, lr, beta1, beta2, alpha, validation_size, ratio_test, dataset_size):
+def get_data_shape(X, y):
 
-    print("\n============================")
-    print("         SETTING")
-    print("============================")
+    if y.ndim == 1:
+        n_labels = len(np.unique(y))
+    else:
+        n_labels = y.shape[1]
 
-    print("\nInfo Training")
-    print("Nombre d'iteration: ", nb_iteration);
-    print("Validation_size: ", validation_size)
-    print("Ratio trainset/testset: ", ratio_test)
-    print("Dataset size: ", dataset_size)
-    
-    print("\nInfo CNN")
-    print("Learning rate: ", lr)
-    print("Beta1: ", beta1)
-    print("Beta2: ", beta2)
-    print("Alpha: ", alpha)
+    # Forme d'entrée (nb_data, hauteur, largeur)
+    if X.ndim == 3:
+        input_shape = (1, X.shape[1], X.shape[2])
+        output_shape = n_labels
 
-    print("\nInfo DNN")
-    print("Learning rate: ", lr)
+        print("")
+        print("X has 2 dimensions")
+        print("Input shape: ", input_shape)
+        print("Output shape: ", output_shape)
+
+    # Forme d'entrée (nb_data, hauteur, largeur, cannaux)
+    elif X.ndim == 4:
+        _, _, _, channel = X.shape
+        input_shape = (channel, X.shape[1], X.shape[2])
+        output_shape = n_labels
+
+        print("")
+        print("X has 3 dimensions")
+        print("Input shape: ", input_shape)
+        print("Output shape: ", output_shape)
+
+    return input_shape, output_shape
 
 
 def handle_key(event):
@@ -34,13 +43,18 @@ def handle_key(event):
         plt.close(event.canvas.figure)  # Ferme la fenêtre associée
 
 
-def preprocessing(X, y, dataset_size, test_size=0.1, contamination=0.2):
+def preprocessing(X, y, hyperparams, dataset):
     
     print("")
     print("Data shape")
     print("X:",X.shape)
     print("Y:",y.shape)
 
+    contamination = hyperparams.contamination
+    dataset_size = dataset.dataset_size
+    ratio_test = dataset.ratio_test
+    
+    
     """
     Affiche les 15 premières images de chaque classe du dataset.
     """
@@ -74,7 +88,7 @@ def preprocessing(X, y, dataset_size, test_size=0.1, contamination=0.2):
 
     #______________________________________________________________#
     #Split the dataset for the training
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size, dataset_size)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, ratio_test, dataset_size)
 
     y_train = y_train.reshape((y_train.shape[0], 1))
     y_test = y_test.reshape((y_test.shape[0], 1))
@@ -110,32 +124,32 @@ def preprocessing(X, y, dataset_size, test_size=0.1, contamination=0.2):
     print("y_train.shape:", y_train.shape)
 
     #Affichage des 15 premières images du dataset
-    n = min(16, len(y_train))
-    fig = plt.figure(figsize=(n,8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Train Dataset")
-    for i in range(1,n):
-        plt.subplot(4,5, i)
-        plt.imshow(New_X_train[i], cmap="gray")
+    # n = min(16, len(y_train))
+    # fig = plt.figure(figsize=(n,8))
+    # fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    # fig.suptitle("Train Dataset")
+    # for i in range(1,n):
+    #     plt.subplot(4,5, i)
+    #     plt.imshow(New_X_train[i], cmap="gray")
 
-        plt.title(str(np.argmax(y_train[i])))
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show() 
+    #     plt.title(str(np.argmax(y_train[i])))
+    #     plt.axis("off")
+    # plt.tight_layout()    
+    # plt.show() 
 
-    #Affichage des 15 premières images
-    n = min(16, len(y_test))
-    fig = plt.figure(figsize=(n,8))
-    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    fig.suptitle("Test Dataset")
-    for i in range(1,n):
-        plt.subplot(4,5, i)
-        plt.imshow(New_X_test[i], cmap="gray")
+    # #Affichage des 15 premières images
+    # n = min(16, len(y_test))
+    # fig = plt.figure(figsize=(n,8))
+    # fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    # fig.suptitle("Test Dataset")
+    # for i in range(1,n):
+    #     plt.subplot(4,5, i)
+    #     plt.imshow(New_X_test[i], cmap="gray")
         
 
-        plt.title(str(np.argmax(y_test[i])))
-        plt.axis("off")
-    plt.tight_layout()    
-    plt.show() 
+    #     plt.title(str(np.argmax(y_test[i])))
+    #     plt.axis("off")
+    # plt.tight_layout()    
+    # plt.show() 
 
     return New_X_train, y_train, New_X_test, y_test, transformer

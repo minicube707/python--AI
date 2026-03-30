@@ -171,12 +171,16 @@ class Convolution(Layer):
 
         return dX
     
-    def get_params(self):
+    def get_params_update(self):
         return [(self.K, self.dK), (self.b, self.db)]
     
-    def get_activations(self):
-        return self.A
 
+    def get_params_save(self):
+        return self.K, self.b
+    
+    def set_params(self, K, b):
+        self.K = K
+        self.b = b
 
 class BatchNorm(Layer):
 
@@ -286,10 +290,19 @@ class BatchNorm(Layer):
 
         return dX
 
-    def get_params(self):
+    def get_params_update(self):
         return [(self.gamma, self.dgamma), (self.beta, self.dbeta)]
     
 
+    def get_params_save(self):
+        return self.gamma, self.beta, self.running_mean, self.running_var
+
+    def set_params(self, gamma, beta, running_mean, running_var):
+        self.gamma = gamma
+        self.beta = beta
+        self.running_mean = running_mean
+        self.running_var = running_var
+    
 class Dropout(Layer):
 
     def __init__(self, dropout_per):
@@ -378,9 +391,17 @@ class Dense(Layer):
 
         return dA
 
-    def get_params(self):
+    def get_params_update(self):
         return [(self.W, self.dW), (self.b, self.db)]
-    
+
+
+    def get_params_save(self):
+        return self.W, self.b
+
+    def set_params(self, W, b):
+        self.W = W
+        self.b = b
+
 class Flatten(Layer):
 
     def __int__(self):

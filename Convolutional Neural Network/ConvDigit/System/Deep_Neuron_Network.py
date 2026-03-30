@@ -4,28 +4,28 @@ from .Layer import BatchNorm, Dropout, Block, Dense
 
 class DNN():
     
-    def __init__(self, y, x_shape, dimensions, alpha, optimizer):
+    def __init__(self, x_shape, y_shape, structure, alpha, optimizer):
 
-        self.dimensions = dimensions
+        self.structure = structure
         self.layers = []
-        self.C_DNN = len(dimensions)
+        self.C_DNN = len(structure)
         self.logits = None
 
-        DNN.initialisation(self, y, x_shape, alpha)
+        self.initialisation(x_shape, y_shape, alpha)
         
         self.optimizer = optimizer
 
-    def initialisation(self, y, x_shape, alpha):
+    def initialisation(self, x_shape, y_shape, alpha):
 
-        dimensions = self.dimensions
+        structure = self.structure
         C_DNN = self.C_DNN
         
-        dimensions[str(C_DNN)] = (y.shape[1], dimensions[str(C_DNN)][1], dimensions[str(C_DNN)][2])
+        structure[str(C_DNN)] = (y_shape, structure[str(C_DNN)][1], structure[str(C_DNN)][2])
         nb_activation = x_shape
 
         for i in range(1, C_DNN + 1):
 
-            nb_neuron, activation_function, dropout_per = dimensions[str(i)]
+            nb_neuron, activation_function, dropout_per = structure[str(i)]
 
             #Dense
             dense = Dense(nb_activation, nb_neuron)
@@ -52,12 +52,28 @@ class DNN():
             self.layers.append(Block(dense, batchnorm, activation, dropout))
             nb_activation = nb_neuron
     
-    def get_parameters(self):
+    def get_parameters_update(self):
         params = []
         for block in self.layers:
-            params += block.dense.get_params()
-            params += block.batchnorm.get_params()
+            params += block.dense.get_params_update()
+            params += block.batchnorm.get_params_update()
         return params
+
+
+    def set_parameters(self, parameters):
+
+        for i, block in enumerate(self.layers):
+            
+            W = parameters[f"DNN_W{i}"]
+            B = parameters[f"DNN_B{i}"]
+            block.dense.set_params(W, B)
+
+            g = parameters[f"DNN_g{i}"]
+            b = parameters[f"DNN_b{i}"]
+            rm = parameters[f"DNN_rm{i}"]
+            rv = parameters[f"DNN_rv{i}"]
+            block.batchnorm.set_params(g, b, rm, rv)
+
 
     def forward_propagation(self, X, training):
 
@@ -73,12 +89,12 @@ class DNN():
         return dZ
     
     def update(self):
-        params = self.get_parameters()
+        params = self.get_parameters_update()
         self.optimizer.update(params)
 
     def show_information(self):
 
-        dimensions = self.dimensions
+        structure = self.structure
         C_DNN = self.C_DNN
 
         print("")
@@ -89,7 +105,7 @@ class DNN():
         print("\nDétail de la convolution :")
         print("Nb activation")
         for c in range(1, C_DNN + 1):
-            print(dimensions[str(c)][0], end="")
+            print(structure[str(c)][0], end="")
             if c < C_DNN:
                 print("->", end="")
         print("")
@@ -103,6 +119,23 @@ class DNN():
 
         print("")
         print("nb neuron, function, dropout")
-        for keys, values in dimensions.items():
+        for keys, values in structure.items():
             print(keys, values)
         print("")
+
+    def save(self):
+
+        save = {}
+        for i, block in enumerate(self.layers):
+
+            W, B = block.dense.get_params_save()
+            save[f"DNN_W{i}"] = W
+            save[f"DNN_B{i}"] = B
+
+            g, b, rm, rv = block.batchnorm.get_params_save()
+            save[f"DNN_g{i}"] = g
+            save[f"DNN_b{i}"] = b
+            save[f"DNN_rm{i}"] = rm
+            save[f"DNN_rv{i}"] = rv
+
+        return save

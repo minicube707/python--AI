@@ -2,10 +2,10 @@ import  numpy as np
 
 class Adam:
 
-    def __init__(self, lr, beta1, beta2):
-        self.lr = lr
-        self.beta1 = beta1
-        self.beta2 = beta2
+    def __init__(self, hyperparams):
+        self.lr = hyperparams.lr
+        self.beta1 =  hyperparams.beta1
+        self.beta2 =  hyperparams.beta2
         self.t = 0
         self.state = {}
 

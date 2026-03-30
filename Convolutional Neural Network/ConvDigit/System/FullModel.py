@@ -9,23 +9,29 @@ from .Mathematical_function import Softmax
 
 class FullModel():
 
-    def __init__(self, X, y, 
-                 dimensions_CNN, dimensions_DNN, 
-                 optimizer, loss_metric, output_layer, 
-                 input_shape, alpha, padding_mode):
+    def __init__(self, hyperparams, structure, loss_metric, output_layer, optimizer):
         
-        input_size = X.shape[2]
-        for val in dimensions_CNN.values():
+        input_shape = hyperparams.input_shape
+        output_shape = hyperparams.output_shape
+        alpha = hyperparams.alpha
+        padding_mode = hyperparams.padding_mode
+
+        structure_CNN = structure[0]
+        structure_DNN = structure[1]
+
+        input_size = input_shape[1]
+        for val in structure_CNN.values():
             o_size = calcul_output_shape(input_size, val[0], val[1], val[2])
             input_size = o_size
 
-        last_CNN_layer = dimensions_CNN[str(len(dimensions_CNN))]
+        last_CNN_layer = structure_CNN[str(len(structure_CNN))]
         flattened_size = np.int32((np.int32(input_size)**2 * last_CNN_layer[3]))
 
-        self.cnn_model = CNN(dimensions_CNN, input_shape, padding_mode, alpha, optimizer)
-        self.dnn_model= DNN(y, flattened_size, dimensions_DNN, alpha, optimizer)
+        self.cnn_model = CNN(structure_CNN, input_shape, padding_mode, alpha, optimizer)
+        self.dnn_model= DNN(flattened_size, output_shape, structure_DNN, alpha, optimizer)
         self.loss_metric = loss_metric
         self.output_layer = output_layer
+        self.optimizer = optimizer
         self.flatten = Flatten()
         self.y_pred =  None
 
@@ -64,3 +70,16 @@ class FullModel():
     def show_information(self, input_size):
         self.cnn_model.show_information(input_size)
         self.dnn_model.show_information()
+
+    def save(self, path):
+        save = {}
+
+        save.update(self.cnn_model.save())
+        save.update(self.dnn_model.save())
+
+        np.savez(path, **save)
+
+    def load(self, parameters):
+        
+        self.cnn_model.set_parameters(parameters)
+        self.dnn_model.set_parameters(parameters)

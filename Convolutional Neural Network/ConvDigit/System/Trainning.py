@@ -2,7 +2,7 @@
 import  numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from copy import deepcopy
+from matplotlib.animation import FuncAnimation
 import time
 
 from .Evaluation_Metric import log_loss, accuracy_score, dx_log_loss, confidence_score
@@ -15,52 +15,76 @@ def smooth_curve(values, window=10):
         return values
     return np.convolve(values, np.ones(window)/window, mode='valid')
 
-def plot_metrics(train_loss, test_loss, train_lear, test_lear,
-                 train_accu, test_accu, train_conf, test_conf):
-    
+def init_animation():
     fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Raccourci clavier actif
 
-    window = 4  # Taille de la fenêtre pour le lissage
-
-    # Données à tracer : (titre, train_data, test_data, ylim)
     metrics = [
-        ("Fonction de coût", train_loss, test_loss, None),
-        ("Dérivée coût", train_lear, test_lear, None),
-        ("Accuracy", train_accu, test_accu, (0, 1)),
-        ("Confidence", train_conf, test_conf, (0, 1))
+        ("Fonction de coût", None),
+        ("Dérivée coût", None),
+        ("Accuracy", (0, 1)),
+        ("Confidence", (0, 1))
     ]
 
-    def plot_with_trend(ax, train, test, title, ylim=None):
-        # Données brutes
-        ax.plot(train, label="Train", alpha=0.5)
-        ax.plot(test, label="Test", alpha=0.5)
+    lines = []
 
-        # Lissage
-        sm_train = smooth_curve(train, window)
-        sm_test = smooth_curve(test, window)
-
-        # Centrage
-        offset_train = (len(train) - len(sm_train)) // 2
-        offset_test = (len(test) - len(sm_test)) // 2
-
-        # Courbes lissées
-        ax.plot(range(offset_train, offset_train + len(sm_train)), sm_train, label="Trend Train", color='fuchsia', linewidth=2)
-        ax.plot(range(offset_test, offset_test + len(sm_test)), sm_test, label="Trend Test", color='lime', linewidth=2)
+    for ax, (title, ylim) in zip(axs, metrics):
+        line_train, = ax.plot([], [], label="Train", alpha=0.5)
+        line_test, = ax.plot([], [], label="Test", alpha=0.5)
+        line_trend_train, = ax.plot([], [], color='fuchsia', linewidth=2)
+        line_trend_test, = ax.plot([], [], color='lime', linewidth=2)
 
         ax.set_title(title)
         if ylim:
             ax.set_ylim(*ylim)
         ax.legend()
 
-    # Tracer les 4 métriques
-    for i, (title, train_data, test_data, ylim) in enumerate(metrics):
-        plot_with_trend(axs[i], train_data, test_data, title, ylim)
+        lines.append((line_train, line_test, line_trend_train, line_trend_test))
 
     plt.tight_layout()
     plt.show(block=False)
 
-def compute_metrics(model, X, y, indices, batch_size=32):
+    return fig, axs, lines
+
+def update_graph(lines, axs, data_train, data_test, window=4):
+
+    metrics_data = [
+        data_train["loss"], data_test["loss"],
+        data_train["lear"], data_test["lear"],
+        data_train["accu"], data_test["accu"],
+        data_train["conf"], data_test["conf"]
+    ]
+
+    for i in range(4):
+        train = metrics_data[i * 2]
+        test = metrics_data[i * 2 + 1]
+
+        l_train, l_test, l_trend_train, l_trend_test = lines[i]
+
+        x = np.arange(len(train))
+
+        # Courbes principales
+        l_train.set_data(x, train)
+        l_test.set_data(x, test)
+
+        # Lissage
+        sm_train = smooth_curve(train, window)
+        sm_test = smooth_curve(test, window)
+
+        if len(sm_train) > 0:
+            offset = (len(train) - len(sm_train)) // 2
+            l_trend_train.set_data(range(offset, offset + len(sm_train)), sm_train)
+
+        if len(sm_test) > 0:
+            offset = (len(test) - len(sm_test)) // 2
+            l_trend_test.set_data(range(offset, offset + len(sm_test)), sm_test)
+
+        axs[i].relim()
+        axs[i].autoscale_view()
+
+    plt.pause(0.05)
+
+def compute_metrics(model, X, y, indices, batch_size, dict_performance):
 
     total_loss = 0.0
     total_dx = 0.0
@@ -89,44 +113,59 @@ def compute_metrics(model, X, y, indices, batch_size=32):
     total_acc /= n_samples
     total_conf /= n_samples
 
-    return total_loss, total_dx, total_acc, total_conf
+    dict_performance["loss"].append(total_loss)
+    dict_performance["lear"].append(total_dx)
+    dict_performance["accu"].append(total_acc)
+    dict_performance["conf"].append(total_conf)
 
-def trainnig(model, 
-             X_train, y_train, X_test, y_test, batch_size,
-             nb_iteration, validation_size, validation_frequency):
+def trainnig(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
 
-# Suivi des métriques
-    train_loss, train_accu, train_lear, train_conf = [], [], [], []
-    test_loss, test_accu, test_lear, test_conf = [], [], [], []
+    nb_epoch = hyperparams.nb_epoch
+    batch_size = hyperparams.batch_size
+
+    validation_size = dataset.validation_size
+    validation_frequency = dataset.validation_frequency
+    
+
+    # Suivi des métriques
+
+    data_train = {
+    "loss": [],
+    "lear": [],
+    "accu": [],
+    "conf": [],
+    }
+
+    data_test = {
+    "loss": [],
+    "lear": [],
+    "accu": [],
+    "conf": [],
+    }
 
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
-    vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
+    compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+    compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
 
-    train_loss.append(tl)
-    train_lear.append(tdx)
-    train_accu.append(ta)
-    train_conf.append(tc)
-
-    test_loss.append(vl)
-    test_lear.append(vdx)
-    test_accu.append(va)
-    test_conf.append(vc)
+    va = data_test["accu"][-1]
+    vc = data_test["conf"][-1]
+    vl = data_test["loss"][-1]
     
     best_accu = va
     print(f"\nInitial accurracy: {best_accu}")
     print(f"Initial confidence score: {vc}")
     print(f"Initial loss: {vl}")
     print("")
-
+    
+    fig, axs, lines = init_animation()
     # Démarrer le chronomètre
     start_time = time.time()
     global_step = 0
 
-    for epoch in range(nb_iteration):
-        for j in tqdm(range(0, X_train.shape[0], batch_size), desc=f"Époque {epoch + 1}/{nb_iteration}"):
+    for epoch in range(nb_epoch):
+        for j in tqdm(range(0, X_train.shape[0], batch_size), desc=f"Époque {epoch + 1}/{nb_epoch}"):
             
             X_batch = X_train[j:j+batch_size]
             y_batch = y_train[j:j+batch_size]
@@ -138,24 +177,20 @@ def trainnig(model,
             model.backward_propagation(y_batch)
             model.update()
 
+            update_graph(lines, axs, data_train, data_test)
+            
             global_step += 1
             if (global_step % validation_frequency == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-                tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
-                vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
+                compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+                compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
 
-                train_loss.append(tl)
-                train_lear.append(tdx)
-                train_accu.append(ta)
-                train_conf.append(tc)
-
-                test_loss.append(vl)
-                test_lear.append(vdx)
-                test_accu.append(va)
-                test_conf.append(vc)
+                va = data_test["accu"][-1]
+                vc = data_test["conf"][-1]
+                vl = data_test["loss"][-1]
 
                 if va > best_accu:
                     best_accu = va
@@ -172,19 +207,12 @@ def trainnig(model,
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
 
-    tl, tdx, ta, tc = compute_metrics(model, X_train, y_train, rand_idx_train, batch_size)
-    vl, vdx, va, vc = compute_metrics(model, X_test, y_test, rand_idx_test, batch_size)
+    compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+    compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
 
-
-    train_loss.append(tl)
-    train_lear.append(tdx)
-    train_accu.append(ta)
-    train_conf.append(tc)
-
-    test_loss.append(vl)
-    test_lear.append(vdx)
-    test_accu.append(va)
-    test_conf.append(vc)
+    va = data_test["accu"][-1]
+    vc = data_test["conf"][-1]
+    vl = data_test["loss"][-1]
 
     if va > best_accu:
         best_accu = va
@@ -197,21 +225,24 @@ def trainnig(model,
     elapsed_time_minutes = (end_time - start_time) / 60
         
     # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train          : {train_loss[-1]:.5f}")
-    print(f"🧪💰 Coût final - Test             : {test_loss[-1]:.5f}")
-    print(f"🧠📉 Derive Coût final - Train 🚆  : {train_lear[-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪   : {test_lear[-1]:.5f}")
-    print(f"🧠 Accuracy finale - Train          : {train_accu[-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test           : {test_accu[-1]:.5f}")
-    print(f"🔎 Confidence score - Test          : {test_conf[-1]:.5f}")
+    print(f"\n🚂💰 Coût final - Train          : {data_train["loss"][-1]:.5f}")
+    print(f"🧪💰 Coût final - Test             : {data_test["loss"][-1]:.5f}")
+
+    print(f"🧠 Accuracy finale - Train          : {data_train["accu"][-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test           : {data_test["accu"][-1]:.5f}")
+
+    print(f"🔎 Confidence score - Train         : {data_train["conf"][-1]:.5f}")
+    print(f"🔎 Confidence score - Test          : {data_test["conf"][-1]:.5f}")
 
     print("\nIndicateur underfiting/overfiting")
-    print(f"🧠📉 Derive Coût final - Train 🚆   : {train_lear[-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪    : {test_lear[-1]:.5f}")
-    print("Accuracy Ratio                         :", test_accu[-1] / train_accu[-1])
-    print("Indicateur d’overfitting               :", test_loss[-1] - train_loss[-1])
+    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train["lear"][-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test["lear"][-1]:.5f}")
+    print("Accuracy Ratio                         :", data_test["accu"][-1] / data_train["accu"][-1])
+    print("Indicateur d’overfitting               :", data_test["loss"][-1] - data_train["loss"][-1])
 
     print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
     print("")
 
-    plot_metrics(train_loss, test_loss, train_lear, test_lear, train_accu, test_accu, train_conf, test_conf)
+    update_graph(lines, axs, data_train, data_test)
+
+    return data_test, elapsed_time_minutes
