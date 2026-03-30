@@ -51,8 +51,6 @@ def preprocessing(X, y, hyperparams, dataset):
     print("Y:",y.shape)
 
     contamination = hyperparams.contamination
-    dataset_size = dataset.dataset_size
-    ratio_test = dataset.ratio_test
     
     
     """
@@ -88,7 +86,9 @@ def preprocessing(X, y, hyperparams, dataset):
 
     #______________________________________________________________#
     #Split the dataset for the training
-    X_train, X_test, y_train, y_test = train_test_split(X, y, ratio_test, dataset_size)
+    dataset.completion_value(y)
+    dataset.print_info()
+    X_train, X_test, y_train, y_test = train_test_split(X, y, dataset.ratio_test, dataset.dataset_size)
 
     y_train = y_train.reshape((y_train.shape[0], 1))
     y_test = y_test.reshape((y_test.shape[0], 1))
