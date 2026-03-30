@@ -70,9 +70,10 @@ class CNN():
             input_size = o_size
             previ_input_size = input_size
 
-            self.error_initialisation(structure, nb_channel, input_size, previ_input_size, type_layer, fonction, stride, dropout)
-
             self.structure = structure
+
+            self.error_initialisation(x_shape, input_size, previ_input_size, type_layer, fonction, stride, dropout)
+
 
     def initialisation_affectation(self, x_shape, alpha):
 
@@ -122,26 +123,26 @@ class CNN():
             nb_layer = nb_kernel
     
 
-    def error_initialisation(self, structure, nb_activation, input_size, previ_input_size, type_layer, fonction, stride, dropout):
+    def error_initialisation(self, x_shape, input_size, previ_input_size, type_layer, fonction, stride, dropout):
 
         if input_size < 1:
-            self.show_information(structure, (nb_activation, input_size, input_size))
+            self.show_information(x_shape)
             raise ValueError(f"ERROR: The current dimension is {input_size}. Dimension can't be negatif")
             
         if previ_input_size % input_size != 0 and stride != 1:
-            self.show_information(structure, (nb_activation, input_size, input_size))
+            self.show_information(x_shape)
             raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
         
         if type_layer not in ["conv", "pool"]:
-            self.show_information(structure, (nb_activation, input_size, input_size))
+            self.show_information(x_shape)
             raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pool' or 'conv'.")
         
         if fonction not in ["relu", "sigmoide", "max", "tanh", "leaky relu"]:
-            self.show_information(structure, (nb_activation, input_size, input_size))
+            self.show_information(x_shape)
             raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu', 'leaky relu', 'sigmoide', 'max' ou 'tanh'.")
 
         if ( not (0 <= dropout <= 1)):
-            self.show_information(structure, (nb_activation, input_size, input_size))
+            self.show_information(x_shape)
             raise NameError(f"ERROR: dropout percent should be betwenn 0 and 1.")
     
 
