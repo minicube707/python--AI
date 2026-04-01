@@ -147,29 +147,29 @@ class Convolution(Layer):
         # Gradient entry
         # ========================
 
-        # Propagation via convolution
-        dZ = convolution(dZ, self.K)
+        # On calcule le gradient projeté à travers les poids
+        # On utilise einsum pour multiplier dZ (B, N, H_out, W_out) 
+        # par K (N, C, Kh, Kw) -> donne (B, C, H_out, W_out, Kh, Kw)
+        dZ_windows = np.einsum('bnhw,nckl->bchwkl', dZ, self.K)
+        
+        # Reconstruction de dX
+        H_in, W_in = self.X.shape[2], self.X.shape[3]
+        dX = np.zeros_like(self.X)
+        
+        # Optimisation cruciale : Utiliser les indices pour vectoriser la sommation
+        for h in range(Kh):
+            for w in range(Kw):
+                h_end = h + H_out * stride
+                w_end = w + W_out * stride
+                dX[:, :, h:h_end:stride, w:w_end:stride] += dZ_windows[:, :, :, :, h, w]
 
-        # Expansion to distribute across windows
-        dZ_expanded = dZ[:, :, :, :, None, None]
-
-        dX = np.zeros_like(X)
-
-        for h in range(H_out):
-            for w in range(W_out):
-                h_start = h * stride
-                h_end   = h_start + Kh
-
-                w_start = w * stride
-                w_end   = w_start + Kw
-
-                dX[:, :, h_start:h_end, w_start:w_end] += dZ_expanded[:, :, h, w]
-
-        # Removal of padding
+    
+        # Removal of paddin
         if padding > 0:
-            dX = dX[:, :, :-padding, :-padding]
+            dX = dX[:, :, padding:-padding, padding:-padding]
 
         return dX
+
     
     def get_params_update(self):
         return [(self.K, self.dK), (self.b, self.db)]

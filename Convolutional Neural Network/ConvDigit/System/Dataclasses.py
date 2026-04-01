@@ -10,7 +10,7 @@ class Hyperparams:
     lr: float = 0.001
     beta1: float = 0.9
     beta2: float = 0.999
-    alpha: float = 0.001
+    alpha: float = 0.0
 
     padding_mode: str = "auto"
 
@@ -32,6 +32,35 @@ class Hyperparams:
     def  add_shape(self, input_shape, output_shape):
         self.input_shape = input_shape
         self.output_shape = output_shape
+    
+    def print_info(self):
+
+        print("\n============================")
+        print("  Hyperparameters Setting")
+        print("============================")
+
+        print("")
+        print("Number epoch: ", self.nb_epoch)
+        print("Batch Size: ", self.batch_size)
+
+        print("")
+        print("Learning Rate: ", self.lr)
+        print("Beta1: ", self.beta1)
+        print("Beta2: ", self.beta2)
+        print("Alpha: ", self.alpha)
+
+        print("")
+        print("Padding Mode: ", self.padding_mode)
+
+        print("")
+        print("Loss Metric: ", self.loss_metric)
+        print("Ouput Layer: ", self.output_layer)
+        print("Optimizer: ", self.optimizer)
+
+        print("")
+        print("Input Shape: ", self.input_shape)
+        print("Output Shape: ", self.output_shape)
+
 
 @dataclass
 class Dataset:

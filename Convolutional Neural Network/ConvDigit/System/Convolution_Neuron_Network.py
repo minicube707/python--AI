@@ -4,7 +4,7 @@ from .Mathematical_function import Linear, ReLU, LeakyReLU, Sigmoide, Tanh
 from .Layer import MaxPooling, Convolution, BatchNorm, Dropout, Block
 
 def calcul_output_shape(input_size, k_size, stride, padding):
-    return np.int8((input_size - k_size + padding) / stride +1)
+    return np.int16((input_size - k_size + padding) / stride +1)
 
 class CNN():
 
