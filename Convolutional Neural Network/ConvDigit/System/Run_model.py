@@ -4,6 +4,7 @@ import numpy as np
 
 from datetime import datetime
 from PIL import Image
+from tqdm import tqdm
 
 #System
 from .Set_mode import set_mode
@@ -15,10 +16,61 @@ from .Manage_logbook import save_model_configuration, show_all_info_model
 from .Preprocessing import preprocessing, get_data_shape
 
 from .FullModel import FullModel
-from .Training import training, training2, load_file_paths
+from .Training import training_full_data, training_batch_data
 
 from .Display_parametre_CNN import display_kernel_and_biais, display_first_picture, display_dataset
 
+def load_file_paths(base_dir):
+    file_paths = []
+    labels = []
+
+    for label in tqdm(['0','1'], desc="Classes"):
+        folder = os.path.join(base_dir, label)
+        for filename in os.listdir(folder):
+            if filename.endswith('.jpg'):
+                file_paths.append(os.path.join(folder, filename))
+                labels.append(int(label))
+
+    return file_paths, labels
+
+def change_dim_picture(input_shape):
+
+    print("Current shape of a picture: ", input_shape)
+
+    while(1):
+        str_load_in_color = input("Do you want to load the images in color? (yes/no): ").strip().lower()
+        
+        if str_load_in_color == "yes" or str_load_in_color == "y":
+            print("Images will be loaded in color (RGB).")
+            picture_in_RGB = True
+            break
+        
+        elif str_load_in_color == "non" or str_load_in_color == "n":
+            print("Images will be loaded in grayscale (black and white).")
+            picture_in_RGB = False
+            break
+
+        else:
+            print("Error: Please enter yes or no")
+
+    while(1):
+        str_answer = input("Which shape do you want to train: ").strip()
+        
+        try:
+            int_answer = int(str_answer)
+
+        except:
+            print("Please enter a number")
+            continue
+
+    if (not picture_in_RGB):
+        input_shape = (1, int_answer, int_answer)
+
+    else:
+        input_shape = (input_shape[0], int_answer, int_answer)
+	
+    return picture_in_RGB, input_shape
+    
 def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, dataset):
 
     while True:
@@ -55,6 +107,8 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
 
             img_array = img_array.transpose(2, 0, 1)
             input_shape, output_shape =  img_array.shape, 2
+
+            picture_in_RGB, input_shape = change_dim_picture(input_shape)
             break
 
         else:
@@ -71,6 +125,7 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         display_kernel_and_biais(X, y, model.cnn_model)
         exit(0)
 
+    hyperparams.check_support()
 
     if mode in {1}:
 
@@ -92,7 +147,6 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         model, _, _, _, _, metadata_old = load_model(module_dir, model_name)
         model.set_alpha(hyperparams.alpha)
 
-
     if mode in {1, 2}:
         # ============================
         #       TRAINNING
@@ -101,10 +155,10 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         # Entraînement d'un nouveau modèle
 
         if dataset_full_size:
-            data_test, elapsed_time_minutes = training(model, X_train, y_train, X_test, y_test, hyperparams, dataset)
+            data_test, elapsed_time_minutes = training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dataset)
 
         else:
-            data_test, elapsed_time_minutes = training2(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels)
+            data_test, elapsed_time_minutes = training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB)
         
         # ============================
         #          SAVE
@@ -136,7 +190,7 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         
         #______________________________________________________________#
         while(1):
-            str_answer = input("What do you want to do ?\n")
+            str_answer = input("How many test do you want to do ?\n")
             try:
                 nb_test = int(str_answer)
             except:

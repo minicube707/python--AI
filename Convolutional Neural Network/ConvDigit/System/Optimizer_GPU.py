@@ -1,6 +1,6 @@
-import numpy as np
+import cupy as cp
 
-class Adam:
+class Adam_GPU:
 
     def __init__(self, hyperparams):
         self.lr = hyperparams.lr
@@ -23,21 +23,23 @@ class Adam:
 
             if key not in self.state:
                 self.state[key] = {
-                    "m": np.zeros_like(param),
-                    "v": np.zeros_like(param)
+                    "m": cp.zeros_like(param),
+                    "v": cp.zeros_like(param)
                 }
 
             m = self.state[key]["m"]
             v = self.state[key]["v"]
 
-            # update Adam
-            m = self.beta1 * m + one_minus_beta1 * grad
-            v = self.beta2 * v + one_minus_beta2 * (grad * grad)
+            # update moments (IN-PLACE pour perf GPU)
+            m *= self.beta1
+            m += (1 - self.beta1) * grad
 
+            v *= self.beta2
+            v += (1 - self.beta2) * (grad * grad)
+
+            # bias correction
             m_hat = m / bias_correction1
             v_hat = v / bias_correction2
 
-            param -= self.lr * m_hat / (np.sqrt(v_hat) + 1e-8)
-
-            self.state[key]["m"] = m
-            self.state[key]["v"] = v
+            # update param (in-place)
+            param -= self.lr * m_hat / (cp.sqrt(v_hat) + self.eps)

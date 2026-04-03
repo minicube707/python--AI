@@ -1,15 +1,20 @@
 
-from .Mathematical_function import ReLU, LeakyReLU, Sigmoide, Tanh
-from .Layer import BatchNorm, Dropout, Block, Dense
+from .Mathematical_function import Linear, ReLU, LeakyReLU, Sigmoide, Tanh
+from .Mathematical_function_GPU import ReLU_GPU, LeakyReLU_GPU, Sigmoide_GPU, Tanh_GPU
+
+from .Layer import Dense, BatchNorm, Dropout, Block
+from .Layer_GPU import Dense_GPU, BatchNorm_GPU, Dropout_GPU
+
 
 class DNN():
     
-    def __init__(self, x_shape, y_shape, structure, alpha, optimizer):
+    def __init__(self, x_shape, y_shape, structure, alpha, optimizer, gpu_mode):
 
         self.structure = structure
         self.layers = []
         self.C_DNN = len(structure)
         self.logits = None
+        self.gpu_mode = gpu_mode
 
         self.initialisation(x_shape, y_shape, alpha)
         
@@ -19,35 +24,36 @@ class DNN():
 
         structure = self.structure
         C_DNN = self.C_DNN
-        
+        gpu_mode = self.gpu_mode
+
         structure[str(C_DNN)] = (y_shape, structure[str(C_DNN)][1], structure[str(C_DNN)][2])
         nb_activation = x_shape
 
-        for i in range(1, C_DNN + 1):
+        LAYER_MAP = {
+            "batchNorm": (BatchNorm, BatchNorm_GPU),
+            "sigmoide": (Sigmoide, Sigmoide_GPU),      
+            "tanh": (Tanh, Tanh_GPU),
+            "relu": (ReLU, ReLU_GPU),
+            "leaky relu": (LeakyReLU, LeakyReLU_GPU),
+            "dropout": (Dropout, Dropout),
+            "linear": (Linear, Linear),
+            "dense": (Dense, Dense_GPU)
+        }
+        
+        def get_layer(layer_name, gpu_mode=True, *args, **kwargs):
+            CPU_class, GPU_class = LAYER_MAP[layer_name]
+            LayerClass = GPU_class if gpu_mode else CPU_class
+            return LayerClass(*args, **kwargs)
 
+        for i in range(1, C_DNN + 1):
             nb_neuron, activation_function, dropout_per = structure[str(i)]
 
-            #Dense
-            dense = Dense(nb_activation, nb_neuron)
+            dense = get_layer("dense", gpu_mode, nb_activation, nb_neuron)
+            batchnorm = get_layer("batchNorm", gpu_mode, nb_neuron)
 
-            #Batchnorm
-            batchnorm =  BatchNorm(nb_neuron)
-
-            #Activation
-            if activation_function == "sigmoide":
-                activation = Sigmoide()
-            
-            elif activation_function == "tanh":
-                activation = Tanh()
-            
-            elif activation_function == "relu":
-                activation = ReLU()
-
-            elif activation_function == "leaky relu":
-                activation = LeakyReLU(alpha)
-
-            #Droout
-            dropout = Dropout(dropout_per)
+            # instanciation activation
+            activation = get_layer(activation_function, gpu_mode, alpha if activation_function=="leaky relu" else None)
+            dropout = get_layer("dropout", gpu_mode, dropout_per)
 
             self.layers.append(Block(dense, batchnorm, activation, dropout))
             nb_activation = nb_neuron

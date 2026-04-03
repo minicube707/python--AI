@@ -86,7 +86,7 @@ def update_graph(lines, axs, data_train, data_test, window=4):
 
     plt.pause(0.01)
 
-def compute_metrics(model, X, y, indices, batch_size, dict_performance):
+def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance):
 
     total_loss = 0.0
     total_dx = 0.0
@@ -122,53 +122,7 @@ def compute_metrics(model, X, y, indices, batch_size, dict_performance):
     dict_performance["accu"].append(total_acc)
     dict_performance["conf"].append(total_conf)
 
-
-def sample_files(file_paths, labels, sample_size):
-
-    if (sample_size > len(file_paths)):
-        sample_size = len(file_paths)
-
-    indices = np.random.choice(len(file_paths), size=sample_size, replace=False)
-    
-    sampled_files = [file_paths[i] for i in indices]
-    sampled_labels = [labels[i] for i in indices]
-    
-    return sampled_files, sampled_labels
-
-def compute_metrics2(model, file_paths, labels, batch_size, dict_performance, img_size=(224,224)):
-
-    total_loss = 0.0
-    total_dx = 0.0
-    total_acc = 0.0
-    total_conf = 0.0
-    n_samples = len(file_paths)
-
-    gen = batch_generator(file_paths, labels, batch_size, img_size, shuffle=False)
-
-    for X_batch, y_batch in gen:
-        
-        X_batch = X_batch.transpose(0, 3, 1, 2)
-        pred_batch = model.forward_propagation(X_batch, training=False)
-        batch_len = len(y_batch)
-
-        total_loss += model.loss_metric.forward(pred_batch, y_batch) * batch_len
-        total_dx += np.mean(model.loss_metric.backward()) * batch_len
- 
-        total_acc += accuracy_score(y_batch, pred_batch) * batch_len
-        total_conf += confidence_score(y_batch, pred_batch) * batch_len
-
-    total_loss /= n_samples
-    total_dx /= n_samples
-    total_acc /= n_samples
-    total_conf /= n_samples
-
-    dict_performance["loss"].append(total_loss)
-    dict_performance["lear"].append(total_dx)
-    dict_performance["accu"].append(total_acc)
-    dict_performance["conf"].append(total_conf)
-
-
-def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
+def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
@@ -196,8 +150,8 @@ def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-    compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -227,21 +181,21 @@ def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
             model.backward_propagation(y_batch)
             model.update()
 
-            update_graph(lines, axs, data_train, data_test)
-            
             global_step += 1
             if (global_step % validation_frequency == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-                compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-                compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+                compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+                compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+
+                update_graph(lines, axs, data_train, data_test)
 
                 va = data_test["accu"][-1]
                 vc = data_test["conf"][-1]
                 vl = data_test["loss"][-1]
-
+                
                 if va > best_accu:
                     best_accu = va
                     print(f"\nNew accuracy: {va}")
@@ -256,8 +210,8 @@ def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    compute_metrics(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-    compute_metrics(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
+    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -274,20 +228,20 @@ def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
     elapsed_time_minutes = (end_time - start_time) / 60
         
     # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train          : {data_train["loss"][-1]:.5f}")
-    print(f"🧪💰 Coût final - Test             : {data_test["loss"][-1]:.5f}")
+    print(f"\n🚂💰 Coût final - Train          : {data_train['loss'][-1]:.5f}")
+    print(f"🧪💰 Coût final - Test             : {data_test['loss'][-1]:.5f}")
 
-    print(f"🧠 Accuracy finale - Train          : {data_train["accu"][-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test           : {data_test["accu"][-1]:.5f}")
+    print(f"🧠 Accuracy finale - Train          : {data_train['accu'][-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test           : {data_test['accu'][-1]:.5f}")
 
-    print(f"🔎 Confidence score - Train         : {data_train["conf"][-1]:.5f}")
-    print(f"🔎 Confidence score - Test          : {data_test["conf"][-1]:.5f}")
+    print(f"🔎 Confidence score - Train         : {data_train['conf'][-1]:.5f}")
+    print(f"🔎 Confidence score - Test          : {data_test['conf'][-1]:.5f}")
 
     print("\nIndicateur underfiting/overfiting")
-    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train["lear"][-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test["lear"][-1]:.5f}")
-    print("Accuracy Ratio                         :", data_test["accu"][-1] / data_train["accu"][-1])
-    print("Indicateur d’overfitting               :", data_test["loss"][-1] - data_train["loss"][-1])
+    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train['lear'][-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test['lear'][-1]:.5f}")
+    print("Accuracy Ratio                         :", data_test['accu'][-1] / data_train['accu'][-1])
+    print("Indicateur d’overfitting               :", data_test['loss'][-1] - data_train['loss'][-1])
 
     print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
     print("")
@@ -297,7 +251,19 @@ def training(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
     return data_test, elapsed_time_minutes
 
 
-def batch_generator(file_paths, labels, batch_size, img_size=(224,224), shuffle=True):
+def sample_files(file_paths, labels, sample_size):
+
+    if (sample_size > len(file_paths)):
+        sample_size = len(file_paths)
+
+    indices = np.random.choice(len(file_paths), size=sample_size, replace=False)
+    
+    sampled_files = [file_paths[i] for i in indices]
+    sampled_labels = [labels[i] for i in indices]
+    
+    return sampled_files, sampled_labels
+
+def batch_generator(file_paths, labels, batch_size, img_size, shuffle, picture_in_RGB):
     n = len(file_paths)
     indices = np.arange(n)
     if shuffle:
@@ -311,7 +277,11 @@ def batch_generator(file_paths, labels, batch_size, img_size=(224,224), shuffle=
         for i in batch_idx:
 
             # Lecture image
-            img = Image.open(file_paths[i]).convert('RGB')  # 'L' pour grayscale, 'RGB' si couleur
+            if (picture_in_RGB):
+                img = Image.open(file_paths[i]).convert('RGB')  # 'L' pour grayscale, 'RGB' si couleur
+            else:
+                img = Image.open(file_paths[i]).convert('L')
+
             img = img.resize(img_size)
             img_array = np.array(img) / 255.0  # normalisation
 
@@ -324,22 +294,39 @@ def batch_generator(file_paths, labels, batch_size, img_size=(224,224), shuffle=
 
         yield np.array(X_batch), np.array(y_batch)
 
+def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_performance, img_size, picture_in_RGB):
 
-def load_file_paths(base_dir):
-    file_paths = []
-    labels = []
+    total_loss = 0.0
+    total_dx = 0.0
+    total_acc = 0.0
+    total_conf = 0.0
+    n_samples = len(file_paths)
 
-    for label in tqdm(['0','1'], desc="Classes"):
-        folder = os.path.join(base_dir, label)
-        for filename in os.listdir(folder):
-            if filename.endswith('.jpg'):
-                file_paths.append(os.path.join(folder, filename))
-                labels.append(int(label))
+    gen = batch_generator(file_paths, labels, batch_size, img_size, False, picture_in_RGB)
 
-    return file_paths, labels
+    for X_batch, y_batch in gen:
+        
+        X_batch = X_batch.transpose(0, 3, 1, 2)
+        pred_batch = model.forward_propagation(X_batch, training=False)
+        batch_len = len(y_batch)
 
+        total_loss += model.loss_metric.forward(pred_batch, y_batch) * batch_len
+        total_dx += np.mean(model.loss_metric.backward()) * batch_len
+ 
+        total_acc += accuracy_score(y_batch, pred_batch) * batch_len
+        total_conf += confidence_score(y_batch, pred_batch) * batch_len
 
-def training2(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels):
+    total_loss /= n_samples
+    total_dx /= n_samples
+    total_acc /= n_samples
+    total_conf /= n_samples
+
+    dict_performance["loss"].append(total_loss)
+    dict_performance["lear"].append(total_dx)
+    dict_performance["accu"].append(total_acc)
+    dict_performance["conf"].append(total_conf)
+
+def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
@@ -367,8 +354,8 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
     train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
     test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-    compute_metrics2(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size)
-    compute_metrics2(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size)
+    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
+    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -387,7 +374,7 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
 
     for epoch in range(nb_epoch):
 
-        train_gen = batch_generator(train_files, train_labels, batch_size, img_size)
+        train_gen = batch_generator(train_files, train_labels, batch_size, img_size, True, picture_in_RGB)
         steps_per_epoch = np.ceil(len(train_files) / batch_size)
 
         for X_batch, y_batch in tqdm(train_gen, total=steps_per_epoch, desc=f"Epoch {epoch+1}/{nb_epoch}"):
@@ -398,8 +385,6 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
             model.backward_propagation(y_batch)
             model.update()
 
-            update_graph(lines, axs, data_train, data_test)
-            
             global_step += 1
             if (global_step % validation_frequency == 0):
                 
@@ -407,9 +392,11 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
                 train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
                 test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-                compute_metrics2(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size)
-                compute_metrics2(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size)
-
+                compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
+                compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
+                
+                update_graph(lines, axs, data_train, data_test)
+                
                 va = data_test["accu"][-1]
                 vc = data_test["conf"][-1]
                 vl = data_test["loss"][-1]
@@ -428,8 +415,8 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
     train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
     test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-    compute_metrics2(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size)
-    compute_metrics2(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size)
+    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
+    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -446,20 +433,20 @@ def training2(model, hyperparams, dataset, train_files, train_labels, test_files
     elapsed_time_minutes = (end_time - start_time) / 60
         
     # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train          : {data_train["loss"][-1]:.5f}")
-    print(f"🧪💰 Coût final - Test             : {data_test["loss"][-1]:.5f}")
+    print(f"\n🚂💰 Coût final - Train          : {data_train['loss'][-1]:.5f}")
+    print(f"🧪💰 Coût final - Test             : {data_test['loss'][-1]:.5f}")
 
-    print(f"🧠 Accuracy finale - Train          : {data_train["accu"][-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test           : {data_test["accu"][-1]:.5f}")
+    print(f"🧠 Accuracy finale - Train          : {data_train['accu'][-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test           : {data_test['accu'][-1]:.5f}")
 
-    print(f"🔎 Confidence score - Train         : {data_train["conf"][-1]:.5f}")
-    print(f"🔎 Confidence score - Test          : {data_test["conf"][-1]:.5f}")
+    print(f"🔎 Confidence score - Train         : {data_train['conf'][-1]:.5f}")
+    print(f"🔎 Confidence score - Test          : {data_test['conf'][-1]:.5f}")
 
     print("\nIndicateur underfiting/overfiting")
-    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train["lear"][-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test["lear"][-1]:.5f}")
-    print("Accuracy Ratio                         :", data_test["accu"][-1] / data_train["accu"][-1])
-    print("Indicateur d’overfitting               :", data_test["loss"][-1] - data_train["loss"][-1])
+    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train['lear'][-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test['lear'][-1]:.5f}")
+    print("Accuracy Ratio                         :", data_test['accu'][-1] / data_train['accu'][-1])
+    print("Indicateur d’overfitting               :", data_test['loss'][-1] - data_train['loss'][-1])
 
     print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
     print("")

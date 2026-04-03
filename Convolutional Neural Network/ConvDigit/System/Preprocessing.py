@@ -35,6 +35,10 @@ def get_data_shape(X, y):
         print("Input shape: ", input_shape)
         print("Output shape: ", output_shape)
 
+    else:
+        print(f"Error: Data with wrong shape X:({X.shape})")
+        exit(1)
+        
     return input_shape, output_shape
 
 

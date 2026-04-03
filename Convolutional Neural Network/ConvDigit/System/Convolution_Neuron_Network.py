@@ -1,20 +1,26 @@
 
 import numpy as np
+import cupy as cp
+
 from .Mathematical_function import Linear, ReLU, LeakyReLU, Sigmoide, Tanh
+from .Mathematical_function_GPU import ReLU_GPU, LeakyReLU_GPU, Sigmoide_GPU, Tanh_GPU
+
 from .Layer import MaxPooling, Convolution, BatchNorm, Dropout, Block
+from .Layer_GPU import MaxPooling_GPU, Convolution_GPU, BatchNorm_GPU, Dropout_GPU
 
 def calcul_output_shape(input_size, k_size, stride, padding):
     return np.int16((input_size - k_size + padding) / stride +1)
 
 class CNN():
 
-    def __init__(self, structure, input_shape, padding_mode, alpha, optimizer):
+    def __init__(self, structure, input_shape, padding_mode, alpha, optimizer, gpu_mode):
 
         self.structure = structure
         self.layers = []
         self.C_CNN = len(structure)
         self.logits = None
-       
+        self.gpu_mode = gpu_mode
+
         self.initialisation (input_shape, padding_mode, alpha)
 
         self.optimizer = optimizer
@@ -74,50 +80,52 @@ class CNN():
 
             self.error_initialisation(x_shape, input_size, previ_input_size, type_layer, fonction, stride, dropout)
 
-
     def initialisation_affectation(self, x_shape, alpha):
 
         nb_layer = x_shape[0]
         o_size = x_shape[1]
         C = self.C_CNN
         structure = self.structure
+        gpu_mode = self.gpu_mode
 
+        # dictionnaire activation
+        LAYER_MAP = {
+            "conv": (Convolution, Convolution_GPU),
+            "batchNorm": (BatchNorm, BatchNorm_GPU),
+            "sigmoide": (Sigmoide, Sigmoide_GPU),      
+            "tanh": (Tanh, Tanh_GPU),
+            "relu": (ReLU, ReLU_GPU),
+            "leaky relu": (LeakyReLU, LeakyReLU_GPU),
+            "dropout": (Dropout, Dropout),
+            "linear": (Linear, Linear),
+            "maxPooling": (MaxPooling, MaxPooling_GPU)
+        }
+
+        def get_layer(layer_name, gpu_mode, *args, **kwargs):
+            CPU_class, GPU_class = LAYER_MAP[layer_name]
+            LayerClass = GPU_class if gpu_mode else CPU_class
+            return LayerClass(*args, **kwargs)
+        
         for i in range(1, C + 1):
             k_size, stride, padding, nb_kernel, type_layer, activation_function, dropout_per = self.initialisation_extraction(structure, i)
             o_size = calcul_output_shape(o_size, structure[str(i)][0], structure[str(i)][1], structure[str(i)][2])
 
+            # Construction de la layer
             if type_layer == "conv":
-                
-                if (i < C):
-                    o_size = o_size + padding
 
-                corr =  Convolution(nb_kernel, nb_layer, k_size, stride, o_size, padding)
+                if i < C:
+                    o_size += padding
 
-                #Batchnorm
-                batchnorm = BatchNorm(nb_kernel)
-
-                #Activation
-                if activation_function == "sigmoide":
-                    activation = Sigmoide()
-                
-                elif activation_function == "tanh":
-                    activation = Tanh()
-                
-                elif activation_function == "relu":
-                    activation = ReLU()
-
-                elif activation_function == "leaky relu":
-                    activation = LeakyReLU(alpha)
-
-                #Droout
-                dropout = Dropout(dropout_per)
+                corr = get_layer("conv", gpu_mode, nb_kernel, nb_layer, k_size, stride, o_size, padding)
+                batchnorm = get_layer("batchNorm", gpu_mode, nb_kernel)
+                activation = get_layer(activation_function, gpu_mode, alpha if activation_function=="leaky relu" else None)
+                dropout = get_layer("dropout", gpu_mode, dropout_per)
 
             elif type_layer == "pool":
-                corr = MaxPooling(k_size, stride, padding)
-
-                batchnorm = Linear()
-                activation = Linear()
-                dropout = Linear()
+                corr = get_layer("maxPooling", gpu_mode, k_size, stride, padding)
+                batchnorm = get_layer("linear", gpu_mode)
+                activation = get_layer("linear", gpu_mode)
+                dropout = get_layer("linear", gpu_mode)
 
             self.layers.append(Block(corr, batchnorm, activation, dropout))
             nb_layer = nb_kernel

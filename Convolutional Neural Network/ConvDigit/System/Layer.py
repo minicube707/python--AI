@@ -1,6 +1,6 @@
 
 import numpy as np
-from .Mathematical_function import Layer, convolution, add_padding
+from .Mathematical_function import Layer, add_padding
 
 class MaxPooling(Layer):
     

@@ -1,8 +1,8 @@
 
 import cupy as cp
-from .Mathematical_function import Layer, add_padding
+from .Mathematical_function import Layer
 
-class MaxPooling(Layer):
+class MaxPooling_GPU(Layer):
     
     def __init__(self, k_size, stride, padding):
         self.k_size = k_size
@@ -88,7 +88,7 @@ class MaxPooling(Layer):
         return dX
 
 
-class Convolution(Layer):
+class Convolution_GPU(Layer):
 
     def __init__(self, nb_kernel, nb_layer, k_size, stride, o_size, padding):
         
@@ -224,7 +224,7 @@ class Convolution(Layer):
         self.K = K
         self.b = b
 
-class BatchNorm(Layer):
+class BatchNorm_GPU(Layer):
 
     def __init__(self, n_features, eps=1e-5, momentum=0.9):
         self.eps = eps
@@ -345,7 +345,7 @@ class BatchNorm(Layer):
         self.running_mean = running_mean
         self.running_var = running_var
     
-class Dropout(Layer):
+class Dropout_GPU(Layer):
 
     def __init__(self, dropout_per):
         self.dropout_per = dropout_per
@@ -372,35 +372,7 @@ class Dropout(Layer):
         else:
             return dZ
         
-class Block(Layer):
-
-    def __init__(self, dense, batchnorm, activation, dropout):
-
-        self.dense = dense
-        self.batchnorm = batchnorm
-        self.activation = activation
-        self.dropout = dropout
-
-    def forward(self, X, training=True):
-
-        Z = self.dense.forward(X)
-        Z = self.batchnorm.forward(Z, training)
-        A = self.activation.forward(Z)
-        A = self.dropout.forward(A, training)
-
-        return A
-
-    def backward(self, dZ):
-
-        dA = self.dropout.backward(dZ)
-        dZ = self.activation.backward(dA)
-        dZ = self.batchnorm.backward(dZ)
-        dZ = self.dense.backward(dZ)
-
-        return dZ
-    
-
-class Dense(Layer):
+class Dense_GPU(Layer):
 
     def __init__(self, nb_activation, nb_neuron):
         w_shape = (nb_activation, nb_neuron)
@@ -444,15 +416,3 @@ class Dense(Layer):
     def set_params(self, W, b):
         self.W = W
         self.b = b
-
-class Flatten(Layer):
-
-    def __int__(self):
-        self.shape = None
-
-    def forward(self, X):
-        self.shape = X.shape
-        return X.reshape(X.shape[0], -1)
-    
-    def backward(self, dZ):
-        return dZ.reshape(self.shape)

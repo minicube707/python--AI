@@ -88,27 +88,6 @@ class Tanh(Layer):
         return dA * (1 - self.A**2)
     
 
-def convolution(dZ, K):
-    # dZ : (B, F, H, W)
-    # K  : (F, C, Kh, Kw)
-
-    B, F, H, W = dZ.shape
-    _, C, Kh, Kw = K.shape
-
-    pad_h = Kh - 1
-    pad_w = Kw - 1
-
-    padded = np.pad(dZ, ((0,0),(0,0),(pad_h,pad_h),(pad_w,pad_w)))
-
-    # (B, F, H+Kh-1, W+Kw-1, Kh, Kw)
-    windows = sliding_window_view(padded, (Kh, Kw), axis=(2,3))
-
-    # (C, B, H+Kh-1, W+Kw-1)
-    out = np.tensordot(K, windows, axes=([0,2,3],[1,4,5]))
-
-    # (B, C, H+Kh-1, W+Kw-1)
-    return np.moveaxis(out, 0, 1)
-
 def add_padding(X, padding):
     # X : (B, C, H, W)
 

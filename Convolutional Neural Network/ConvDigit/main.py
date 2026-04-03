@@ -25,7 +25,9 @@ hyperparams = {
 
     "contamination" : 0.1,
 
-    "padding_mode": "auto"
+    "padding_mode": "auto",
+
+    "support": "CPU"
 }
 
 dataset = {
@@ -43,13 +45,11 @@ dataset = {
 
 # Structure CNN : (kernel size, stride, padding, nb kernels, type_layer, activations function)
 structure_CNN = {
-    "1": (7, 1, 0, 32, 'conv', 'leaky relu', 0.0),
-    "2": (4, 4, 2, 32, 'pool', 'max', 0.0),
-    "3": (3, 1, 0, 64, 'conv', 'leaky relu', 0.1),
-    "4": (4, 4, 2, 32, 'pool', 'max', 0.0),
-    "5": (3, 1, 0, 64, 'conv', 'leaky relu', 0.1),
-    "6": (4, 4, 2, 64, 'pool', 'max', 0.0),
-    "7": (3, 1, 0, 64, 'conv', 'leaky relu', 0.1)
+    "1": (5, 1, 0, 32, "conv", "leaky relu", 0.0),
+    "2": (2, 2, 0, 1, "pool", "max", 0.0),
+    "3": (3, 1, 0, 64, "conv", "leaky relu", 0.0),
+    "4": (2, 2, 0, 1, "pool", "max", 0.0),
+    "5": (3, 1, 0, 64, "conv", "leaky relu", 0.0)
 }
 
 
@@ -67,8 +67,8 @@ structure_DNN = {
 
 hyperparams = Hyperparams(**hyperparams)
 
-loss_metric = BinaryCrossEntropy()
-output_layer = Sigmoide()    
+loss_metric = CrossEntropyLoss()
+output_layer = Softmax()    
 optimizer = Adam(hyperparams)
 
 hyperparams.add_training_parameters(loss_metric, output_layer, optimizer)

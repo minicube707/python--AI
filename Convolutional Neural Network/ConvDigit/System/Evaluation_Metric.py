@@ -1,5 +1,5 @@
 
-import  numpy as np
+import numpy as np
 
 """
 ============================
@@ -34,7 +34,7 @@ class CrossEntropyLoss:
 
     def backward(self):
         m = self.y_pred.shape[0]
-        return -(self.y_true / self.y_pred) / m
+        return - (self.y_true / self.y_pred) / m
     
 
 class MSE:
@@ -43,10 +43,11 @@ class MSE:
 
         self.y_pred = y_pred
         self.y_true = y_true
-        return  np.mean((y_pred - y_true) ** 2)
+        self.diff = y_pred - y_true
+        return  np.mean(self.diff ** 2)
 
     def backward(self):
-        return 2 * (self.y_pred - self.y_true) / self.y_true.shape[0]
+        return 2 * (self.diff) / self.y_true.shape[0]
     
 
 def accuracy_score(y_true, y_pred):
