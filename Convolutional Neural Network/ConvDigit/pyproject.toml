@@ -1,0 +1,16 @@
+[project]
+name = "convdigit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cupy-cuda11x>=13.6.0",
+    "kagglehub>=1.0.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.2.6",
+    "pandas>=2.3.3",
+    "pillow>=12.2.0",
+    "scikit-learn>=1.7.2",
+    "tqdm>=4.67.3",
+]
