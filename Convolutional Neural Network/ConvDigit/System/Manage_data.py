@@ -3,13 +3,12 @@ import os
 import sys
 
 import numpy as np
-import cupy as cp
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
 def manage_data():
-    print(module_dir)
+    
     dataset_path = os.path.join(module_dir, "../../../Dataset") 
     
     # Vérifier si le dossier Dataset existe
@@ -26,7 +25,7 @@ def manage_data():
         exit(1)
 
     # Afficher les fichiers avec un numéro
-    print("Sélectionnez un fichier en entrant son numéro :")
+    print("\nSélectionnez un fichier en entrant son numéro :")
     for idx, file in enumerate(files, start=1):
         print(f"{idx}. {file}")
 

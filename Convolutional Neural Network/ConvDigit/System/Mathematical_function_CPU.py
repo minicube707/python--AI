@@ -1,39 +1,48 @@
-import cupy as cp
+import numpy as np
 
 from .Layer import Layer
 
-class Softmax_GPU(Layer):
-
+class Softmax_CPU(Layer):
+    
     def __init__(self):
         self.class_ = "Softmax"
         
     def forward(self, X):
         # stabilité numérique
-        X_shifted = X - cp.max(X, axis=1, keepdims=True)
-        exp_X = cp.exp(X_shifted)
-        self.out = exp_X / cp.sum(exp_X, axis=1, keepdims=True)
+        X_shifted = X - np.max(X, axis=1, keepdims=True)
+        exp_X = np.exp(X_shifted)
+        self.out = exp_X / np.sum(exp_X, axis=1, keepdims=True)
         return self.out
 
     def backward(self, dY):
-        dot = cp.sum(dY * self.out, axis=1, keepdims=True)
-        dX = self.out * (dY - dot)
+        # Jacobien complet (coûteux mais correct)
+        m, n = self.out.shape
+        dX = np.zeros_like(dY)
+
+        for i in range(m):
+            y = self.out[i].reshape(-1, 1)
+            jacobian = np.diagflat(y) - y @ y.T
+            dX[i] = jacobian @ dY[i]
+
         return dX
 
 
-class ReLU_GPU(Layer):
+class ReLU_CPU(Layer):
 
     def __init__(self):
         self.class_ = "ReLU"
-        
+
     def forward(self, X):
+        clip_value = 1e3
+        X = np.clip(X, -clip_value, clip_value)
         self.X = X
-        return cp.maximum(0, X)
+        return np.maximum(0, X)
 
     def backward(self, dA):
         return dA * (self.X > 0)
 
 
-class LeakyReLU_GPU(Layer):
+class LeakyReLU_CPU(Layer):
 
     def __init__(self):
         self.class_ = "LeakyReLU"
@@ -42,45 +51,48 @@ class LeakyReLU_GPU(Layer):
         self.alpha = alpha
 
     def forward(self, X):
+        clip_value = 1e3
+        X = np.clip(X, -clip_value, clip_value)
         self.X = X
-        return cp.maximum(X, 0) + self.alpha * cp.minimum(X, 0)
+        return np.maximum(X, 0) + self.alpha * np.minimum(X, 0)
 
     def backward(self, dA):
-        dx = cp.ones_like(self.X)
+        dx = np.ones_like(self.X)
         dx[self.X < 0] = self.alpha
         return dA * dx
 
 
-class Sigmoide_GPU(Layer):
+class Sigmoide_CPU(Layer):
 
     def __init__(self):
         self.class_ = "Sigmoide"
-        
+
     def forward(self, X):
-        self.A = 1 / (1 + cp.exp(-X))
+        self.A = 1 / (1 + np.exp(-X))
         return self.A
 
     def backward(self, dA):
         return dA * self.A * (1 - self.A)
 
 
-class Tanh_GPU(Layer):
+class Tanh_CPU(Layer):
     
     def __init__(self):
         self.class_ = "Tanh"
         
     def forward(self, X):
-        self.A = cp.tanh(X)
+        self.A = np.tanh(X)
         return self.A
 
     def backward(self, dA):
         return dA * (1 - self.A**2)
+    
 
-def add_padding_GPU(X, padding):
+def add_padding_CPU(X, padding):
     # X : (B, C, H, W)
 
     B, C, H, W = X.shape
-    out = cp.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
+    out = np.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
 
     out[:, :, :H, :W] = X
     return out

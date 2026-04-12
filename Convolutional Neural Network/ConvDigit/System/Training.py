@@ -1,14 +1,17 @@
 
 import numpy as np
+import cupy as cp
 import matplotlib.pyplot as plt
 import time
-import os
 
 from tqdm import tqdm
-from PIL import Image
+from PIL import Image, ImageOps
 
-from .Evaluation_Metric import accuracy_score, confidence_score
+from .Evaluation_Metric_CPU import accuracy_score_cpu, confidence_score_cpu
+from .Evaluation_Metric_GPU import accuracy_score_gpu, confidence_score_gpu
+
 from .Preprocessing import handle_key
+
 
 def smooth_curve(values, window=10):
     """Calcule une moyenne glissante"""
@@ -16,6 +19,7 @@ def smooth_curve(values, window=10):
     if len(values) < window:
         return values
     return np.convolve(values, np.ones(window)/window, mode='valid')
+
 
 def init_animation():
     fig, axs = plt.subplots(1, 4, figsize=(16, 4), sharex=True)
@@ -47,6 +51,7 @@ def init_animation():
     plt.show(block=False)
 
     return fig, axs, lines
+
 
 def update_graph(lines, axs, data_train, data_test, window=4):
 
@@ -86,7 +91,8 @@ def update_graph(lines, axs, data_train, data_test, window=4):
 
     plt.pause(0.01)
 
-def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance):
+
+def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance, hyperparams):
 
     total_loss = 0.0
     total_dx = 0.0
@@ -102,15 +108,27 @@ def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance
         if X_batch.ndim == 3:
             X_batch = X_batch[:, None, :, :]
 
+        if (hyperparams.support == "GPU"):
+            X_batch = cp.array(X_batch)
+            y_batch = cp.array(y_batch)
+
         # forward batch
         pred_batch = model.forward_propagation(X_batch, training=False)
         batch_len = len(y_batch)
+        
+        if (hyperparams.support == "GPU"):
+            total_loss += cp.asnumpy(model.loss_metric.forward(y_batch, pred_batch)) * batch_len
+            total_dx += cp.asnumpy(np.mean(model.loss_metric.backward())) * batch_len
 
-        total_loss += model.loss_metric.forward(pred_batch, y_batch) * batch_len
-        total_dx += np.mean(model.loss_metric.backward()) * batch_len
+            total_acc += cp.asnumpy(accuracy_score_gpu(y_batch, pred_batch)) * batch_len
+            total_conf += cp.asnumpy(confidence_score_gpu(y_batch, pred_batch)) * batch_len
 
-        total_acc += accuracy_score(y_batch, pred_batch) * batch_len
-        total_conf += confidence_score(y_batch, pred_batch) * batch_len
+        else:
+            total_loss += model.loss_metric.forward(y_batch, pred_batch) * batch_len
+            total_dx += np.mean(model.loss_metric.backward()) * batch_len
+
+            total_acc += accuracy_score_cpu(y_batch, pred_batch) * batch_len
+            total_conf += confidence_score_cpu(y_batch, pred_batch) * batch_len
 
     total_loss /= n_samples
     total_dx /= n_samples
@@ -122,7 +140,8 @@ def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance
     dict_performance["accu"].append(total_acc)
     dict_performance["conf"].append(total_conf)
 
-def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dataset):
+
+def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y_test):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
@@ -132,7 +151,6 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
     
 
     # Suivi des métriques
-
     data_train = {
     "loss": [],
     "lear": [],
@@ -150,8 +168,8 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
+    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -166,7 +184,7 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
     fig, axs, lines = init_animation()
     # Démarrer le chronomètre
     start_time = time.time()
-    global_step = 0
+    global_step = 1
 
     for epoch in range(nb_epoch):
         for j in tqdm(range(0, X_train.shape[0], batch_size), desc=f"Époque {epoch + 1}/{nb_epoch}"):
@@ -177,18 +195,21 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
             if X_batch.ndim == 3:
                 X_batch = X_batch[:, None, :, :]
 
+            if (hyperparams.support == "GPU"):
+                X_batch = cp.array(X_batch)
+                y_batch = cp.array(y_batch)
+
             model.forward_propagation(X_batch, True)
             model.backward_propagation(y_batch)
             model.update()
-
-            global_step += 1
+            
             if (global_step % validation_frequency == 0):
                 # Évaluation partielle
                 rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
                 rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-                compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-                compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+                compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
+                compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
 
                 update_graph(lines, axs, data_train, data_test)
 
@@ -203,6 +224,8 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
                     print(f"New loss: {vl}")
                     print("")
 
+            global_step += 1
+            
     # Arrêter le chronomètre
     end_time = time.time()
 
@@ -210,8 +233,8 @@ def training_full_data(model, X_train, y_train, X_test, y_test, hyperparams, dat
     rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
     rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
 
-    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train)
-    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test)
+    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
+    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -263,17 +286,22 @@ def sample_files(file_paths, labels, sample_size):
     
     return sampled_files, sampled_labels
 
+
 def batch_generator(file_paths, labels, batch_size, img_size, shuffle, picture_in_RGB):
+    
     n = len(file_paths)
     indices = np.arange(n)
+    
     if shuffle:
         np.random.shuffle(indices)
         
     for start in range(0, n, batch_size):
         end = min(start + batch_size, n)
         batch_idx = indices[start:end]
+        
         X_batch = []
         y_batch = []
+        
         for i in batch_idx:
 
             # Lecture image
@@ -281,20 +309,24 @@ def batch_generator(file_paths, labels, batch_size, img_size, shuffle, picture_i
                 img = Image.open(file_paths[i]).convert('RGB')  # 'L' pour grayscale, 'RGB' si couleur
             else:
                 img = Image.open(file_paths[i]).convert('L')
-
-            img = img.resize(img_size)
-            img_array = np.array(img) / 255.0  # normalisation
+                
+            # Resize sans déformation (padding)
+            img = ImageOps.pad(img, img_size, method=Image.Resampling.LANCZOS)            
+            img_array = np.array(img) / np.max(img)  # normalisation
 
             # ajouter canal si grayscale
-            if img_array.ndim == 2:
+            if (picture_in_RGB):
+                img_array = np.transpose(img_array, (2, 0, 1))
+            else:
                 img_array = img_array[None, :, :]
-
+            
             X_batch.append(img_array)
             y_batch.append(labels[i])
 
         yield np.array(X_batch), np.array(y_batch)
 
-def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_performance, img_size, picture_in_RGB):
+
+def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_performance, img_size, picture_in_RGB, num_classes, hyperparams):
 
     total_loss = 0.0
     total_dx = 0.0
@@ -306,15 +338,37 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
 
     for X_batch, y_batch in gen:
         
-        X_batch = X_batch.transpose(0, 3, 1, 2)
+        if X_batch.ndim == 3:
+            X_batch = X_batch[:, None, :, :]
+
+        if num_classes is not None:
+            y_batch = np.eye(num_classes)[y_batch]
+        
+        if (hyperparams.support == "GPU"):
+            X_batch = cp.array(X_batch)
+            y_batch = cp.array(y_batch)
+
+        # forward batch
         pred_batch = model.forward_propagation(X_batch, training=False)
         batch_len = len(y_batch)
+        
+        #Flatten for the BinarycrossEntropy
+        if pred_batch.ndim == 2 and pred_batch.shape[1] == 1:
+            pred_batch = pred_batch.flatten()
+        
+        if (hyperparams.support == "GPU"):
+            total_loss += cp.asnumpy(model.loss_metric.forward(y_batch, pred_batch)) * batch_len
+            total_dx += cp.asnumpy(cp.mean(model.loss_metric.backward())) * batch_len
 
-        total_loss += model.loss_metric.forward(pred_batch, y_batch) * batch_len
-        total_dx += np.mean(model.loss_metric.backward()) * batch_len
- 
-        total_acc += accuracy_score(y_batch, pred_batch) * batch_len
-        total_conf += confidence_score(y_batch, pred_batch) * batch_len
+            total_acc += cp.asnumpy(accuracy_score_gpu(y_batch, pred_batch)) * batch_len
+            total_conf += cp.asnumpy(confidence_score_gpu(y_batch, pred_batch)) * batch_len
+
+        else:
+            total_loss += model.loss_metric.forward(y_batch, pred_batch) * batch_len
+            total_dx += np.mean(model.loss_metric.backward()) * batch_len
+
+            total_acc += accuracy_score_cpu(y_batch, pred_batch) * batch_len
+            total_conf += confidence_score_cpu(y_batch, pred_batch) * batch_len
 
     total_loss /= n_samples
     total_dx /= n_samples
@@ -326,7 +380,8 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
     dict_performance["accu"].append(total_acc)
     dict_performance["conf"].append(total_conf)
 
-def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB):
+
+def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB, class_to_idx):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
@@ -335,6 +390,12 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     validation_size = dataset.validation_size
     validation_frequency = dataset.validation_frequency
     
+    #For One-Hot Encoder
+    if model.loss_metric.class_ == "CrossEntropyLoss":
+        num_classes = len(class_to_idx)
+    else:
+        num_classes = None
+
 
     # Suivi des métriques
     data_train = {
@@ -354,8 +415,8 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
     test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
-    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
+    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
+    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]
@@ -370,7 +431,7 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     fig, axs, lines = init_animation()
     # Démarrer le chronomètre
     start_time = time.time()
-    global_step = 0
+    global_step = 1
 
     for epoch in range(nb_epoch):
 
@@ -379,21 +440,29 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
 
         for X_batch, y_batch in tqdm(train_gen, total=steps_per_epoch, desc=f"Epoch {epoch+1}/{nb_epoch}"):
             
-            X_batch = X_batch.transpose(0, 3, 1, 2)
+            if X_batch.ndim == 3:
+                X_batch = X_batch[:, None, :, :]
+
+            if num_classes is not None:
+                y_batch = np.eye(num_classes)[y_batch]
+            
+            if (hyperparams.support == "GPU"):
+                X_batch = cp.array(X_batch)
+                y_batch = cp.array(y_batch)
 
             model.forward_propagation(X_batch, training=True)
             model.backward_propagation(y_batch)
             model.update()
 
-            global_step += 1
+            
             if (global_step % validation_frequency == 0):
                 
                 # Évaluation partielle
                 train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
                 test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-                compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
-                compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
+                compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
+                compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
                 
                 update_graph(lines, axs, data_train, data_test)
                 
@@ -401,13 +470,33 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
                 vc = data_test["conf"][-1]
                 vl = data_test["loss"][-1]
 
+                ta = data_train["accu"][-1]
+                tc = data_train["conf"][-1]
+                tl = data_train["loss"][-1]
+                
                 if va > best_accu:
                     best_accu = va
-                    print(f"\nNew accuracy: {va}")
-                    print(f"New confidence score: {vc}")
-                    print(f"New loss: {vl}")
+                    print("\n-----------------------")
+                    print(f"New accuracy test: {va}")
+                    print(f"New confidence score test: {vc}")
+                    print(f"New loss test: {vl}")
                     print("")
-
+                
+                else:
+                    print("\n-----------------------")
+                    print(f"Accuracy test: {va}")
+                    print(f"Confidence score test: {vc}")
+                    print(f"Loss test: {vl}")
+                    print("")
+                
+                print(f"Accuracy train: {ta}")
+                print(f"Confidence score train: {tc}")
+                print(f"Loss train: {tl}")
+                print("")
+            
+            global_step += 1       
+                
+                    
     # Arrêter le chronomètre
     end_time = time.time()
 
@@ -415,8 +504,8 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
     test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
 
-    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB)
-    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB)
+    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
+    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
 
     va = data_test["accu"][-1]
     vc = data_test["conf"][-1]

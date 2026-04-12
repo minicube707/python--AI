@@ -1,25 +1,21 @@
 
 import numpy as np
-import cupy as cp
 
 from .Mathematical_function import Linear, ReLU, LeakyReLU, Sigmoide, Tanh
-from .Mathematical_function_GPU import ReLU_GPU, LeakyReLU_GPU, Sigmoide_GPU, Tanh_GPU
-
-from .Layer import MaxPooling, Convolution, BatchNorm, Dropout, Block
-from .Layer_GPU import MaxPooling_GPU, Convolution_GPU, BatchNorm_GPU, Dropout_GPU
+from .Layers import MaxPooling, Convolution, BatchNorm, Dropout, Block
 
 def calcul_output_shape(input_size, k_size, stride, padding):
-    return np.int16((input_size - k_size + padding) / stride +1)
+    return np.int32((input_size - k_size + padding) / stride + 1)
 
 class CNN():
 
-    def __init__(self, structure, input_shape, padding_mode, alpha, optimizer, gpu_mode):
+    def __init__(self, structure, input_shape, padding_mode, alpha, optimizer, support):
 
         self.structure = structure
         self.layers = []
         self.C_CNN = len(structure)
         self.logits = None
-        self.gpu_mode = gpu_mode
+        self.support = support
 
         self.initialisation (input_shape, padding_mode, alpha)
 
@@ -34,7 +30,6 @@ class CNN():
     def initialisation_extraction(self, structure, i):
 
         #Kernel size, stride, padding, nb_kernel, type layer, function, dropout
-
         k_size = structure[str(i)][0]
         stride = structure[str(i)][1]
         padding = structure[str(i)][2]
@@ -86,26 +81,8 @@ class CNN():
         o_size = x_shape[1]
         C = self.C_CNN
         structure = self.structure
-        gpu_mode = self.gpu_mode
+        support = self.support
 
-        # dictionnaire activation
-        LAYER_MAP = {
-            "conv": (Convolution, Convolution_GPU),
-            "batchNorm": (BatchNorm, BatchNorm_GPU),
-            "sigmoide": (Sigmoide, Sigmoide_GPU),      
-            "tanh": (Tanh, Tanh_GPU),
-            "relu": (ReLU, ReLU_GPU),
-            "leaky relu": (LeakyReLU, LeakyReLU_GPU),
-            "dropout": (Dropout, Dropout),
-            "linear": (Linear, Linear),
-            "maxPooling": (MaxPooling, MaxPooling_GPU)
-        }
-
-        def get_layer(layer_name, gpu_mode, *args, **kwargs):
-            CPU_class, GPU_class = LAYER_MAP[layer_name]
-            LayerClass = GPU_class if gpu_mode else CPU_class
-            return LayerClass(*args, **kwargs)
-        
         for i in range(1, C + 1):
             k_size, stride, padding, nb_kernel, type_layer, activation_function, dropout_per = self.initialisation_extraction(structure, i)
             o_size = calcul_output_shape(o_size, structure[str(i)][0], structure[str(i)][1], structure[str(i)][2])
@@ -116,16 +93,29 @@ class CNN():
                 if i < C:
                     o_size += padding
 
-                corr = get_layer("conv", gpu_mode, nb_kernel, nb_layer, k_size, stride, o_size, padding)
-                batchnorm = get_layer("batchNorm", gpu_mode, nb_kernel)
-                activation = get_layer(activation_function, gpu_mode, alpha if activation_function=="leaky relu" else None)
-                dropout = get_layer("dropout", gpu_mode, dropout_per)
+                corr = Convolution.add_layer(nb_kernel, nb_layer, k_size, stride, o_size, padding, support)
+                batchnorm = BatchNorm.add_layer(nb_kernel, support)
+                
+                if (activation_function == "sigmoide"):
+                    activation = Sigmoide.add_layer(support)
+                elif (activation_function == "tanh"):
+                    activation = Tanh.add_layer(support)
+                elif (activation_function == "relu"):
+                    activation = ReLU.add_layer(support)
+                elif (activation_function == "leaky relu"):
+                    activation = LeakyReLU.add_layer(alpha, support)
+                elif (activation_function == "linear"):
+                    activation = Linear()
+                else:
+                    raise Exception("Undefine activatoin function")
+                
+                dropout = Dropout.add_layer(dropout_per, support)
 
             elif type_layer == "pool":
-                corr = get_layer("maxPooling", gpu_mode, k_size, stride, padding)
-                batchnorm = get_layer("linear", gpu_mode)
-                activation = get_layer("linear", gpu_mode)
-                dropout = get_layer("linear", gpu_mode)
+                corr = MaxPooling.add_layer(k_size, stride, padding, support)
+                batchnorm = Linear()
+                activation = Linear()
+                dropout = Linear()
 
             self.layers.append(Block(corr, batchnorm, activation, dropout))
             nb_layer = nb_kernel
@@ -145,9 +135,9 @@ class CNN():
             self.show_information(x_shape)
             raise NameError(f"ERROR: Layer parametre '{type_layer}' is not defined. Please correct with 'pool' or 'conv'.")
         
-        if fonction not in ["relu", "sigmoide", "max", "tanh", "leaky relu"]:
+        if fonction not in ["relu", "sigmoide", "max", "tanh", "leaky relu", "linear"]:
             self.show_information(x_shape)
-            raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'relu', 'leaky relu', 'sigmoide', 'max' ou 'tanh'.")
+            raise NameError(f"ERROR: Layer parametre '{fonction}' is not defined. Please correct with 'linear', 'relu', 'leaky relu', 'sigmoide', 'max' ou 'tanh'.")
 
         if ( not (0 <= dropout <= 1)):
             self.show_information(x_shape)
@@ -158,7 +148,7 @@ class CNN():
 
         for block in self.layers:
             X = block.forward(X, training)
-
+            
         self.logits = X
 
     def backward_propagation(self, dZ):
@@ -171,11 +161,11 @@ class CNN():
         self.optimizer.update(params)
 
 
-    def get_parameters_update(self):
+    def get_parameters_update(self) :
         params = []
         for block in self.layers:
 
-            if isinstance(block.dense, Convolution):
+            if block.dense.class_ == "Convolution":
                 params += block.dense.get_params_update()
                 params += block.batchnorm.get_params_update()
 
@@ -185,7 +175,7 @@ class CNN():
 
         for i, block in enumerate(self.layers):
             
-            if isinstance(block.dense, Convolution):
+            if block.dense.class_ == "Convolution":
                 K = parameters[f"CNN_K{i}"]
                 B = parameters[f"CNN_B{i}"]
                 block.dense.set_params(K, B)
@@ -196,14 +186,8 @@ class CNN():
                 rv = parameters[f"CNN_rv{i}"]
                 block.batchnorm.set_params(g, b, rm, rv)
 
-    def set_alpha(self, alpha):
 
-        for block in (self.layers):
-            if isinstance(block.activation, LeakyReLU):
-                block.activation.alpha = alpha
-
-
-    def get_activatoins(self, X, i):
+    def get_activations(self, X, i):
         
         c = 0
         for block in self.layers:
@@ -221,7 +205,7 @@ class CNN():
             c += 1
             X = Z4
         
-        if isinstance(block.dense, MaxPooling):
+        if block.dense.class_ == "MaxPooling":
             return Z1_cpy, None
         
         return Z1_cpy, Z3_cpy
@@ -263,12 +247,15 @@ class CNN():
         for keys, values in structure.items():
             print(keys, values)
 
+        print("\nNumber of parameter:", f"{self.get_nb_parameter():,}".replace(",", " "))
+        
+
     def save(self):
 
         save = {}
         for i, block in enumerate(self.layers):
 
-            if isinstance(block.dense, Convolution):
+            if block.dense.class_ == "Convolution":
 
                 K, B = block.dense.get_params_save()
                 save[f"CNN_K{i}"] = K
@@ -281,3 +268,15 @@ class CNN():
                 save[f"CNN_rv{i}"] = rv
 
         return save
+    
+    def get_nb_parameter(self):
+        
+        nb_parameter = 0
+        for block in self.layers:
+            
+            if block.dense.class_ == "Convolution":
+                K, B = block.dense.get_params_save()
+                nb_parameter += K.size
+                nb_parameter += B.size
+
+        return nb_parameter

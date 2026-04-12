@@ -1,174 +1,136 @@
 
-import cupy as cp
-from .Mathematical_function import Layer
+import numpy as np
 
-class MaxPooling_GPU(Layer):
+from .Layer import Layer
+from .Mathematical_function_CPU import add_padding_CPU 
+
+class MaxPooling_CPU(Layer):
     
     def __init__(self, k_size, stride, padding):
         self.k_size = k_size
         self.stride = stride
         self.padding = padding
         self.X = None
+        self.class_ = "MaxPooling"
 
     def forward(self, X):
-
+        
         padding = self.padding
 
-        # ========================
-        # Padding (GPU safe)
-        # ========================
+        # Padding
         if padding > 0:
-            X = cp.pad(X, ((0,0), (0,0), (padding,padding), (padding,padding)), mode='constant')
+            X = add_padding_CPU(X, padding)
+
+        self.X = X
 
         k = self.k_size
         s = self.stride
-
-        B, C, H, W = X.shape
-
-        # ========================
-        # Output size
-        # ========================
-        H_out = (H - k) // s + 1
-        W_out = (W - k) // s + 1
-
-        # ========================
-        # im2col via as_strided
-        # ========================
-        shape = (B, C, H_out, W_out, k, k)
-
-        strides = (
-            X.strides[0],
-            X.strides[1],
-            s * X.strides[2],
-            s * X.strides[3],
-            X.strides[2],
-            X.strides[3]
+        
+        windows = np.lib.stride_tricks.sliding_window_view(
+            X, (k, k), axis=(2, 3)
         )
+        windows = windows[:, :, ::s, ::s, :, :]
 
-        windows = cp.lib.stride_tricks.as_strided(X, shape=shape, strides=strides)
-
-        B, C, H_out, W_out, k, _ = windows.shape
-
-        # max
-        out = windows.max(axis=(-1, -2))
-
-        # argmax (flatten k*k)
-        self.argmax = windows.reshape(B, C, H_out, W_out, -1).argmax(axis=-1)
-
-        return out
+        self.windows = windows 
+        return windows.max(axis=(-1, -2))
 
     def backward(self, dA):
-
         k = self.k_size
         s = self.stride
+        X = self.X
+        windows = self.windows
         padding = self.padding
-        argmax = self.argmax
 
-        B, C, H_out, W_out = dA.shape
+        # mask des max
+        max_vals = windows.max(axis=(-1, -2), keepdims=True)
+        mask = (windows == max_vals)
 
-        # convertir index → (i, j)
-        i_idx = argmax // k
-        j_idx = argmax % k
+        # On broadcast dZ sur les k,k
+        dZ_expanded = dA[:, :, :, :, None, None]
+        dA_prev = mask * dZ_expanded
 
-        # boucle seulement sur k (OK GPU)
-        for i in range(k):
-            for j in range(k):
+        dA_prev_full = np.zeros_like(X)
 
-                mask = (i_idx == i) & (j_idx == j)
+        H_out, W_out = dA.shape[2], dA.shape[3]
 
-                dX[:, :, 
-                i:i + H_out * s:s,
-                j:j + W_out * s:s
-                ] += dA * mask
+        for h in range(H_out):
+            for w in range(W_out):
+                h_start = h * s
+                h_end   = h_start + k
+                w_start = w * s
+                w_end   = w_start + k
+                dA_prev_full[:, :, h_start:h_end, w_start:w_end] += dA_prev[:, :, h, w, :, :]
 
-        # remove padding
+        # Removal of padding
         if padding > 0:
-            dX = dX[:, :, padding:-padding, padding:-padding]
+            dA_prev_full = dA_prev_full[:, :, :-padding, :-padding]
 
-        return dX
+        return dA_prev_full
 
 
-class Convolution_GPU(Layer):
+class Convolution_CPU(Layer):
 
     def __init__(self, nb_kernel, nb_layer, k_size, stride, o_size, padding):
         
         k_shape = (nb_kernel, nb_layer, k_size, k_size)
         b_shape = (nb_kernel, o_size, o_size)
         
-        self.K = cp.random.randn(*k_shape) * 0.01
-        self.b = cp.zeros(b_shape)
+        self.K = np.random.randn(*k_shape) * 0.01
+        self.b = np.zeros(b_shape)
         self.X = None
 
-        self.dK = cp.zeros(k_shape)
-        self.db = cp.zeros(b_shape)
+        self.dK = np.zeros(k_shape)
+        self.db = np.zeros(b_shape)
         self.stride = stride
         self.padding = padding
         self.windows = None
-
+        self.class_ = "Convolution"
 
     def forward(self, X):
-
         stride  = self.stride
         padding = self.padding
 
-        B, C, H, W = X.shape
-        N, _, Kh, Kw = self.K.shape
+        B, C, H, W     = X.shape
+        N, _, Kh, Kw   = self.K.shape
 
-        # ========================
-        # Padding (GPU safe)
-        # ========================
+        # Padding
         if padding > 0:
-            X = cp.pad(X, ((0,0), (0,0), (padding,padding), (padding,padding)), mode='constant')
+            X = add_padding_CPU(X, padding)
 
-        self.X = X
+        self.X = X  # stocke l'entrée paddée
 
-        # ========================
-        # Output size
-        # ========================
-        H_out = (H + 2*padding - Kh) // stride + 1
-        W_out = (W + 2*padding - Kw) // stride + 1
-
-        # ========================
-        # im2col (vectorisé GPU)
-        # ========================
-        shape = (B, C, Kh, Kw, H_out, W_out)
-
-        strides = (
-            X.strides[0],
-            X.strides[1],
-            X.strides[2],
-            X.strides[3],
-            stride * X.strides[2],
-            stride * X.strides[3]
+        # Extraction des fenêtres (cross-correlation)
+        windows = np.lib.stride_tricks.sliding_window_view(
+            X, (Kh, Kw), axis=(2, 3)
         )
-
-        windows = cp.lib.stride_tricks.as_strided(
-            X,
-            shape=shape,
-            strides=strides
-        )
-
+        windows = windows[:, :, ::stride, ::stride, :, :]
         self.windows = windows
 
-        # ========================
-        # Convolution (GPU)
-        # ========================
-        out = cp.einsum('nckl,bcklhw->bnhw', self.K, windows)
+        # Dimensions de sortie
+        H_out, W_out = windows.shape[2], windows.shape[3]
 
-        # Ajout biais
+        # Convolution (produit tensoriel)
+        out = np.tensordot(
+            self.K,
+            windows,
+            axes=([1, 2, 3], [1, 4, 5])
+        )  # (N, B, H_out, W_out)
+
+        out = np.moveaxis(out, 0, 1)  # → (B, N, H_out, W_out)
+
+        # Ajout du biais
         out += self.b
-
+        
         return out
-
 
     def backward(self, dZ):
         stride  = self.stride
         padding = self.padding
 
         B, N, H_out, W_out = dZ.shape
-        _, C, Kh, Kw = self.K.shape
+        _, C, Kh, Kw       = self.K.shape
 
-        X = self.X
+        X  = self.X
         windows = self.windows
 
         # ========================
@@ -176,41 +138,42 @@ class Convolution_GPU(Layer):
         # ========================
 
         # dK
-        self.dK = cp.tensordot(
+        self.dK = np.tensordot(
             dZ,
             windows,
             axes=([0, 2, 3], [0, 2, 3])
         )
 
         # db
-        self.db = cp.sum(dZ, axis=0)
+        self.db = np.sum(dZ, axis=0)
 
         # ========================
-        # Gradient input (dX)
+        # Gradient entry
         # ========================
 
-        # Step 1: appliquer les filtres (équivalent convolution backward)
-        # (B, N, H_out, W_out) x (N, C, Kh, Kw)
-        dZK = cp.einsum('bnhw,nckl->bchwkl', dZ, self.K)
-        # → (B, C, H_out, W_out, Kh, Kw)
+        # On calcule le gradient projeté à travers les poids
+        # On utilise einsum pour multiplier dZ (B, N, H_out, W_out) 
+        # par K (N, C, Kh, Kw) -> donne (B, C, H_out, W_out, Kh, Kw)
+        dZ_windows = np.einsum('bnhw,nckl->bchwkl', dZ, self.K)
+        
+        # Reconstruction de dX
+        H_in, W_in = self.X.shape[2], self.X.shape[3]
+        dX = np.zeros_like(self.X)
+        
+        # Optimisation cruciale : Utiliser les indices pour vectoriser la sommation
+        for h in range(Kh):
+            for w in range(Kw):
+                h_end = h + H_out * stride
+                w_end = w + W_out * stride
+                dX[:, :, h:h_end:stride, w:w_end:stride] += dZ_windows[:, :, :, :, h, w]
 
-        # Step 2: reconstruction (col2im optimisé)
-        dX = cp.zeros_like(X)
-
-        for i in range(Kh):
-            for j in range(Kw):
-                dX[:, :, 
-                i:i + H_out * stride:stride,
-                j:j + W_out * stride:stride
-                ] += dZK[:, :, :, :, i, j]
-
-        # ========================
-        # Remove padding
-        # ========================
+    
+        # Removal of paddin
         if padding > 0:
             dX = dX[:, :, padding:-padding, padding:-padding]
 
         return dX
+
     
     def get_params_update(self):
         return [(self.K, self.dK), (self.b, self.db)]
@@ -219,24 +182,24 @@ class Convolution_GPU(Layer):
     def get_params_save(self):
         return self.K, self.b
     
-
     def set_params(self, K, b):
         self.K = K
         self.b = b
 
-class BatchNorm_GPU(Layer):
+class BatchNorm_CPU(Layer):
 
     def __init__(self, n_features, eps=1e-5, momentum=0.9):
         self.eps = eps
         self.momentum = momentum
         self.training = False
 
-        self.gamma = cp.ones((1, n_features))
-        self.beta  = cp.zeros((1, n_features))
+        self.gamma = np.ones((1, n_features))
+        self.beta  = np.zeros((1, n_features))
         
-        self.running_mean = cp.zeros((1, n_features))
-        self.running_var  = cp.ones((1, n_features))
-    
+        self.running_mean = np.zeros((1, n_features))
+        self.running_var  = np.ones((1, n_features))
+        self.class_ = "BatchNorm"
+        
     def forward(self, X, training):
 
         self.training = training
@@ -259,12 +222,12 @@ class BatchNorm_GPU(Layer):
         beta  = self.beta.reshape(reshape)
 
         if self.training:
-            self.mu  = cp.mean(X, axis=axes, keepdims=True)
-            self.var = cp.var(X, axis=axes, keepdims=True)
+            self.mu  = np.mean(X, axis=axes, keepdims=True)
+            self.var = np.var(X, axis=axes, keepdims=True)
 
             self.X_centered = X - self.mu
             self.var_eps = self.var + self.eps
-            self.std_inv = 1.0 / cp.sqrt(self.var_eps)
+            self.std_inv = 1.0 / np.sqrt(self.var_eps)
 
             self.X_hat = self.X_centered * self.std_inv
 
@@ -281,7 +244,7 @@ class BatchNorm_GPU(Layer):
         else:
             mu  = self.running_mean.reshape(reshape)
             var = self.running_var.reshape(reshape)
-            self.X_hat = (X - mu) / cp.sqrt(var + self.eps)
+            self.X_hat = (X - mu) / np.sqrt(var + self.eps)
 
         return gamma * self.X_hat + beta
 
@@ -310,14 +273,14 @@ class BatchNorm_GPU(Layer):
         # ===== Gradients =====
         dX_hat = dY * gamma
 
-        dvar = cp.sum(
+        dvar = np.sum(
             dX_hat * self.X_centered * -0.5 * self.var_eps**(-1.5),
             axis=axes, keepdims=True
         )
 
         dmu = (
-            cp.sum(dX_hat * -self.std_inv, axis=axes, keepdims=True)
-            + dvar * cp.sum(-2 * self.X_centered, axis=axes, keepdims=True) / m
+            np.sum(dX_hat * -self.std_inv, axis=axes, keepdims=True)
+            + dvar * np.sum(-2 * self.X_centered, axis=axes, keepdims=True) / m
         )
 
         dX = (
@@ -327,8 +290,8 @@ class BatchNorm_GPU(Layer):
         )
 
         # gamma / beta gradients (always in (1, C))
-        self.dgamma = cp.sum(dY * self.X_hat, axis=axes, keepdims=True).reshape(1, -1)
-        self.dbeta  = cp.sum(dY, axis=axes, keepdims=True).reshape(1, -1)
+        self.dgamma = np.sum(dY * self.X_hat, axis=axes, keepdims=True).reshape(1, -1)
+        self.dbeta  = np.sum(dY, axis=axes, keepdims=True).reshape(1, -1)
 
         return dX
 
@@ -345,18 +308,18 @@ class BatchNorm_GPU(Layer):
         self.running_mean = running_mean
         self.running_var = running_var
     
-class Dropout_GPU(Layer):
+class Dropout_CPU(Layer):
 
     def __init__(self, dropout_per):
         self.dropout_per = dropout_per
         self.training = False
-
+        self.class_ = "Dropout"
+        
     def forward(self, A, training):
         
         self.training = training
-
         if training:
-            self.M = (cp.random.rand(*A.shape) > self.dropout_per).astype(A.dtype)
+            self.M = (np.random.rand(*A.shape) > self.dropout_per).astype(A.dtype)
             return  self.M * A / (1 - self.dropout_per)
         
         else:
@@ -372,34 +335,37 @@ class Dropout_GPU(Layer):
         else:
             return dZ
         
-class Dense_GPU(Layer):
+
+class Dense_CPU(Layer):
 
     def __init__(self, nb_activation, nb_neuron):
         w_shape = (nb_activation, nb_neuron)
         b_shape = (1, nb_neuron)
 
         #Parameters
-        self.W = cp.random.randn(*w_shape) * 0.01
-        self.b = cp.zeros(b_shape)
+        self.W = np.random.randn(*w_shape) * 0.01
+        self.b = np.zeros(b_shape)
         
         #Gradient
-        self.dW = cp.zeros_like(self.W)
-        self.db = cp.zeros_like(self.b)
+        self.dW = np.zeros_like(self.W)
+        self.db = np.zeros_like(self.b)
 
-        self.Wm = cp.zeros(w_shape)
-        self.Wv = cp.zeros(w_shape)
+        self.Wm = np.zeros(w_shape)
+        self.Wv = np.zeros(w_shape)
 
-        self.bm = cp.zeros(b_shape)
-        self.bv = cp.zeros(b_shape)
+        self.bm = np.zeros(b_shape)
+        self.bv = np.zeros(b_shape)
 
+        self.class_ = "Dense"
+        
     def forward(self, X):
         self.X = X
-        return cp.dot(X, self.W) + self.b
+        return np.dot(X, self.W) + self.b
 
     def backward(self, dZ):
-        dW = cp.dot(self.X.T, dZ)
-        db = cp.sum(dZ, axis=0, keepdims=True)
-        dA = cp.dot(dZ, self.W.T)
+        dW = np.dot(self.X.T, dZ)
+        db = np.sum(dZ, axis=0, keepdims=True)
+        dA = np.dot(dZ, self.W.T)
 
         self.dW = dW
         self.db = db
@@ -416,3 +382,4 @@ class Dense_GPU(Layer):
     def set_params(self, W, b):
         self.W = W
         self.b = b
+

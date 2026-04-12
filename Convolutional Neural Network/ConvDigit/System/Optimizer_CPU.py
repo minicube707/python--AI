@@ -1,6 +1,6 @@
-import cupy as cp
+import numpy as np
 
-class Adam_GPU:
+class Adam_CPU:
 
     def __init__(self, hyperparams):
         self.lr = hyperparams.lr
@@ -14,39 +14,31 @@ class Adam_GPU:
 
         one_minus_beta1 = 1 - self.beta1
         one_minus_beta2 = 1 - self.beta2
-
+        
         bias_correction1 = 1 - (self.beta1 ** self.t)
         bias_correction2 = 1 - (self.beta2 ** self.t)
 
-        grad_clip = 1
-        update_clip = 10
-        
+
         for param, grad in params:
             key = id(param)
 
             if key not in self.state:
                 self.state[key] = {
-                    "m": cp.zeros_like(param),
-                    "v": cp.zeros_like(param)
+                    "m": np.zeros_like(param),
+                    "v": np.zeros_like(param)
                 }
 
             m = self.state[key]["m"]
             v = self.state[key]["v"]
 
-            grad = cp.clip(grad, - grad_clip, grad_clip)
-            
-            # update moments (IN-PLACE pour perf GPU)
-            m *= self.beta1
-            m += (one_minus_beta1) * grad
+            # update Adam
+            m = self.beta1 * m + one_minus_beta1 * grad
+            v = self.beta2 * v + one_minus_beta2 * (grad * grad)
 
-            v *= self.beta2
-            v += (one_minus_beta2) * (grad * grad)
-
-            # bias correction
             m_hat = m / bias_correction1
             v_hat = v / bias_correction2
 
-            # update param (in-place)
-            update = self.lr * m_hat / (cp.sqrt(v_hat) + 1e-8)
-            update = cp.clip(update, - update_clip, update_clip)
-            param -= update
+            param -= self.lr * m_hat / (np.sqrt(v_hat) + 1e-8)
+
+            self.state[key]["m"] = m
+            self.state[key]["v"] = v

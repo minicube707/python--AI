@@ -1,32 +1,39 @@
 
 import cupy as cp
 
+from .Layer import Layer
+
 """
 ============================
 Evaluation Metrics Function
 ============================
 """
 
-class BinaryCrossEntropy_GPU:
+class BinaryCrossEntropy_GPU(Layer):
 
-    def forward(self, y_pred, y_true):
+    def __init__(self):
+        self.class_ = "BinaryCrossEntropy"
+        
+    def forward(self, y_true, y_pred):
+        
         self.y_pred = y_pred
         self.y_true = y_true
-
+        
         eps = 1e-12
         self.y_pred_clipped = cp.clip(y_pred, eps, 1 - eps)
-
         return -cp.mean(y_true * cp.log(self.y_pred_clipped) + (1 - y_true) * cp.log(1 - self.y_pred_clipped))
 
     def backward(self):
-        m = self.y_pred.shape[0]
-
+        m = self.y_true.shape[0]
         return - (self.y_true / self.y_pred_clipped - (1 - self.y_true) / (1 - self.y_pred_clipped)) / m
     
 
-class CrossEntropyLoss_GPU:
+class CrossEntropyLoss_GPU(Layer):
 
-    def forward(self, y_pred, y_true):
+    def __init__(self):
+        self.class_ = "CrossEntropyLoss"
+        
+    def forward(self, y_true, y_pred):
         self.y_pred = y_pred
         self.y_true = y_true
 
@@ -40,9 +47,12 @@ class CrossEntropyLoss_GPU:
         return - (self.y_true / self.y_pred_clipped) / m
 
 
-class MSE_GPU:
+class MSE_GPU(Layer):
 
-    def forward(self, y_pred, y_true):
+    def __init__(self):
+        self.class_ = "MSE"
+        
+    def forward(self, y_true, y_pred):
         self.diff = y_pred - y_true
         return cp.mean(self.diff ** 2)
 
@@ -51,7 +61,7 @@ class MSE_GPU:
     
 
 def accuracy_score_gpu(y_true, y_pred):
-
+   
     if y_true.ndim == 1:
         acc = cp.mean(y_true == (y_pred >= 0.5))
     
@@ -62,9 +72,10 @@ def accuracy_score_gpu(y_true, y_pred):
 
 
 def confidence_score_gpu(y_true, y_pred):
-
+    
     if y_true.ndim == 1:
         probs = cp.where(y_true == 1, y_pred, 1 - y_pred)
+        
     else:
         probs = y_pred[
             cp.arange(y_pred.shape[0]),

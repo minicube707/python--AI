@@ -1,6 +1,6 @@
 
-import numpy as np
-
+from .Evaluation_Metric_CPU import BinaryCrossEntropy_CPU, CrossEntropyLoss_CPU, MSE_CPU
+from .Evaluation_Metric_GPU import BinaryCrossEntropy_GPU, CrossEntropyLoss_GPU, MSE_GPU
 """
 ============================
 Evaluation Metrics Function
@@ -8,66 +8,51 @@ Evaluation Metrics Function
 """
 
 class BinaryCrossEntropy:
-
-    def forward(self, y_pred, y_true):
-        self.y_pred = y_pred
-        self.y_true = y_true
-
-        eps = 1e-12
-        self.y_pred_clipped = np.clip(y_pred, eps, 1 - eps)
-        return - np.mean(y_true * np.log(self.y_pred_clipped) + (1 - y_true) * np.log(1 - self.y_pred_clipped))
-
-    def backward(self):
-        m = self.y_pred.shape[0]
-        return - (self.y_true / self.y_pred_clipped - (1 - self.y_true) / (1 - self.y_pred_clipped)) / m
-
-class CrossEntropyLoss:
-
-    def forward(self, y_pred, y_true):
-
-        self.y_pred = y_pred
-        self.y_true = y_true
-
-        eps = 1e-12
-        y_pred_clipped = np.clip(y_pred, eps, 1 - eps)
-        return -np.sum(y_true * np.log(y_pred_clipped)) / y_pred.shape[0]
-
-    def backward(self):
-        m = self.y_pred.shape[0]
-        return - (self.y_true / self.y_pred) / m
     
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
+
+        if support == "cpu":
+            return BinaryCrossEntropy_CPU()
+        
+        elif support == "gpu":
+            return BinaryCrossEntropy_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
+
+    
+class CrossEntropyLoss:
+    
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
+
+        if support == "cpu":
+            return  CrossEntropyLoss_CPU()
+        
+        elif support == "gpu":
+            return CrossEntropyLoss_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
+
 
 class MSE:
-
-    def forward(self, y_pred, y_true):
-
-        self.y_pred = y_pred
-        self.y_true = y_true
-        self.diff = y_pred - y_true
-        return  np.mean(self.diff ** 2)
-
-    def backward(self):
-        return 2 * (self.diff) / self.y_true.shape[0]
     
-
-def accuracy_score(y_true, y_pred):
-
-    if y_true.ndim == 1:
-        y_pred_labels = (y_pred >= 0.5).astype(int)
-        return np.mean(y_true == y_pred_labels)
-    
-    else:
-        y_true_labels = np.argmax(y_true, axis=1)
-        y_pred_labels = np.argmax(y_pred, axis=1)
-        return np.mean(y_true_labels == y_pred_labels)
-
-
-def confidence_score(y_true, y_pred):
-
-    if y_true.ndim == 1:
-        true_class_probs = y_pred * y_true + (1 - y_pred) * (1 - y_true)
+    @staticmethod
+    def add_layer(support):
         
-    else:
-        true_class_probs = y_pred[np.arange(y_true.shape[0]), np.argmax(y_true, axis=1)]
+        support = support.lower()
 
-    return np.mean(true_class_probs)
+        if support == "cpu":
+            return  MSE_CPU()
+        
+        elif support == "gpu":
+            return MSE_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
