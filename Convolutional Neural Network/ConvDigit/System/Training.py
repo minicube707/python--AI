@@ -353,7 +353,7 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
         batch_len = len(y_batch)
         
         #Flatten for the BinarycrossEntropy
-        if pred_batch.ndim == 2 and pred_batch.shape[1] == 1:
+        if model.loss_metric.class_ == "BinaryCrossEntropy":
             pred_batch = pred_batch.flatten()
         
         if (hyperparams.support == "GPU"):
