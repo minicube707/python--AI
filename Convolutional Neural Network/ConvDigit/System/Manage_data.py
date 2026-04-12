@@ -1,13 +1,14 @@
 
 import os
 import sys
+
 import numpy as np
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
 def manage_data():
-    print(module_dir)
+    
     dataset_path = os.path.join(module_dir, "../../../Dataset") 
     
     # Vérifier si le dossier Dataset existe
@@ -24,7 +25,7 @@ def manage_data():
         exit(1)
 
     # Afficher les fichiers avec un numéro
-    print("Sélectionnez un fichier en entrant son numéro :")
+    print("\nSélectionnez un fichier en entrant son numéro :")
     for idx, file in enumerate(files, start=1):
         print(f"{idx}. {file}")
 
@@ -41,11 +42,11 @@ def manage_data():
             print(f"\n✅ Vous avez sélectionné : {selected_file}")
 
             while True:
-                answer = input("Do you what load data ? \n")
-                if answer == "yes" or answer == "y" or answer == "Y" or  answer == "YES":
+                answer = input("Do you what load data ? \n").strip().lower()
+                if answer == "yes" or answer == "y" :
                     with np.load(os.path.join(dataset_path, selected_file)) as f:
                         return f["data"], f["target"], selected_file
-                elif answer == "no" or answer == "n" or answer == "NO" or answer == "N":
+                elif answer == "no" or answer == "n":
                     return None, None, selected_file
                 else:
                     print("Please answer by yes or no")

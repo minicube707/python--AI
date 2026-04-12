@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from .Layer import Convolution
+from .Layers import Convolution
 from .Preprocessing import handle_key
 
 def display_comparaison_layer(A, Z=None, max_par_fig=12):
@@ -109,7 +109,7 @@ def display_activation(X, y, model):
 
     C = model.C_CNN
     for i in range(C):  
-        A, Z =  model.get_activatoins(X_chosen, i)
+        A, Z =  model.get_activations(X_chosen, i)
         display_comparaison_layer(A, Z)
 
 
@@ -241,7 +241,7 @@ def display_kernel_and_biais(X, y, model):
     
     for i, block in enumerate(model.layers):
         
-        if isinstance(block.dense, Convolution):
+        if block.dense.class_ == "Convolution":
 
             K = block.dense.K
             b = block.dense.b

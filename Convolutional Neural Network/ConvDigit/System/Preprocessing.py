@@ -35,6 +35,10 @@ def get_data_shape(X, y):
         print("Input shape: ", input_shape)
         print("Output shape: ", output_shape)
 
+    else:
+        print(f"Error: Data with wrong shape X:({X.shape})")
+        exit(1)
+        
     return input_shape, output_shape
 
 
@@ -56,23 +60,23 @@ def preprocessing(X, y, hyperparams, dataset):
     """
     Affiche les 15 premières images de chaque classe du dataset.
     """
-    # classes = np.unique(y)
-    # for cls in classes:
-    #     fig = plt.figure(figsize=(16, 8))
-    #     fig.suptitle(f"Classe {cls}", fontsize=16)
-    #     fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
+    classes = np.unique(y)
+    for cls in classes:
+        fig = plt.figure(figsize=(16, 8))
+        fig.suptitle(f"Classe {cls}", fontsize=16)
+        fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
         
-    #     # Récupère les indices des images correspondant à la classe cls
-    #     indices = np.where(y == cls)[0][:15]  # 15 premières images
-    #     for i, idx in enumerate(indices):
-    #         plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
-    #          plt.imshow(X[idx])
+        # Récupère les indices des images correspondant à la classe cls
+        indices = np.where(y == cls)[0][:15]  # 15 premières images
+        for i, idx in enumerate(indices):
+            plt.subplot(3, 5, i + 1)  # 3 lignes, 5 colonnes
+            plt.imshow(X[idx])
 
-    #         plt.title(f"{y[idx]}")
-    #         plt.axis("off")
+            plt.title(f"{y[idx]}")
+            plt.axis("off")
 
-    #     plt.tight_layout()
-    #     plt.show()
+        plt.tight_layout()
+        plt.show()
 
     #______________________________________________________________#
     #Remove the bad data
@@ -86,10 +90,8 @@ def preprocessing(X, y, hyperparams, dataset):
 
     #______________________________________________________________#
     #Split the dataset for the training
-    dataset.completion_value(y)
-    dataset.print_info()
     X_train, X_test, y_train, y_test = train_test_split(X, y, dataset.ratio_test, dataset.dataset_size)
-
+    
     y_train = y_train.reshape((y_train.shape[0], 1))
     y_test = y_test.reshape((y_test.shape[0], 1))
 
@@ -124,32 +126,32 @@ def preprocessing(X, y, hyperparams, dataset):
     print("y_train.shape:", y_train.shape)
 
     #Affichage des 15 premières images du dataset
-    # n = min(16, len(y_train))
-    # fig = plt.figure(figsize=(n,8))
-    # fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    # fig.suptitle("Train Dataset")
-    # for i in range(1,n):
-    #     plt.subplot(4,5, i)
-    #     plt.imshow(New_X_train[i], cmap="gray")
+    n = min(16, len(y_train))
+    fig = plt.figure(figsize=(n,8))
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    fig.suptitle("Train Dataset")
+    for i in range(1,n):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_train[i], cmap="gray")
 
-    #     plt.title(str(np.argmax(y_train[i])))
-    #     plt.axis("off")
-    # plt.tight_layout()    
-    # plt.show() 
+        plt.title(str(np.argmax(y_train[i])))
+        plt.axis("off")
+    plt.tight_layout()    
+    plt.show() 
 
-    # #Affichage des 15 premières images
-    # n = min(16, len(y_test))
-    # fig = plt.figure(figsize=(n,8))
-    # fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
-    # fig.suptitle("Test Dataset")
-    # for i in range(1,n):
-    #     plt.subplot(4,5, i)
-    #     plt.imshow(New_X_test[i], cmap="gray")
+    #Affichage des 15 premières images
+    n = min(16, len(y_test))
+    fig = plt.figure(figsize=(n,8))
+    fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de touches 
+    fig.suptitle("Test Dataset")
+    for i in range(1,n):
+        plt.subplot(4,5, i)
+        plt.imshow(New_X_test[i], cmap="gray")
         
 
-    #     plt.title(str(np.argmax(y_test[i])))
-    #     plt.axis("off")
-    # plt.tight_layout()    
-    # plt.show() 
+        plt.title(str(np.argmax(y_test[i])))
+        plt.axis("off")
+    plt.tight_layout()    
+    plt.show() 
 
     return New_X_train, y_train, New_X_test, y_test, transformer

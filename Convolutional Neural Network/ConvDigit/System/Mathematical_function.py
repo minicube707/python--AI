@@ -1,38 +1,8 @@
 
-import numpy as np
-from abc import ABC, abstractmethod
-from numpy.lib.stride_tricks import sliding_window_view
+from .Layer import Layer
 
-class Layer(ABC):
-
-    @abstractmethod
-    def forward(self, X):
-        pass
-
-    @abstractmethod
-    def backward(self, dA):
-        pass
-
-class Softmax(Layer):
-
-    def forward(self, X):
-        # stabilité numérique
-        X_shifted = X - np.max(X, axis=1, keepdims=True)
-        exp_X = np.exp(X_shifted)
-        self.out = exp_X / np.sum(exp_X, axis=1, keepdims=True)
-        return self.out
-
-    def backward(self, dY):
-        # Jacobien complet (coûteux mais correct)
-        m, n = self.out.shape
-        dX = np.zeros_like(dY)
-
-        for i in range(m):
-            y = self.out[i].reshape(-1, 1)
-            jacobian = np.diagflat(y) - y @ y.T
-            dX[i] = jacobian @ dY[i]
-
-        return dX
+from .Mathematical_function_CPU import ReLU_CPU, LeakyReLU_CPU, Sigmoide_CPU, Tanh_CPU, Softmax_CPU
+from .Mathematical_function_GPU import ReLU_GPU, LeakyReLU_GPU, Sigmoide_GPU, Tanh_GPU, Softmax_GPU
 
 class Linear(Layer):
 
@@ -41,79 +11,87 @@ class Linear(Layer):
 
     def backward(self, dA):
         return dA
-
-
-class ReLU(Layer):
-
-    def forward(self, X):
-        self.X = X
-        return np.maximum(0, X)
-
-    def backward(self, dA):
-        return dA * (self.X > 0)
-
-
-class LeakyReLU(Layer):
-
-    def __init__(self, alpha=0.01):
-        self.alpha = alpha
-
-    def forward(self, X):
-        self.X = X
-        return np.maximum(X, 0) + self.alpha * np.minimum(X, 0)
-
-    def backward(self, dA):
-        dx = np.ones_like(self.X)
-        dx[self.X < 0] = self.alpha
-        return dA * dx
-
-
-class Sigmoide(Layer):
-
-    def forward(self, X):
-        self.A = 1 / (1 + np.exp(-X))
-        return self.A
-
-    def backward(self, dA):
-        return dA * self.A * (1 - self.A)
-
-
-class Tanh(Layer):
     
-    def forward(self, X):
-        self.A = np.tanh(X)
-        return self.A
-
-    def backward(self, dA):
-        return dA * (1 - self.A**2)
+class Softmax:
     
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
 
-def convolution(dZ, K):
-    # dZ : (B, F, H, W)
-    # K  : (F, C, Kh, Kw)
+        if support == "cpu":
+            return Softmax_CPU()
+        
+        elif support == "gpu":
+            return Softmax_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
 
-    B, F, H, W = dZ.shape
-    _, C, Kh, Kw = K.shape
 
-    pad_h = Kh - 1
-    pad_w = Kw - 1
+class ReLU:
 
-    padded = np.pad(dZ, ((0,0),(0,0),(pad_h,pad_h),(pad_w,pad_w)))
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
 
-    # (B, F, H+Kh-1, W+Kw-1, Kh, Kw)
-    windows = sliding_window_view(padded, (Kh, Kw), axis=(2,3))
+        if support == "cpu":
+            return ReLU_CPU()
+        
+        elif support == "gpu":
+            return ReLU_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
 
-    # (C, B, H+Kh-1, W+Kw-1)
-    out = np.tensordot(K, windows, axes=([0,2,3],[1,4,5]))
 
-    # (B, C, H+Kh-1, W+Kw-1)
-    return np.moveaxis(out, 0, 1)
+class LeakyReLU:
 
-def add_padding(X, padding):
-    # X : (B, C, H, W)
+    @staticmethod
+    def add_layer(alpha, support):
+        
+        support = support.lower()
 
-    B, C, H, W = X.shape
-    out = np.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
+        if support == "cpu":
+            return LeakyReLU_CPU(alpha)
+        
+        elif support == "gpu":
+            return LeakyReLU_GPU(alpha)
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
 
-    out[:, :, :H, :W] = X
-    return out
+
+class Sigmoide:
+
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
+
+        if support == "cpu":
+            return Sigmoide_CPU()
+        
+        elif support == "gpu":
+            return Sigmoide_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
+
+    
+class Tanh:
+
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
+
+        if support == "cpu":
+            return Tanh_CPU()
+        
+        elif support == "gpu":
+            return Tanh_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")

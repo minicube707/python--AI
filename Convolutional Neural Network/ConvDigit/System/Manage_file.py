@@ -1,37 +1,53 @@
 import os
-import  numpy as np
+import numpy as np
 import pandas as pd
 
 from .Manage_logbook import show_info_main
 
-from .Evaluation_Metric import CrossEntropyLoss
-from .Mathematical_function import Softmax
+from .Evaluation_Metric import CrossEntropyLoss, BinaryCrossEntropy
+from .Mathematical_function import Softmax, Sigmoide
 from .FullModel import FullModel
 from .Optimizer import Adam
 
 from .Dataclasses import Hyperparams, Dataset
 
-def load_model(path, model_name):
+def load_model(path, model_name, hyperparams):
 
     params = load_model_parameters(path, model_name + ".npz")
     df = load_model_hyperparameters(path, model_name + ".json")
     data = df.to_dict(orient="records")
 
     log = data[0]
-    hyperparams = Hyperparams(**log.get("hyperparameters", {}))
+
+    if (hyperparams == None):
+        hyperparams = Hyperparams(**log.get("hyperparameters", {}))
+
     structure = (log.get("structure", [{}]))
     performance = log.get("performance", {})
     dataset = Dataset(**log.get("dataset", {}))
     metadata = log.get("metadata", {})
 
+
     if hyperparams.loss_metric == "CrossEntropyLoss":
-        loss_metric = CrossEntropyLoss()
+        loss_metric = CrossEntropyLoss
+    elif hyperparams.loss_metric == "BinaryCrossEntropy":
+        loss_metric = BinaryCrossEntropy
+    else:
+        raise Exception("Unknow loss metric: ", hyperparams.loss_metric)
+    
     
     if hyperparams.output_layer == "Softmax":
-        output_layer = Softmax()  
-    
+        output_layer = Softmax  
+    elif hyperparams.output_layer == "Sigmoide":
+        output_layer = Sigmoide 
+    else:
+        raise Exception("Unknow output layer: ", hyperparams.output_layer)
+        
+        
     if hyperparams.optimizer == "Adam":
-        optimizer = Adam(hyperparams)
+        optimizer = Adam()
+    else:
+        raise Exception("Unknow optimizer: ", hyperparams.optimizer)
     
     model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer)
     model.load(params)
@@ -119,12 +135,20 @@ def file_management(date, test_accu, test_conf):
     return name_model
 
 
-def transform_name(filename: str) -> str:
-    # Remplacer "Dataset" par "Package"
-    new_name = filename.replace("Dataset", "Package")
-    # Retirer ".npz" à la fin
-    if new_name.endswith(".npz"):
-        new_name = new_name[:-4]
+def transform_name(filename):
+    
+    if filename.endswith(".npz"):
+        filename = filename[:-4]
+
+    if "Dataset" in filename:
+        new_name = filename.replace("Dataset", "Package")
+    
+    elif "Package" in filename:
+        new_name = filename
+    
+    else:
+        new_name = "Package " + filename
+
     return new_name
 
 def select_model(path, json_dir):

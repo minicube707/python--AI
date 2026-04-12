@@ -4,6 +4,8 @@ import numpy as np
 
 from datetime import datetime
 from PIL import Image
+from tqdm import tqdm
+from sklearn.model_selection import train_test_split
 
 #System
 from .Set_mode import set_mode
@@ -15,69 +17,274 @@ from .Manage_logbook import save_model_configuration, show_all_info_model
 from .Preprocessing import preprocessing, get_data_shape
 
 from .FullModel import FullModel
-from .Training import training, training2, load_file_paths
+from .Training import training_full_data, training_batch_data
 
 from .Display_parametre_CNN import display_kernel_and_biais, display_first_picture, display_dataset
 
-def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, dataset):
 
+def ask_yes_no(question):
+    
     while True:
-        answer = input("Is your dataset a single .npz file? (Yes/No)\n")
-        if answer == "yes" or answer == "y" or answer == "Y" or  answer == "YES":
+        
+        answer = input(question + " (Yes/No)\n").strip().lower()
+        
+        if answer in {"yes", "y"}:
+            return True
+        
+        if answer in {"no", "n"}:
+            return False
+        
+        print("Please answer Yes or No")
 
-            dataset_full_size = True
 
-            X, y, data_name = manage_data()
-            input_shape, output_shape =  get_data_shape(X, y)
+def load_file_paths(base_dir, class_to_idx):
+    file_paths = []
+    labels = []
 
-            dir_name = transform_name(data_name)
-            module_dir = os.path.join(module_dir, dir_name)
+    if class_to_idx is None:
+        class_names = sorted(os.listdir(base_dir))  # stable
+        class_to_idx = {name: idx for idx, name in enumerate(class_names)} #Dict key: name_folder: value: number
 
-            X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, hyperparams, dataset)
+    for label in tqdm(class_to_idx.keys(), desc="Classes"):
+        folder = os.path.join(base_dir, label)
+
+        if not os.path.isdir(folder):
+            continue  # ignore fichiers
+
+        for filename in os.listdir(folder):
+            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                file_paths.append(os.path.join(folder, filename))
+                labels.append(class_to_idx[label])
+
+    print("Number of files uploaded:", len(file_paths))
+    return file_paths, labels, class_to_idx
+
+def change_dim_picture(train_picture):
+
+    img = Image.open(train_picture)
+    img_array = np.array(img)
+            
+    if np.ndim(img_array) == 3:
+        img_array = img_array.transpose((2, 0, 1))
+                
+    print("\nCurrent shape of a picture: ", img_array.shape)
+
+    while(1):
+        str_load_in_color = input("\nDo you want to load the images in color? (yes/no): ").strip().lower()
+        
+        if str_load_in_color == "yes" or str_load_in_color == "y":
+            print("Images will be loaded in color (RGB).")
+            picture_in_RGB = True
             break
-
-        elif answer == "no" or answer == "n" or answer == "NO" or answer == "N":
-
-            dataset_full_size = False
-
-            data_name = "Breast_Cancer"
-            dir_name = transform_name(data_name)
-            module_dir = os.path.join(module_dir, dir_name)
-
-            path_train_file = input("Enter the path for the train file:\n")
-            train_files, train_labels = load_file_paths(path_train_file)
-
-            path_test_file = input("Enter the path for the test file:\n")
-            test_files, test_labels = load_file_paths(path_test_file)
-
-            img = Image.open(train_files[0])
-            img_array = np.array(img)
-
-            img_array = img_array.transpose(2, 0, 1)
-            input_shape, output_shape =  img_array.shape, 2
+        
+        elif str_load_in_color == "non" or str_load_in_color == "n":
+            print("Images will be loaded in grayscale (black and white).")
+            picture_in_RGB = False
             break
 
         else:
-            print("Please answer by yes or no")
+            print("Error: Please enter yes or no")
 
+    while(1):
+        answer = input("\nWhich shape do you want to train (-1 if unchange): ").strip()
+        
+        if not answer.isdigit():
+            print("Please enter a number")
+            continue
+        
+        else:
+            int_answer = int(answer)
+            break
+          
+    if (int_answer == -1):
+        int_answer = input_shape[0]
+        
+    if (not picture_in_RGB):
+        input_shape = (1, int_answer, int_answer)
+
+    else:
+        input_shape = (3, int_answer, int_answer)
+	
+    return picture_in_RGB, input_shape
+
+def get_dataset_folder(current_path):
+    
+    while True:
+        answer = input("\nWhould you use an existance Package ?\n").strip().lower()
+        if answer == "yes" or answer == "y":
+            
+            folders = sorted(os.listdir(current_path))
+            folder = [f for f in folders if os.path.isdir(os.path.join(current_path, f)) and "Package" in f]
+            
+            # Afficher les fichiers avec un numéro
+            print("\nSélectionnez un fichier en entrant son numéro :")
+            for idx, file in enumerate(folder, start=1):
+                print(f"{idx}. {file}")
+            
+            # Demander à l'utilisateur de choisir
+            while True:
+                choice = input("Entrez le numéro du fichier : ")
+                if not choice.isdigit():
+                    print("❌ Veuillez entrer un numéro valide.")
+                    continue
+
+                choice = int(choice)
+                if 1 <= choice <= len(folder):
+                    selected_folder = folder[choice - 1]
+                    print(f"\n✅ Vous avez sélectionné : {selected_folder}")
+                    return selected_folder
+
+                elif choice == 0:
+                    exit(0)
+
+                else:
+                    print(f"❌ Numéro invalide. Veuillez choisir entre 1 et {len(folder)}.")
+        
+        else:
+            new_folder =  input("Enter name of the new package: \n")
+            return new_folder
+
+
+def get_dataset_config(module_dir, hyperparams, dataset):
+    
+    answer = ask_yes_no("Is your dataset a single .npz file?")
+
+    if answer:
+        return handle_single_npz(module_dir, hyperparams, dataset)
+    else:
+        return handle_dataset_folder(module_dir, hyperparams, dataset)
+
+
+def handle_single_npz(module_dir, hyperparams, dataset):
+    
+    X, y, data_name = manage_data()
+    input_shape, output_shape =  get_data_shape(X, y)
+
+    dir_name = transform_name(data_name)
+    module_dir = os.path.join(module_dir, dir_name)
+
+    X_train, y_train, X_test, y_test, transformer = preprocessing(X, y, hyperparams, dataset)
+    
+    dataset.completion_value(len(y), len(y_train), len(y_test), hyperparams.batch_size, True)
+    dataset.print_info()
+    
+    return {
+        "full_size": True,
+        
+        "module_dir": module_dir,
+        "input_shape": input_shape,
+        "output_shape": output_shape,
+        
+        "X": X,
+        "y": y,
+        
+        "X_train": X_train,
+        "y_train": y_train,
+        "X_test": X_test,
+        "y_test": y_test,
+        
+        "transformer": transformer,
+    }
+
+
+def print_info_dataset(train_files, train_labels, test_files, test_labels, class_to_idx):
+    
+    print("")
+    print("NB Train file: ", len(train_files))
+    print("NB Train label: ", np.unique(train_labels, return_counts=True))
+    print("NB Test file: ", len(test_files))
+    print("NB Test label: ", np.unique(test_labels, return_counts=True))
+    
+    for key, value in class_to_idx.items():
+        print(f"Class: {key:<20}  Index: {value}")
+ 
+               
+def handle_dataset_folder(module_dir, hyperparams, dataset):
+    
+    data_name = get_dataset_folder(module_dir)
+    module_dir = os.path.join(module_dir, transform_name(data_name))
+
+    split_mode = ask_yes_no("Dataset already split train/test?")
+
+    if split_mode:
+        #Train Set
+        path_train_file = input("\nEnter the path for the train file:\n").strip()
+        train_files, train_labels, class_to_idx = load_file_paths(path_train_file, None)
+
+        #Test Set
+        path_test_file = input("\nEnter the path for the test file:\n").strip()
+        test_files, test_labels, _ = load_file_paths(path_test_file, class_to_idx)
+    
+    else:
+        path_dataset = input("\nEnter the path for the dataset:\n").strip()
+        files, labels, class_to_idx = load_file_paths(path_dataset, None)
+                    
+        train_files, test_files, train_labels, test_labels = train_test_split(
+            files,
+            labels,
+            test_size=dataset.ratio_test,
+            stratify=labels,
+            random_state=42
+        )
+        
+    print_info_dataset(train_files, train_labels, test_files, test_labels, class_to_idx)
+    
+    picture_in_RGB, input_shape = change_dim_picture(train_files[0])
+    
+    dataset_size = len(train_files) + len(test_files)
+    dataset.completion_value(dataset_size, len(train_files), len(test_files), hyperparams.batch_size, False)
+    dataset.print_info()
+    
+    return {
+        "full_size": False,
+        
+        "module_dir": module_dir,
+        "input_shape": input_shape,
+        "output_shape": len(class_to_idx.keys()),
+        
+        "train_files": train_files,
+        "train_labels": train_labels,
+        "test_files": test_files,
+        "test_labels": test_labels,
+        
+        "class_to_idx": class_to_idx,
+        
+        "picture_in_RGB": picture_in_RGB
+    }
+
+         
+def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, dataset):
+
+    dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
+
+    dataset_full_size = dataset_config["full_size"]
+    input_shape = dataset_config["input_shape"]
+    output_shape = dataset_config["output_shape"]
+    module_dir = dataset_config["module_dir"]
+    
     mode = set_mode()
 
     if mode in {4} and dataset_full_size:
         model_name = select_model(module_dir, "LogBook")
-        model, hyperparams, structure, performance, dataset, metadata_old = load_model(module_dir, model_name)
+        model, hyperparams, structure, performance, dataset, metadata_old = load_model(module_dir, model_name, None)
 
         print("")
         show_all_info_model(hyperparams, structure, performance, dataset, metadata_old)
+        
+        X = dataset_config["X"]
+        y = dataset_config["y"]
+        
         display_kernel_and_biais(X, y, model.cnn_model)
         exit(0)
 
+    hyperparams.add_shape(input_shape, output_shape)
+    hyperparams.check_support()
 
     if mode in {1}:
 
         # ============================
         #     INITIALISATION CNN
         # ============================
-        hyperparams.add_shape(input_shape, output_shape)
         model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer)
         metadata_old = None
 
@@ -89,9 +296,7 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
 
         # Chargement du modele existant
         model_name = select_model(module_dir, "LogBook")
-        model, _, _, _, _, metadata_old = load_model(module_dir, model_name)
-        model.set_alpha(hyperparams.alpha)
-
+        model, hyperparams, _, _, _, metadata_old = load_model(module_dir, model_name, hyperparams)
 
     if mode in {1, 2}:
         # ============================
@@ -101,10 +306,33 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         # Entraînement d'un nouveau modèle
 
         if dataset_full_size:
-            data_test, elapsed_time_minutes = training(model, X_train, y_train, X_test, y_test, hyperparams, dataset)
+            
+            X_train = dataset_config["X_train"]
+            y_train = dataset_config["y_train"]
+            X_test = dataset_config["X_test"]
+            y_test = dataset_config["y_test"]
+            
+            data_test, elapsed_time_minutes = training_full_data(
+                model, 
+                hyperparams, dataset,
+                X_train, y_train, 
+                X_test, y_test)
 
         else:
-            data_test, elapsed_time_minutes = training2(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels)
+            
+            train_files = dataset_config["train_files"]
+            train_labels = dataset_config["train_labels"]
+            test_files = dataset_config["test_files"]
+            test_labels = dataset_config["test_labels"]
+            picture_in_RGB = dataset_config["picture_in_RGB"]
+            class_to_idx = dataset_config["class_to_idx"]
+            
+            data_test, elapsed_time_minutes = training_batch_data(
+                model, 
+                hyperparams, dataset,
+                train_files, train_labels, 
+                test_files, test_labels, 
+                picture_in_RGB, class_to_idx)
         
         # ============================
         #          SAVE
@@ -136,21 +364,27 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         
         #______________________________________________________________#
         while(1):
-            str_answer = input("What do you want to do ?\n")
-            try:
-                nb_test = int(str_answer)
-            except:
+            
+            str_answer = input("How many test do you want to do ?\n")
+
+            if not str_answer.isdigit():
                 print("Please enter a number")
                 continue
-        
-            if (nb_test == 0):
-                print("Exit")
-                exit(0)
             
             else:
                 break
-
+        
+        nb_test = int(str_answer)
+            
+        if (nb_test == 0):
+            print("Exit")
+            exit(0)
+            
         if dataset_full_size:
+            X_test = dataset_config["X_test"]
+            y_test = dataset_config["y_test"]
+            transformer = dataset_config["transformer"]
+            
             y_final = transformer.inverse_transform(y_test)
             display_first_picture(model, X_test, y_final)
             display_dataset(model, X_test, y_final, nb_test)

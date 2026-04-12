@@ -1,37 +1,19 @@
-import  numpy as np
+
+from .Optimizer_CPU import Adam_CPU
+from .Optimizer_GPU import Adam_GPU
 
 class Adam:
+    
+    @staticmethod
+    def add_layer(hyperparams):
+        
+        support = hyperparams.support.lower()
 
-    def __init__(self, hyperparams):
-        self.lr = hyperparams.lr
-        self.beta1 =  hyperparams.beta1
-        self.beta2 =  hyperparams.beta2
-        self.t = 0
-        self.state = {}
-
-    def update(self, params):
-        self.t += 1
-
-        for param, grad in params:
-            key = id(param)
-
-            if key not in self.state:
-                self.state[key] = {
-                    "m": np.zeros_like(param),
-                    "v": np.zeros_like(param)
-                }
-
-            m = self.state[key]["m"]
-            v = self.state[key]["v"]
-
-            # update Adam
-            m = self.beta1 * m + (1 - self.beta1) * grad
-            v = self.beta2 * v + (1 - self.beta2) * (grad * grad)
-
-            m_hat = m / (1 - self.beta1**self.t)
-            v_hat = v / (1 - self.beta2**self.t)
-
-            param -= self.lr * m_hat / (np.sqrt(v_hat) + 1e-8)
-
-            self.state[key]["m"] = m
-            self.state[key]["v"] = v
+        if support == "cpu":
+            return  Adam_CPU(hyperparams)
+        
+        elif support == "gpu":
+            return Adam_GPU(hyperparams)
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")

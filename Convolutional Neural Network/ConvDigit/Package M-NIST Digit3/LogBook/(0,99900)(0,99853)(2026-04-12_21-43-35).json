@@ -2,22 +2,23 @@
     {
         "hyperparameters":{
             "alpha":0.001,
-            "batch_size":32,
+            "batch_size":128,
             "beta1":0.9,
             "beta2":0.999,
             "contamination":0.1,
             "input_shape":[
                 1,
-                28,
-                28
+                32,
+                32
             ],
             "loss_metric":"CrossEntropyLoss",
             "lr":0.001,
-            "nb_epoch":1,
+            "nb_epoch":50,
             "optimizer":"Adam",
             "output_layer":"Softmax",
             "output_shape":10,
-            "padding_mode":"auto"
+            "padding_mode":"auto",
+            "support":"GPU"
         },
         "structure":[
             {
@@ -46,7 +47,7 @@
                     64,
                     "conv",
                     "leaky relu",
-                    0.1
+                    0.0
                 ],
                 "4":[
                     2,
@@ -61,54 +62,58 @@
                     3,
                     1,
                     0,
-                    64,
+                    128,
                     "conv",
                     "leaky relu",
-                    0.1
+                    0.0
+                ],
+                "6":[
+                    2,
+                    2,
+                    0,
+                    128,
+                    "pool",
+                    "max",
+                    0.0
                 ]
             },
             {
                 "1":[
-                    124,
+                    128,
                     "leaky relu",
-                    0.2
+                    0.0
                 ],
                 "2":[
                     64,
                     "leaky relu",
-                    0.2
+                    0.0
                 ],
                 "3":[
-                    64,
-                    "leaky relu",
-                    0.2
-                ],
-                "4":[
                     10,
                     "leaky relu",
-                    0.2
+                    0.0
                 ]
             }
         ],
         "performance":{
-            "cost_loss":0.0673656411,
-            "accuracy":0.953,
-            "confidence_score":0.7294811864
+            "cost_loss":0.0023020586,
+            "accuracy":0.999,
+            "confidence_score":0.998525341
         },
         "dataset":{
-            "dataset_size":10000,
-            "ratio_test":0.2,
-            "size_test_set":2000.0,
-            "size_training_set":8000.0,
-            "validation_frequency":100,
+            "dataset_size":60000,
+            "ratio_test":0.05,
+            "size_test_set":12000,
+            "size_training_set":48000,
+            "validation_frequency":375,
             "validation_size":1000
         },
         "metadata":{
-            "name":"(0,95300)(0,72948)(2026-03-30_01-56-23)",
-            "date":"2026-03-30_01-56-23",
+            "name":"(0,99900)(0,99853)(2026-04-12_21-43-35)",
+            "date":"2026-04-12_21-43-35",
             "Based_model":"X",
-            "total_epoch":1,
-            "training_time_(min)":0.7585168521,
+            "total_epoch":50,
+            "training_time_(min)":19.5492160122,
             "Number_fine_tuning":0
         }
     }

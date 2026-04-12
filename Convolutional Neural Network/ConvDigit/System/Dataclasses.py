@@ -1,4 +1,6 @@
 
+import cupy as cp
+import numpy as np
 from dataclasses import dataclass
 
 @dataclass
@@ -23,6 +25,28 @@ class Hyperparams:
 
     contamination : float = 0.1
     
+    support: str = "CPU"
+
+
+    def __post_init__(self):
+        # input_shape
+        if isinstance(self.input_shape, (list, tuple)):
+            self.input_shape = tuple(self.input_shape)
+        elif self.input_shape:
+            self.input_shape = (self.input_shape,)
+        else:
+            self.input_shape = ()
+
+        # output_shape
+        if isinstance(self.output_shape, (list, tuple)):
+            self.output_shape = tuple(self.output_shape)
+        elif isinstance(self.output_shape, int):
+            self.output_shape = (self.output_shape,)
+        elif self.output_shape:
+            self.output_shape = (self.output_shape,)
+        else:
+            self.output_shape = ()
+
     def add_training_parameters(self, loss_metric, output_layer, optimizer):
 
         self.loss_metric = loss_metric.__class__.__name__
@@ -33,6 +57,16 @@ class Hyperparams:
         self.input_shape = input_shape
         self.output_shape = output_shape
     
+    def check_support(self):
+
+        if self.support not in ["CPU", "GPU"]:
+            print(f"ERROR: support '{self.support}' is not defined. Please correct with 'CPU' or 'GPU'.")
+            exit(0)
+
+        if self.support == "GPU" and cp.cuda.runtime.getDeviceCount() == 0:
+            print(f"ERROR: GPU is not find. Support pass to CPU mode")
+            self.support = "CPU"
+
     def print_info(self):
 
         print("\n============================")
@@ -61,30 +95,45 @@ class Hyperparams:
         print("Input Shape: ", self.input_shape)
         print("Output Shape: ", self.output_shape)
 
+        print("")
+        print("Support: ", self.support)
+
+        if (self.support ==  "GPU"):
+            print("Num GPUs:", cp.cuda.runtime.getDeviceCount())
+            print("GPU name:", cp.cuda.runtime.getDeviceProperties(0)['name'])
+            print("Memory bytes (free, total): ", cp.cuda.Device().mem_info) 
+
 
 @dataclass
 class Dataset:
     dataset_size: int = -1
-    ratio_test: float = 0.2
+    ratio_test: float = 0.0
     size_test_set: int = dataset_size * ratio_test
     size_training_set: int = dataset_size - size_test_set
     
     validation_size: int = -1
     validation_frequency: int = -1
 
-    def completion_value(self, y):
+    def completion_value(self, dataset_size, train_size, test_size, batch_size, is_full_data):
         
-        if (self.dataset_size == -1 or self.dataset_size > len(y)):
+        if (self.dataset_size == -1 or self.dataset_size > dataset_size):
+            
+            self.dataset_size = dataset_size
+            
+            if (is_full_data):
+                self.size_test_set = int(self.dataset_size * self.ratio_test)
+                self.size_training_set = int(self.dataset_size - self.size_test_set)
 
-            self.dataset_size = len(y)
-            self.size_test_set = int(self.dataset_size * self.ratio_test)
-            self.size_training_set = int(self.dataset_size - self.size_test_set)
-
+            else:
+                self.size_training_set = train_size
+                self.size_test_set = test_size
+                self.ratio_test = float(self.dataset_size / (self.size_test_set * 100))
+                
         if (self.validation_size > self.size_test_set or self.validation_size == -1):
             self.validation_size = self.size_test_set
-
+            
         if (self.validation_frequency == -1):
-            self.validation_frequency = self.size_training_set
+            self.validation_frequency = int(np.ceil(self.size_training_set / batch_size))
 
 
 
