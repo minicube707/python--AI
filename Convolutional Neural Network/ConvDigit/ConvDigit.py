@@ -20,7 +20,6 @@ BLACK =         (0, 0, 0)
 GREY =          (128, 128, 128)
 WHITE =         (255, 255, 255)
 
-
 def draw_grid (win, rows, width):
     gap = width // rows
     for i in range(rows):
@@ -104,9 +103,9 @@ def pooling(grid, kernel_size):
 
     return new_grid
 
-def research(grid, model, rows, hyperparams, str_pooling):
+def research(grid, model, rows, hyperparams, do_pool):
 
-    if (str_pooling == "true"):
+    if (do_pool):
         grid = pooling(grid, kernel_size=2)
         rows = int(rows / 2)
 
@@ -123,7 +122,7 @@ def research(grid, model, rows, hyperparams, str_pooling):
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     # Affichage de l'image
-    axs[0].imshow(grid.reshape((rows, rows)), cmap="gray")
+    axs[0].imshow(grid, cmap="gray")
     axs[0].set_title(f"Predict:{pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
@@ -181,14 +180,17 @@ def main (win, width):
 
     module_dir = lister_dossiers() 
     model_name = select_model(module_dir, "LogBook")
-    model, hyperparams, _, _, _, _ = load_model(module_dir, model_name)
+    model, hyperparams, _, _, _, _ = load_model(module_dir, model_name, None)
 
     rows = hyperparams.input_shape[1]
     brush_size = int(input("What is the brush size ?\n"))
-    str_pooling = input("Do want to use pooling ?\n")
+    str_pooling = input("Do want to use pooling ?\n").strip()
 
-    if (str_pooling == "true"):
+    do_pool = False
+    if (str_pooling in {"true", "y", "yes"}):
         rows*=2
+        do_pool = True
+        
     grid = np.zeros((rows, rows))
 
     run = True
@@ -199,15 +201,16 @@ def main (win, width):
             #Quit pygame
             if event.type == pygame.QUIT:
                 run = False
+                
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     run = False
 
                 if event.key == pygame.K_SPACE:
-                    research(grid, model, rows, hyperparams, str_pooling)
+                    research(grid.copy(), model, rows, hyperparams, do_pool)
                 
                 if event.key == pygame.K_c:
-                    grid = np.zeros((rows, rows))
+                    grid = np.zeros_like(grid)
 
         grid = add_node (width, rows, grid, brush_size)
         grid = delete_node (width, rows, grid)
