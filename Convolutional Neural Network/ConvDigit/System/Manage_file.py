@@ -49,6 +49,7 @@ def load_model(path, model_name, hyperparams):
     else:
         raise Exception("Unknow optimizer: ", hyperparams.optimizer)
     
+    hyperparams.check_support()
     model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer)
     model.load(params)
 

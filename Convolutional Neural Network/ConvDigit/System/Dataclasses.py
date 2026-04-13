@@ -37,16 +37,6 @@ class Hyperparams:
         else:
             self.input_shape = ()
 
-        # output_shape
-        if isinstance(self.output_shape, (list, tuple)):
-            self.output_shape = tuple(self.output_shape)
-        elif isinstance(self.output_shape, int):
-            self.output_shape = (self.output_shape,)
-        elif self.output_shape:
-            self.output_shape = (self.output_shape,)
-        else:
-            self.output_shape = ()
-
     def add_training_parameters(self, loss_metric, output_layer, optimizer):
 
         self.loss_metric = loss_metric.__class__.__name__
@@ -63,9 +53,15 @@ class Hyperparams:
             print(f"ERROR: support '{self.support}' is not defined. Please correct with 'CPU' or 'GPU'.")
             exit(0)
 
-        if self.support == "GPU" and cp.cuda.runtime.getDeviceCount() == 0:
-            print(f"ERROR: GPU is not find. Support pass to CPU mode")
-            self.support = "CPU"
+        if self.support == "GPU":
+            try:
+                gpu_count = cp.cuda.runtime.getDeviceCount()
+            except cp.cuda.runtime.CUDARuntimeError:
+                gpu_count = 0
+
+            if gpu_count == 0:
+                print("ERROR: No GPU found. Switching to CPU mode.")
+                self.support = "CPU"
 
     def print_info(self):
 
