@@ -6,12 +6,16 @@ from .Manage_logbook import show_info_main
 
 from .Evaluation_Metric import CrossEntropyLoss, BinaryCrossEntropy
 from .Mathematical_function import Softmax, Sigmoide
+from .Layers import Flatten, GlobalAveragePooling
+
 from .FullModel import FullModel
 from .Optimizer import Adam
 
 from .Dataclasses import Hyperparams, Dataset
 
-def load_model(path, model_name, hyperparams):
+from .Constante import FOLDER_NAME_LOGBOOK, FOLDER_NAME_MODEL
+
+def load_model(path, model_name, new_hyperparams):
 
     params = load_model_parameters(path, model_name + ".npz")
     df = load_model_hyperparameters(path, model_name + ".json")
@@ -19,9 +23,19 @@ def load_model(path, model_name, hyperparams):
 
     log = data[0]
 
-    if (hyperparams == None):
-        hyperparams = Hyperparams(**log.get("hyperparameters", {}))
-
+    hyperparams = Hyperparams(**log.get("hyperparameters", {}))
+    
+    if (new_hyperparams != None):
+        hyperparams.nb_epoch = new_hyperparams.nb_epoch
+        hyperparams.batch_size = new_hyperparams.batch_size
+        hyperparams.lr = hyperparams.lr
+        hyperparams.beta1 = new_hyperparams.beta1
+        hyperparams.beta2 = new_hyperparams.beta2
+        hyperparams.alpha = new_hyperparams.alpha
+        hyperparams.optimizer = new_hyperparams.optimizer
+        hyperparams.contamination = new_hyperparams.contamination
+        hyperparams.support = new_hyperparams.support
+        
     structure = (log.get("structure", [{}]))
     performance = log.get("performance", {})
     dataset = Dataset(**log.get("dataset", {}))
@@ -49,15 +63,22 @@ def load_model(path, model_name, hyperparams):
     else:
         raise Exception("Unknow optimizer: ", hyperparams.optimizer)
     
+    if hyperparams.transition_layer == "Flatten":
+        transition_layer = Flatten()  
+    elif hyperparams.transition_layer == "GlobalAveragePooling":
+        transition_layer = GlobalAveragePooling() 
+    else:
+        raise Exception("Unknow transition layer: ", hyperparams.transition_layer)
+    
     hyperparams.check_support()
-    model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer)
+    model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer)
     model.load(params)
 
     return model, hyperparams, structure, performance, dataset, metadata
 
 def load_model_parameters(path, model_name):
 
-    model_dir = os.path.join(path, "Model")
+    model_dir = os.path.join(path, FOLDER_NAME_MODEL)
     model_path = os.path.join(model_dir, model_name)
     
     if not os.path.exists(model_path):
@@ -69,11 +90,11 @@ def load_model_parameters(path, model_name):
 
         # Liste les fichiers disponibles pour aider au debug
         if os.path.exists(model_dir):
-            print("📂 Fichiers disponibles dans le dossier Model :")
+            print(f"📂 Fichiers disponibles dans le dossier {FOLDER_NAME_MODEL} :")
             for f in os.listdir(model_dir):
                 print(" -", f)
         else:
-            print("❌ Le dossier 'Model' n'existe pas.")
+            print(f"❌ Le dossier '{FOLDER_NAME_MODEL}' n'existe pas.")
 
         exit(1)
 
@@ -84,7 +105,7 @@ def load_model_parameters(path, model_name):
 
 def load_model_hyperparameters(path, model_name):
 
-    model_dir = os.path.join(path, "LogBook")
+    model_dir = os.path.join(path, FOLDER_NAME_LOGBOOK)
     model_path = os.path.join(model_dir, model_name)
 
     if not os.path.exists(model_path):
@@ -96,11 +117,11 @@ def load_model_hyperparameters(path, model_name):
 
         # Liste les fichiers disponibles pour aider au debug
         if os.path.exists(model_dir):
-            print("📂 Fichiers disponibles dans le dossier LogBook :")
+            print(f"📂 Fichiers disponibles dans le dossier {FOLDER_NAME_LOGBOOK} :")
             for f in os.listdir(model_dir):
                 print(" -", f)
         else:
-            print("❌ Le dossier 'LogBook' n'existe pas.")
+            print(f"❌ Le dossier '{FOLDER_NAME_LOGBOOK}' n'existe pas.")
 
         exit(1)
 
@@ -115,12 +136,12 @@ def load_model_hyperparameters(path, model_name):
 
 def save_model_parameters(path, model_name, model):
 
-    model_path = os.path.join(path, "Model")
+    model_path = os.path.join(path, FOLDER_NAME_MODEL)
     
     # Créer le dossier s'il n'existe pas
     if not os.path.exists(model_path):
         os.makedirs(model_path)
-        print(f"[INFO] Dossier 'Model' créé à : {os.path.abspath(model_path)}")
+        print(f"[INFO] Dossier '{FOLDER_NAME_MODEL}' créé à : {os.path.abspath(model_path)}")
 
     # Sauvegarder le modèle
     model_path = os.path.join(model_path, model_name)
@@ -189,7 +210,7 @@ def select_model(path, json_dir):
     print(f"\nModèle sélectionné : {selected_model_name}")
 
     # Étape 6 : Chercher le fichier dans le dossier Model/
-    model_dir = os.path.join(path, "Model", selected_model_name + ".npz")
+    model_dir = os.path.join(path, FOLDER_NAME_MODEL, selected_model_name + ".npz")
 
     if not os.path.exists(model_dir):
         chemin_absolu = os.path.abspath(model_dir)
@@ -200,4 +221,4 @@ def select_model(path, json_dir):
     print(f"\n✅ Modèle sélectionné : {selected_model_name}")
     print(f"📂 Chemin : {model_dir}")
 
-    return selected_model_name
+    return selected_model_name, model_dir
