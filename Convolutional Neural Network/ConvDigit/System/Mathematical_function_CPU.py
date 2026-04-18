@@ -91,8 +91,25 @@ class Tanh_CPU(Layer):
 def add_padding_CPU(X, padding):
     # X : (B, C, H, W)
 
-    B, C, H, W = X.shape
-    out = np.zeros((B, C, H + padding, W + padding), dtype=X.dtype)
+    if padding == 0:
+        return X
 
-    out[:, :, :H, :W] = X
+    B, C, H, W = X.shape
+
+    # Distribution of padding
+    pad_top = padding // 2
+    pad_bottom = padding - pad_top
+
+    pad_left = padding // 2
+    pad_right = padding - pad_left
+
+    # Creation of the padded tensor
+    out = np.zeros(
+        (B, C, H + pad_top + pad_bottom, W + pad_left + pad_right),
+        dtype=X.dtype
+    )
+
+    # Placement of X in the right place
+    out[:, :, pad_top:pad_top + H, pad_left:pad_left + W] = X
+
     return out

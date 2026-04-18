@@ -63,26 +63,41 @@ class MSE_CPU(Layer):
     
 
 def accuracy_score_cpu(y_true, y_pred):
-
-    if y_true.ndim == 2 and y_true.shape[1] == 1:
-        y_true = y_true.flatten()
-        
-    if y_true.ndim == 1:
-        y_pred_labels = (y_pred >= 0.5).astype(int)
-        return np.mean(y_true == y_pred_labels)
     
-    else:  
-        y_true_labels = np.argmax(y_true, axis=1)
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    #BinaryCrossEntropy
+    if y_pred.ndim == 1 or y_pred.shape[1] == 1:
+        y_pred_labels = (y_pred.ravel() >= 0.5).astype(int)
+        y_true_labels = y_true.ravel().astype(int)
+    
+    #CrossEntropy
+    else:
         y_pred_labels = np.argmax(y_pred, axis=1)
-        return np.mean(y_true_labels == y_pred_labels)
+        y_true_labels = np.argmax(y_true, axis=1)
+
+    return np.mean(y_true_labels == y_pred_labels)
 
 
 def confidence_score_cpu(y_true, y_pred):
 
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    
+    #BinaryCrossEntropy
     if y_true.ndim == 1:
-        true_class_probs = y_pred * y_true + (1 - y_pred) * (1 - y_true)
-        
+        y_true_flat = y_true.ravel().astype(int)
+        y_pred_flat = y_pred.ravel()
+
+        true_class_probs = np.where(
+            y_true_flat == 1,
+            y_pred_flat,
+            1 - y_pred_flat
+        )
+    #CrossEntropy
     else:
-        true_class_probs = y_pred[np.arange(y_true.shape[0]), np.argmax(y_true, axis=1)]
+        true_labels = np.argmax(y_true, axis=1)
+        true_class_probs = y_pred[np.arange(y_true.shape[0]), true_labels]
 
     return np.mean(true_class_probs)

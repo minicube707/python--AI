@@ -62,24 +62,44 @@ class MSE_GPU(Layer):
 
 def accuracy_score_gpu(y_true, y_pred):
    
-    if y_true.ndim == 1:
-        acc = cp.mean(y_true == (y_pred >= 0.5))
+    y_true = cp.asarray(y_true)
+    y_pred = cp.asarray(y_pred)
     
+    #BinaryCrossEntropy
+    if y_true.ndim == 1:
+        y_pred_labels = (y_pred.ravel() >= 0.5).astype(cp.int32)
+        y_true_labels = y_true.ravel().astype(cp.int32)
+    
+    #CrossEntropy    
     else:
-        acc = cp.mean(cp.argmax(y_true, axis=1) == cp.argmax(y_pred, axis=1))
+        y_pred_labels = cp.argmax(y_pred, axis=1)
+        y_true_labels = cp.argmax(y_true, axis=1)
 
+    acc = cp.mean(y_pred_labels == y_true_labels)
     return acc.item()
 
 
 def confidence_score_gpu(y_true, y_pred):
     
+    y_true = cp.asarray(y_true)
+    y_pred = cp.asarray(y_pred)
+
+    #BinaryCrossEntropy
     if y_true.ndim == 1:
-        probs = cp.where(y_true == 1, y_pred, 1 - y_pred)
-        
+        y_true_flat = y_true.ravel().astype(cp.int32)
+        y_pred_flat = y_pred.ravel()
+
+        probs = cp.where(
+            y_true_flat == 1,
+            y_pred_flat,
+            1 - y_pred_flat
+        )
+    #CrossEntropy  
     else:
+        true_labels = cp.argmax(y_true, axis=1)
         probs = y_pred[
             cp.arange(y_pred.shape[0]),
-            cp.argmax(y_true, axis=1)
+            true_labels
         ]
 
     return cp.mean(probs).item()

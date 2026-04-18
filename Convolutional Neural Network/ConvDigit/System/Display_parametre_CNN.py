@@ -1,8 +1,9 @@
 
 import numpy as np
+import cupy as cp
+
 import matplotlib.pyplot as plt
-from .Layers import Convolution
-from .Preprocessing import handle_key
+from .User_Input import handle_key
 
 def display_comparaison_layer(A, Z=None, max_par_fig=12):
     """
@@ -206,7 +207,7 @@ def display_kernel_and_biais(X, y, model):
             print("2: Kernel")
             print("3: Biais")
 
-            str_answer = input("Qu'est ce que vous voulez faire ?\n")
+            str_answer = input("Qu'est ce que vous voulez faire ?\n").strip()
             try:
                 int_answer = int(str_answer)
             except:
@@ -252,38 +253,63 @@ def display_kernel_and_biais(X, y, model):
             elif mode == 3:
                 display_biais(b, "Biais", i)
 
-def display_first_picture(model, X_test, y_final):
+def display_first_picture(model, X_test, y_final, class_to_idx):
+
+    idx_to_class = {v: k for k, v in class_to_idx.items()}
 
     #Affichage des 15 premières images
     fig = plt.figure(figsize=(16,8))
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Active la détection de la touche
     for i in range(1,16):
 
-        # Prédiction des probabilités avec softmax
+        x = X_test[i]
         
-        if X_test[i].ndim == 3:
-            y_pred = model.forward_propagation(X_test[i][None, ...], False).flatten()
-            X_display = X_test[i].transpose(1, 2, 0)
+        if x.ndim == 2:
+            x = x[None, None, ...]   # (1,1,H,W)
+        elif x.ndim == 3:
+            x = x[None, ...]         # (1,C,H,W)
+        
+        if model.support == "GPU":
+            x = cp.array(x)
+            
+        y_pred = model.forward_propagation(x, False).squeeze()
 
-        elif X_test[i].ndim == 2:
-            y_pred = model.forward_propagation(X_test[i][None, None, ...], False).flatten()
-            X_display = X_test[i]
-
-        pred = np.argmax(y_pred)
-        porcent = np.max(y_pred)
-
+        x_display = X_test[i]
+        
+        if x_display.ndim == 3:
+            x_display = x_display.transpose(1, 2, 0)
+        
+        if model.support == "GPU":
+            y_pred = cp.asnumpy(y_pred)
+        
+        if model.loss_metric.class_ == "BinaryCrossEntropy":
+            pred = (y_pred >= 0.5).astype(int)
+            porcent = pred * y_pred + (1 - pred) * (1 - y_pred)
+        else:
+            pred = np.argmax(y_pred, axis=-1)
+            porcent = y_pred[pred]
+        
+        display_pred = idx_to_class[pred]
+        display_true = idx_to_class[int(y_final[i])]
+        
         plt.subplot(4,5, i)
-        plt.imshow(X_display)
+        plt.imshow(x_display)
 
-        plt.title(f"Value:{y_final[i]} Predict:{pred}  ({np.round(porcent, 2)}%)")
+        plt.title(f"Value:{display_true} Predict:{display_pred}  ({np.round(porcent, 2)}%)")
         plt.tight_layout()
         plt.axis("off")
     plt.show()
 
-def display_dataset(model, X_test, y_final, nb_test):
 
+def display_dataset(model, X_test, y_final, nb_test, class_to_idx):
+
+    idx_to_class = {v: k for k, v in class_to_idx.items()}
+    
+    def couleur(texte, code):
+        return f"\033[{code}m{texte}\033[0m"
+    
     print("")
-    for i in range(nb_test):
+    for _ in range(nb_test):
         
         while(1):
             index = input(f"Please enter a number between 1 and {X_test.shape[0]}: ")
@@ -300,36 +326,65 @@ def display_dataset(model, X_test, y_final, nb_test):
                 continue
 
             # Exit condition
-            if index < 0:
+            if index <= 0:
                 print("Exiting")
                 exit(0)
             
-            elif index < X_test.shape[0]:
+            elif index <= X_test.shape[0]:
                 break
+        
+        index -= 1
+        x = X_test[index]
+        
+        if x.ndim == 2:
+            x = x[None, None, ...]   # (1,1,H,W)
+        elif x.ndim == 3:
+            x = x[None, ...]         # (1,C,H,W)
+        
+        if model.support == "GPU":
+            x = cp.array(x)
+            
+        y_pred = model.forward_propagation(x, False).squeeze()
 
-        # Prédiction des probabilités avec softmax
-        if X_test[index].ndim == 3:
-            y_pred = model.forward_propagation(X_test[index][None, ...], False).flatten()
-            X_display = X_test[index].transpose(1, 2, 0)
+        x_display = X_test[index]
+        
+        if x_display.ndim == 3:
+            x_display = x_display.transpose(1, 2, 0)
+        
+        if model.support == "GPU":
+            y_pred = cp.asnumpy(y_pred)
+    
+        y_pred = np.array(y_pred)
+        y_pred = np.squeeze(y_pred)   
+        
+        y_pred = np.array(y_pred).squeeze()
 
-        elif X_test[index].ndim == 2:
-            y_pred = model.forward_propagation(X_test[index][None, None, ...], False).flatten()
-            X_display = X_test[index]
-
-        pred = np.argmax(y_pred)
-        porcent = np.max(y_pred)
-
+        if model.loss_metric.class_ == "BinaryCrossEntropy":
+            pred = (y_pred >= 0.5).astype(int)
+            porcent = pred * y_pred + (1 - pred) * (1 - y_pred)
+        else:
+            pred = np.argmax(y_pred, axis=-1)
+            porcent = y_pred[pred]
+                
+        display_pred = idx_to_class[pred]
+        display_true = idx_to_class[int(y_final[index])]
+        
         # Création de la figure avec 2 sous-graphiques (image + histogramme)
         fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
         fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
         
-        axs[0].imshow(X_display)
-        axs[0].set_title(f"Value:{y_final[index]} Predict:{pred} ({np.round(porcent, 2)}%)")
+        axs[0].imshow(x_display)
+        axs[0].set_title(f"Value:{display_true} Predict:{display_pred} ({np.round(porcent, 2)}%)")
         axs[0].axis("off")
 
         # Affichage de l'histogramme des probabilités
-        axs[1].bar(range(len(y_pred)), y_pred, color="blue")
-        axs[1].set_xticks(range(len(y_pred)))
+        if model.loss_metric.class_ == "BinaryCrossEntropy":
+            len_y_pred = 1
+        else:
+            len_y_pred = len(y_pred)
+               
+        axs[1].bar(range(len_y_pred), y_pred, color="blue")
+        axs[1].set_xticks(range(len_y_pred))
         axs[1].set_xlabel("Classes")
         axs[1].set_ylabel("Probability")
         axs[1].set_ylim(0, 1)
@@ -340,3 +395,9 @@ def display_dataset(model, X_test, y_final, nb_test):
 
         plt.tight_layout()
         plt.show()
+        
+        print_res = f"Value:{display_true} Predict:{display_pred} ({np.round(porcent, 2)}%)"
+        if y_final[index] == pred:
+            print(couleur(print_res, 32))
+        else:
+            print(couleur(print_res, 31))

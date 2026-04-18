@@ -95,3 +95,25 @@ class Tanh:
         
         else:
             raise ValueError(f"Unknown support: {support}")
+
+
+def remove_padding(X, padding):
+    # X : (B, C, H, W)
+
+    if padding == 0:
+        return X
+
+    pad_top = padding // 2
+    pad_bottom = padding - pad_top
+
+    pad_left = padding // 2
+    pad_right = padding - pad_left
+
+    B, C, H, W = X.shape
+
+    return X[
+        :,
+        :,
+        pad_top:H - pad_bottom,
+        pad_left:W - pad_right
+    ]

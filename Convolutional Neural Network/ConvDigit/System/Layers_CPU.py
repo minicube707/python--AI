@@ -3,6 +3,7 @@ import numpy as np
 
 from .Layer import Layer
 from .Mathematical_function_CPU import add_padding_CPU 
+from .Mathematical_function import remove_padding
 
 class MaxPooling_CPU(Layer):
     
@@ -62,8 +63,7 @@ class MaxPooling_CPU(Layer):
                 dA_prev_full[:, :, h_start:h_end, w_start:w_end] += dA_prev[:, :, h, w, :, :]
 
         # Removal of padding
-        if padding > 0:
-            dA_prev_full = dA_prev_full[:, :, :-padding, :-padding]
+        dX = remove_padding(dX, padding)
 
         return dA_prev_full
 
@@ -169,8 +169,7 @@ class Convolution_CPU(Layer):
 
     
         # Removal of paddin
-        if padding > 0:
-            dX = dX[:, :, padding:-padding, padding:-padding]
+        dX = remove_padding(dX, padding)
 
         return dX
 
@@ -383,3 +382,24 @@ class Dense_CPU(Layer):
         self.W = W
         self.b = b
 
+
+class GlobalAveragePooling_CPU:
+    
+    def __init__(self):
+        self.class_ = "GlobalAveragePooling"
+        
+    def forward(self, X):
+        self.input_shape = X.shape
+        return np.mean(X, axis=(2, 3))
+
+    def backward(self, grad_output):
+      
+        batch_size, channels, height, width = self.input_shape
+        
+        # Chaque pixel reçoit la même part du gradient
+        grad_input = grad_output[:, :, None, None] / (height * width)
+        
+        # Broadcast sur toute la map
+        grad_input = np.ones((batch_size, channels, height, width)) * grad_input
+        
+        return grad_input

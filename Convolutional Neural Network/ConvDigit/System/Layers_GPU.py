@@ -3,6 +3,7 @@ import cupy as cp
 
 from .Layer import Layer
 from .Mathematical_function_GPU import add_padding_GPU
+from .Mathematical_function import remove_padding
 
 class MaxPooling_GPU(Layer):
     
@@ -89,8 +90,8 @@ class MaxPooling_GPU(Layer):
                 ] += dA * mask
 
         # remove padding
-        if padding > 0:
-            dX = dX[:, :, :-padding, :-padding]
+        dX = remove_padding(dX, padding)
+       
         return dX
 
 
@@ -214,8 +215,7 @@ class Convolution_GPU(Layer):
         # ========================
         # Remove padding
         # ========================
-        if padding > 0:
-            dX = dX[:, :, padding:-padding, padding:-padding]
+        dX = remove_padding(dX, padding)
 
         return dX
     
@@ -427,3 +427,24 @@ class Dense_GPU(Layer):
     def set_params(self, W, b):
         self.W = cp.asarray(W)
         self.b = cp.asarray(b)
+
+class GlobalAveragePooling_GPU:
+    
+    def __init__(self):
+        self.class_ = "GlobalAveragePooling"
+        
+    def forward(self, X):
+        self.input_shape = X.shape
+        return cp.mean(X, axis=(2, 3))
+
+    def backward(self, grad_output):
+      
+        batch_size, channels, height, width = self.input_shape
+        
+        # Chaque pixel reçoit la même part du gradient
+        grad_input = grad_output[:, :, None, None] / (height * width)
+        
+        # Broadcast sur toute la map
+        grad_input = cp.ones((batch_size, channels, height, width)) * grad_input
+        
+        return grad_input

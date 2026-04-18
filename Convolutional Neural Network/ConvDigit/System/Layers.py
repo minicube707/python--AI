@@ -1,14 +1,15 @@
 
 from .Layer import Layer
 
-from .Layers_CPU import MaxPooling_CPU, Convolution_CPU, BatchNorm_CPU, Dropout_CPU, Dense_CPU
-from .Layers_GPU import MaxPooling_GPU, Convolution_GPU, BatchNorm_GPU, Dropout_GPU, Dense_GPU
+from .Layers_CPU import MaxPooling_CPU, Convolution_CPU, BatchNorm_CPU, Dropout_CPU, Dense_CPU, GlobalAveragePooling_CPU
+from .Layers_GPU import MaxPooling_GPU, Convolution_GPU, BatchNorm_GPU, Dropout_GPU, Dense_GPU, GlobalAveragePooling_GPU
 
 
 class Flatten(Layer):
 
     def __init__(self):
         self.input_shape = None
+        self.class_ = "Flatten"
 
     def forward(self, X):
         self.input_shape = X.shape
@@ -16,7 +17,26 @@ class Flatten(Layer):
     
     def backward(self, dZ):
         return dZ.reshape(self.input_shape)
+
+    def add_layer(self, _):
+        return self
+
+class GlobalAveragePooling:
     
+    @staticmethod
+    def add_layer(support):
+        
+        support = support.lower()
+
+        if support == "cpu":
+            return GlobalAveragePooling_CPU()
+        
+        elif support == "gpu":
+            return GlobalAveragePooling_GPU()
+        
+        else:
+            raise ValueError(f"Unknown support: {support}")
+        
 class Block(Layer):
 
     def __init__(self, dense, batchnorm, activation, dropout):
