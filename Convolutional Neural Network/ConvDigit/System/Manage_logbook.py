@@ -1,7 +1,9 @@
 import pandas as pd
 import os
 import json
+
 from dataclasses import asdict
+from .Constante import FOLDER_NAME_LOGBOOK
 
 def create_new_log(new_log, path, json_file):
 
@@ -17,7 +19,7 @@ def create_new_log(new_log, path, json_file):
     df = pd.DataFrame()
     df = pd.concat([df, pd.DataFrame([new_log])], ignore_index=True)
     df.to_json(filename, orient='records', indent=4)
-    print("Update LogBook")
+    print(f"Update {FOLDER_NAME_LOGBOOK}")
 
 
 def save_model_configuration(mode, 
@@ -46,7 +48,7 @@ def save_model_configuration(mode,
         "metadata": metadata,
     }
     
-    create_new_log(new_log, os.path.join(module_dir, "LogBook"), metadata["name"] + ".json")
+    create_new_log(new_log, os.path.join(module_dir, FOLDER_NAME_LOGBOOK), metadata["name"] + ".json")
 
 
 def show_all_info_model(hyperparams, structure, performance, dataset, metadata):
@@ -77,6 +79,7 @@ def show_all_info_model(hyperparams, structure, performance, dataset, metadata):
 
 
 def show_info_main(json_path):
+    
     json_files = [f for f in os.listdir(json_path) if f.endswith(".json")]
     if not json_files:
         print(f"[INFO] Aucun fichier JSON trouvé dans '{json_path}'.")
@@ -89,6 +92,9 @@ def show_info_main(json_path):
         "metadata_training_time_(min)",
         "performance_accuracy",
         "performance_confidence_score",
+        "performance_accuracy_ratio",
+        "performance_overfitting_indicator",
+        "metadata_total_epoch"
     ]
     
     rename_columns = {
@@ -97,6 +103,9 @@ def show_info_main(json_path):
     "metadata_training_time_(min)": "Training Time (min)",
     "performance_accuracy": "Accuracy",
     "performance_confidence_score": "Confidence Score",
+    "performance_accuracy_ratio": "Accuracy Ratio",
+    "performance_overfitting_indicator": "Overfitting Indicator",
+    "metadata_total_epoch": "Total Epoch"
     }
     
     all_dfs = []
