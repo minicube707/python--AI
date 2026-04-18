@@ -1,7 +1,7 @@
 
 import cupy as cp
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class Hyperparams:
@@ -18,12 +18,13 @@ class Hyperparams:
 
     loss_metric : str = ""
     output_layer: str = ""
-    optimizer: str = ""
+    optimizer: str = "" 
+    transition_layer: str = ""
 
     input_shape: tuple = ()
     output_shape: tuple = ()
 
-    contamination : float = 0.1
+    contamination : float = 0.0
     
     support: str = "CPU"
 
@@ -37,11 +38,12 @@ class Hyperparams:
         else:
             self.input_shape = ()
 
-    def add_training_parameters(self, loss_metric, output_layer, optimizer):
+    def add_training_parameters(self, loss_metric, output_layer, optimizer, transition_layer):
 
         self.loss_metric = loss_metric.__class__.__name__
         self.output_layer = output_layer.__class__.__name__
         self.optimizer = optimizer.__class__.__name__
+        self.transition_layer = transition_layer.__class__.__name__
 
     def  add_shape(self, input_shape, output_shape):
         self.input_shape = input_shape
@@ -84,8 +86,9 @@ class Hyperparams:
 
         print("")
         print("Loss Metric: ", self.loss_metric)
-        print("Ouput Layer: ", self.output_layer)
+        print("Output Layer: ", self.output_layer)
         print("Optimizer: ", self.optimizer)
+        print("Transition Layer: ", self.transition_layer)
 
         print("")
         print("Input Shape: ", self.input_shape)
@@ -110,6 +113,8 @@ class Dataset:
     validation_size: int = -1
     validation_frequency: int = -1
 
+    class_to_idx : dict = field(default_factory=dict)
+    
     def completion_value(self, dataset_size, train_size, test_size, batch_size, is_full_data):
         
         if (self.dataset_size == -1 or self.dataset_size > dataset_size):
@@ -123,7 +128,7 @@ class Dataset:
             else:
                 self.size_training_set = train_size
                 self.size_test_set = test_size
-                self.ratio_test = float(self.dataset_size / (self.size_test_set * 100))
+                self.ratio_test = float(self.size_test_set / self.dataset_size)
                 
         if (self.validation_size > self.size_test_set or self.validation_size == -1):
             self.validation_size = self.size_test_set
@@ -146,3 +151,7 @@ class Dataset:
 
         print("validation_size: ", self.validation_size)
         print("validation_frequency: ", self.validation_frequency)
+        
+        print("\nclass_to_idx:")
+        for key, value in self.class_to_idx.items():
+            print(f"Class: {key:<20}  Index: {value}")
