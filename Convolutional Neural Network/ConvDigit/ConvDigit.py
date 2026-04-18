@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import os
 
 from System.Manage_file import select_model, load_model
-from System.Preprocessing import  handle_key
+from System.User_Input import handle_key
+
+from System.Constante import FOLDER_NAME_LOGBOOK
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -179,7 +181,7 @@ def lister_dossiers():
 def main (win, width):
 
     module_dir = lister_dossiers() 
-    model_name = select_model(module_dir, "LogBook")
+    model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
     model, hyperparams, _, _, _, _ = load_model(module_dir, model_name, None)
 
     rows = hyperparams.input_shape[1]
