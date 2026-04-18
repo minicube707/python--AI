@@ -4,6 +4,8 @@ import sys
 
 import numpy as np
 
+from .User_Input import ask_yes_no
+
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
@@ -17,7 +19,7 @@ def manage_data():
         sys.exit(1)
 
     # Ne garder que les fichiers
-    folders = os.listdir(dataset_path)
+    folders = sorted(os.listdir(dataset_path))
     files = [f for f in folders if os.path.isfile(os.path.join(dataset_path, f))]
 
     if not files:
@@ -41,15 +43,28 @@ def manage_data():
             selected_file = files[choice - 1]
             print(f"\n✅ Vous avez sélectionné : {selected_file}")
 
-            while True:
-                answer = input("Do you what load data ? \n").strip().lower()
-                if answer == "yes" or answer == "y" :
-                    with np.load(os.path.join(dataset_path, selected_file)) as f:
-                        return f["data"], f["target"], selected_file
-                elif answer == "no" or answer == "n":
-                    return None, None, selected_file
-                else:
-                    print("Please answer by yes or no")
+                
+            split_mode = ask_yes_no("Dataset already split train/test?")
+            
+            if split_mode:
+                with np.load(os.path.join(dataset_path, selected_file)) as f:
+                    return {
+                        "split_mode": True,
+                        "x_train": f["x_train"], 
+                        "y_train": f["y_train"], 
+                        "x_test": f["x_test"], 
+                        "y_test": f["y_test"], 
+                        "selected_file": selected_file
+                        }
+                
+            else:
+                with np.load(os.path.join(dataset_path, selected_file)) as f:
+                     return {
+                        "split_mode": False,
+                        "X": f["data"], 
+                        "y": f["target"], 
+                        "selected_file": selected_file
+                        }
 
         elif choice == 0:
             exit(0)
