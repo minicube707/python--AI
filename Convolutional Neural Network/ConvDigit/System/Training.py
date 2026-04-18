@@ -10,7 +10,7 @@ from PIL import Image, ImageOps
 from .Evaluation_Metric_CPU import accuracy_score_cpu, confidence_score_cpu
 from .Evaluation_Metric_GPU import accuracy_score_gpu, confidence_score_gpu
 
-from .Preprocessing import handle_key
+from .User_Input import handle_key
 
 
 def smooth_curve(values, window=10):
@@ -141,15 +141,21 @@ def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance
     dict_performance["conf"].append(total_conf)
 
 
-def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y_test):
+def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y_test, num_classes):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
 
     validation_size = dataset.validation_size
     validation_frequency = dataset.validation_frequency
-    
-
+            
+    if num_classes is not None:
+        y_train = np.eye(num_classes, dtype=int)[y_train]
+        y_test = np.eye(num_classes, dtype=int)[y_test]
+                
+        y_train = np.squeeze(y_train)
+        y_test = np.squeeze(y_test)
+        
     # Suivi des métriques
     data_train = {
     "loss": [],
@@ -216,13 +222,30 @@ def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y
                 va = data_test["accu"][-1]
                 vc = data_test["conf"][-1]
                 vl = data_test["loss"][-1]
+
+                ta = data_train["accu"][-1]
+                tc = data_train["conf"][-1]
+                tl = data_train["loss"][-1]
                 
                 if va > best_accu:
                     best_accu = va
-                    print(f"\nNew accuracy: {va}")
-                    print(f"New confidence score: {vc}")
-                    print(f"New loss: {vl}")
+                    print("\n-----------------------")
+                    print(f"New accuracy test: {va}")
+                    print(f"New confidence score test: {vc}")
+                    print(f"New loss test: {vl}")
                     print("")
+                
+                else:
+                    print("\n-----------------------")
+                    print(f"Accuracy test: {va}")
+                    print(f"Confidence score test: {vc}")
+                    print(f"Loss test: {vl}")
+                    print("")
+                
+                print(f"Accuracy train: {ta}")
+                print(f"Confidence score train: {tc}")
+                print(f"Loss train: {tl}")
+                print("")
 
             global_step += 1
             
@@ -271,7 +294,7 @@ def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y
 
     update_graph(lines, axs, data_train, data_test)
 
-    return data_test, elapsed_time_minutes
+    return data_train, data_test, elapsed_time_minutes
 
 
 def sample_files(file_paths, labels, sample_size):
@@ -342,7 +365,7 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
             X_batch = X_batch[:, None, :, :]
 
         if num_classes is not None:
-            y_batch = np.eye(num_classes)[y_batch]
+            y_batch = np.eye(num_classes, dtype=int)[y_batch]
         
         if (hyperparams.support == "GPU"):
             X_batch = cp.array(X_batch)
@@ -381,7 +404,7 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
     dict_performance["conf"].append(total_conf)
 
 
-def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB, class_to_idx):
+def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB, num_classes):
 
     nb_epoch = hyperparams.nb_epoch
     batch_size = hyperparams.batch_size
@@ -390,13 +413,6 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     validation_size = dataset.validation_size
     validation_frequency = dataset.validation_frequency
     
-    #For One-Hot Encoder
-    if model.loss_metric.class_ == "CrossEntropyLoss":
-        num_classes = len(class_to_idx)
-    else:
-        num_classes = None
-
-
     # Suivi des métriques
     data_train = {
     "loss": [],
@@ -422,12 +438,13 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     vc = data_test["conf"][-1]
     vl = data_test["loss"][-1]
     
+                    
     best_accu = va
     print(f"\nInitial accurracy: {best_accu}")
     print(f"Initial confidence score: {vc}")
     print(f"Initial loss: {vl}")
     print("")
-    
+                
     fig, axs, lines = init_animation()
     # Démarrer le chronomètre
     start_time = time.time()
@@ -444,7 +461,7 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
                 X_batch = X_batch[:, None, :, :]
 
             if num_classes is not None:
-                y_batch = np.eye(num_classes)[y_batch]
+                y_batch = np.eye(num_classes, dtype=int)[y_batch]
             
             if (hyperparams.support == "GPU"):
                 X_batch = cp.array(X_batch)
@@ -542,4 +559,4 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
 
     update_graph(lines, axs, data_train, data_test)
 
-    return data_test, elapsed_time_minutes
+    return data_train, data_test, elapsed_time_minutes
