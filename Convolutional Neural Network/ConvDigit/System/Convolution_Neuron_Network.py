@@ -5,7 +5,7 @@ from .Mathematical_function import Linear, ReLU, LeakyReLU, Sigmoide, Tanh
 from .Layers import MaxPooling, Convolution, BatchNorm, Dropout, Block
 
 def calcul_output_shape(input_size, k_size, stride, padding):
-    return np.int32((input_size - k_size + padding) / stride + 1)
+    return int((input_size - k_size + padding) / stride + 1)
 
 class CNN():
 
@@ -41,39 +41,58 @@ class CNN():
         return k_size, stride, padding, nb_kernel, type_layer, fonction, dropout
     
     def initialisation_calcul(self, x_shape, padding_mode):
-        
         structure = self.structure
-        nb_channel = x_shape[0]
+
+        prev_channels = x_shape[0]
         input_size = x_shape[1]
 
-        previ_input_size = input_size
-        previ_channel = nb_channel
+        for i in range(1, len(structure) + 1):
 
-        
-        for i in range(1, len(structure)+1):
-
-            k_size, stride, padding, nb_kernel, type_layer, fonction, dropout = self.initialisation_extraction(structure, i)
-
-            #Add padding
-            if input_size % stride != 0 and padding_mode == "auto":
-                padding = int(stride - input_size % stride)
-                structure[str(i)] = (k_size, stride, padding, nb_kernel, type_layer, fonction, dropout)
+            # --- Get parameters ---
+            k_size, stride, padding, nb_kernel, layer_type, activation, dropout = self.initialisation_extraction(structure, i)
+                        
+            # --- Add padding ---
+            if padding_mode in {"auto", "same"} and input_size % stride != 0:
+                padding = stride - (input_size % stride)
+            
+            if padding_mode == "same" and layer_type == "conv" and stride == 1:
+                padding = input_size - calcul_output_shape(input_size, k_size, stride, 0) 
                 
-            if type_layer == "conv":
-                nb_channel = nb_kernel
-                previ_channel = nb_channel
+            # --- Calcul output size ---
+            output_size = calcul_output_shape(input_size, k_size, stride, padding)
+                
+            # --- Manage channels ---
+            if layer_type == "conv":
+                current_channels = nb_kernel
 
-            #Conserve the nb of channel
-            elif type_layer == "pool":
-                structure[str(i)] = (k_size, stride, padding, previ_channel, type_layer, fonction, dropout)
+            elif layer_type == "pool":
+                nb_kernel = prev_channels
 
-            o_size = calcul_output_shape(input_size, k_size, stride, padding)
-            input_size = o_size
-            previ_input_size = input_size
+            else:
+                raise ValueError(f"Unknown layer type: {layer_type}")
 
-            self.structure = structure
+            # --- Update structure ---
+            structure[str(i)] = (
+                k_size, stride, padding, nb_kernel,
+                layer_type, activation, dropout
+            )
 
-            self.error_initialisation(x_shape, input_size, previ_input_size, type_layer, fonction, stride, dropout)
+            # --- Validation ---
+            self.error_initialisation(
+                x_shape,
+                output_size,
+                input_size + padding,
+                layer_type,
+                activation,
+                stride,
+                dropout
+            )
+
+            # --- Update next iteration ---
+            input_size = output_size
+            prev_channels = current_channels
+
+        self.structure = structure
 
     def initialisation_affectation(self, x_shape, alpha):
 
@@ -89,9 +108,6 @@ class CNN():
 
             # Construction de la layer
             if type_layer == "conv":
-
-                if i < C:
-                    o_size += padding
 
                 corr = Convolution.add_layer(nb_kernel, nb_layer, k_size, stride, o_size, padding, support)
                 batchnorm = BatchNorm.add_layer(nb_kernel, support)
@@ -121,15 +137,15 @@ class CNN():
             nb_layer = nb_kernel
     
 
-    def error_initialisation(self, x_shape, input_size, previ_input_size, type_layer, fonction, stride, dropout):
+    def error_initialisation(self, x_shape, output_size, input_size, type_layer, fonction, stride, dropout):
 
-        if input_size < 1:
+        if output_size < 1:
             self.show_information(x_shape)
-            raise ValueError(f"ERROR: The current dimension is {input_size}. Dimension can't be negatif")
+            raise ValueError(f"ERROR: The current dimension is {output_size}. Dimension can't be negatif")
             
-        if previ_input_size % input_size != 0 and stride != 1:
+        if input_size % output_size != 0 and stride != 1:
             self.show_information(x_shape)
-            raise ValueError(f"ERROR: Issue with the dimension for the pooling. {previ_input_size} not divide {input_size}")
+            raise ValueError(f"ERROR: Issue with the dimension for the pooling. {input_size} not divide {output_size}")
         
         if type_layer not in ["conv", "pool"]:
             self.show_information(x_shape)
