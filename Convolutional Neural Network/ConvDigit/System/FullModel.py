@@ -4,55 +4,94 @@ import numpy as np
 from .Convolution_Neuron_Network import CNN, calcul_output_shape
 from .Deep_Neuron_Network import DNN
 
-from .Layers import Flatten
-
-from .Evaluation_Metric import BinaryCrossEntropy
-
 class FullModel():
 
-    def __init__(self, hyperparams, structure, loss_metric, output_layer, optimizer):
-        
+    def __init__(self, hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer):
+
+        # =========================
+        # 🔧 Hyperparameters
+        # =========================
+        self.support = hyperparams.support
         input_shape = hyperparams.input_shape
         output_shape = hyperparams.output_shape
         alpha = hyperparams.alpha
         padding_mode = hyperparams.padding_mode
 
-        structure_CNN = structure[0]
-        structure_DNN = structure[1]
-        
-        self.loss_metric = loss_metric.add_layer(hyperparams.support)
-        self.output_layer = output_layer.add_layer(hyperparams.support)
-        self.optimizer = optimizer.add_layer(hyperparams)
+        structure_CNN, structure_DNN = structure
 
-        self.cnn_model = CNN(structure_CNN, input_shape, padding_mode, alpha, self.optimizer, hyperparams.support)
-        
-        flattened_size = self.get_inuput_shape(input_shape, structure_CNN)
-       
+        # =========================
+        # 🧱 Layers init
+        # =========================
+        self.loss_metric = loss_metric.add_layer(self.support)
+        self.output_layer = output_layer.add_layer(self.support)
+        self.optimizer = optimizer.add_layer(hyperparams)
+        self.transition_layer = transition_layer.add_layer(self.support)
+
+        # =========================
+        # 🧠 CNN
+        # =========================
+        self.cnn_model = CNN(
+            structure_CNN,
+            input_shape,
+            padding_mode,
+            alpha,
+            self.optimizer,
+            self.support
+        )
+
+        # =========================
+        # 🔄 Transition layer
+        # =========================
+        layer_type = self.transition_layer.class_
+
+        last_layer = structure_CNN[str(len(structure_CNN))]
+        channels = last_layer[3]
+
+        if layer_type == "Flatten":
+            spatial_dim = int(self.get_output_shape(input_shape))
+            flattened_size = spatial_dim ** 2 * channels
+
+        elif layer_type == "GlobalAveragePooling":
+            flattened_size = channels
+
+        else:
+            raise ValueError(f"Unknown transition_layer: {layer_type}")
+
+        # =========================
+        # 🎯 Output adaptation
+        # =========================
         if self.loss_metric.class_ == "BinaryCrossEntropy":
             output_shape = 1
             hyperparams.output_shape = 1
-            
-        self.dnn_model= DNN(flattened_size, output_shape, structure_DNN, alpha, self.optimizer, hyperparams.support)
-        
-        self.flatten = Flatten()
-        
-        self.y_pred =  None
+
+        # =========================
+        # 🧠 DNN
+        # =========================
+        self.dnn_model = DNN(
+            flattened_size,
+            output_shape,
+            structure_DNN,
+            alpha,
+            self.optimizer,
+            self.support
+        )
+
+        # =========================
+        # 📦 Misc
+        # =========================
+        self.y_pred = None
 
         self.show_information(input_shape)
         hyperparams.print_info()
 
-
-    def get_inuput_shape(self, input_shape, structure_CNN):
+    def get_output_shape(self, input_shape):
         
         input_size = input_shape[1]
         for val in self.cnn_model.structure.values():
             o_size = calcul_output_shape(input_size, val[0], val[1], val[2])
             input_size = o_size
-
-        last_CNN_layer = structure_CNN[str(len(structure_CNN))]
-        flattened_size = np.int32((np.int32(input_size)**2 * last_CNN_layer[3]))
         
-        return flattened_size
+        return o_size
     
     
     def forward_propagation(self, X, training):
@@ -60,7 +99,9 @@ class FullModel():
         self.cnn_model.forward_propagation(X, training)
         res_CNN = self.cnn_model.logits
 
-        self.dnn_model.forward_propagation(self.flatten.forward(res_CNN), training)
+        res_flat = self.transition_layer.forward(res_CNN)
+        
+        self.dnn_model.forward_propagation(res_flat, training)
         res_DNN = self.dnn_model.logits
 
         self.y_pred = self.output_layer.forward(res_DNN)
@@ -88,7 +129,7 @@ class FullModel():
             dZ = self.output_layer.backward(dZ)
         
         dZ = self.dnn_model.backward_propagation(dZ)
-        dZ = self.flatten.backward(dZ)
+        dZ = self.transition_layer.backward(dZ)
         self.cnn_model.backward_propagation(dZ)
 
     def update(self):
