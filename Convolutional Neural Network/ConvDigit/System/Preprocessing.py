@@ -2,10 +2,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.preprocessing import LabelBinarizer
 from sklearn.ensemble import IsolationForest
+from .Sklearn_tools import train_test_split
 
-from .Sklearn_tools import train_test_split, Label_binarizer
+from .User_Input import handle_key
 
 def get_data_shape(X, y):
 
@@ -40,11 +40,6 @@ def get_data_shape(X, y):
         exit(1)
         
     return input_shape, output_shape
-
-
-def handle_key(event):
-    if event.key == ' ':
-        plt.close(event.canvas.figure)  # Ferme la fenêtre associée
 
 
 def preprocessing(X, y, hyperparams, dataset):
@@ -98,19 +93,26 @@ def preprocessing(X, y, hyperparams, dataset):
 
     #______________________________________________________________#
     #Encode the labels for the trainning
-    transformer=LabelBinarizer()
-    transformer.fit(y_train)
-    y_train = transformer.transform(y_train.reshape((-1, 1)))
-    y_test = transformer.transform(y_test.reshape((-1, 1)))
+    
+    # Classes uniques
+    unique_list = np.unique(y_train)
+
+    # Mapping classe -> index
+    class_to_idx = {name: idx for idx, name in enumerate(unique_list)}
+    dataset.class_to_idx = class_to_idx
+
+    # Convert en indices
+    y_train = np.array([class_to_idx[y.item()] for y in y_train])
+    y_test = np.array([class_to_idx[y.item()] for y in y_test])
 
     print("\nTrain")
-    print("La dimension de X_train",X_train.shape)
-    print("La dimension de y_train",y_train.shape)
+    print("La dimension de X_train", X_train.shape)
+    print("La dimension de y_train", y_train.shape)
     print(np.unique(y_train, return_counts=True))
 
     print("\nTest")
-    print("La dimension de X_test",X_test.shape)
-    print("La dimension de y_test",y_test.shape)
+    print("La dimension de X_test", X_test.shape)
+    print("La dimension de y_test", y_test.shape)
     print(np.unique(y_test, return_counts=True))
   
     New_X_train = X_train / X_train.max()
@@ -154,4 +156,4 @@ def preprocessing(X, y, hyperparams, dataset):
     plt.tight_layout()    
     plt.show() 
 
-    return New_X_train, y_train, New_X_test, y_test, transformer
+    return New_X_train, y_train, New_X_test, y_test, class_to_idx
