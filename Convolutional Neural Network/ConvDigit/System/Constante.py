@@ -1,0 +1,3 @@
+
+FOLDER_NAME_LOGBOOK = "LogBook"
+FOLDER_NAME_MODEL = "Model"
