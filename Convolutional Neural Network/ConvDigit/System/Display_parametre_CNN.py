@@ -85,28 +85,35 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
 
 def display_activation(X, y, model):
 
-    print("")
-    number_wanted = int(input("Which number do want ?\n"))
+    if y is not None:
+        print("")
+        number_wanted = int(input("Which number do want ?\n"))
 
-    # Trouver tous les index correspondant au chiffre voulu
-    indices = [i for i, label in enumerate(y) if label == number_wanted]
+        # Trouver tous les index correspondant au chiffre voulu
+        indices = [i for i, label in enumerate(y) if label == number_wanted]
 
-    # Choisir un index aléatoire parmi ceux-là
-    index_choisi = np.random.choice(indices)
+        # Choisir un index aléatoire parmi ceux-là
+        index_choisi = np.random.choice(indices)
 
-    X_chosen = X[index_choisi]
+        X_chosen = X[index_choisi]
+    
+    else:
+        X_chosen = X[0]
 
     # Afficher l'image X
-    plt.imshow(X_chosen)
-    plt.title(f"Chiffre: {y[index_choisi]}")
+    if X_chosen.ndim == 2:
+        plt.imshow(X_chosen)
+        X_chosen = X_chosen[None, None, ...]
+        
+    if X_chosen.ndim == 3:
+        plt.imshow(X_chosen.transpose(1, 2, 0))
+        X_chosen = X_chosen[None, ...]
+
+    if y is not None:
+        plt.title(f"Chiffre: {y[index_choisi]}")
+        
     plt.axis('off')
     plt.show()
-    
-    if X_chosen.ndim == 2:
-        X_chosen = X_chosen[None, None, ...]
-
-    if X_chosen.ndim == 3:
-        X_chosen = X_chosen[None, ...].transpose(0, 3, 1, 2)
 
     C = model.C_CNN
     for i in range(C):  
