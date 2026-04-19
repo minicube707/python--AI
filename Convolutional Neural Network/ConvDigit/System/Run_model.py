@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
+from PIL import Image, ImageOps
 
 # Local imports
 from .Constante import FOLDER_NAME_LOGBOOK
@@ -330,34 +331,85 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         return
     
     if mode in {4}:
+        # === Load Model ===
         data_name = get_package_folder(module_dir, False)
         module_dir = os.path.join(module_dir, data_name)
+
         model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
-        model, hyperparams, structure, performance, dataset, metadata_old = load_model(module_dir, model_name, None)
+        model, hyperparams, structure, performance, dataset, metadata_old = load_model(
+            module_dir, model_name, None
+        )
 
         print("")
         show_all_info_model(hyperparams, structure, performance, dataset, metadata_old)
-        
-        dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
-        dataset_full_size = dataset_config["full_size"]
-        
+
+        # === Chose user dataset ===
+        use_dataset = ask_yes_no("\nWould you use a dataset ?")
+
+        if use_dataset:
+            dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
+            dataset_full_size = dataset_config["full_size"]
+
+        else:
+            # === Loading a single image ===
+            file_path = input("\nEnter the path to load your picture:\n").strip().strip('"')
+
+            if file_path == "0":
+                exit(0)
+
+            img_shape = hyperparams.input_shape
+            img_size = (img_shape[1], img_shape[2])
+
+            # Read picture
+            mode = 'RGB' if img_shape[0] == 3 else 'L'
+            img = Image.open(file_path).convert(mode)
+
+            # Resize with padding
+            img = ImageOps.pad(img, img_size, method=Image.Resampling.LANCZOS)
+
+            # Normalization
+            img_array = np.array(img) / np.max(img)
+
+            # Formatting (batch + channels)
+            if img_array.ndim == 2:
+                img_array = img_array[None, None, :, :]  # (1, 1, H, W)
+
+            elif img_array.ndim == 3:
+                img_array = np.transpose(img_array, (2, 0, 1))  # (C, H, W)
+                img_array = img_array[None, :, :, :]  # (1, C, H, W)
+
+            else:
+                raise ValueError(f"Unexpected image shape: {img_array.shape}")
+
+            display_kernel_and_biais(img_array, None, model.cnn_model)
+            exit(0)
+
+        # === Test data preparation ===
         if dataset_full_size:
             X_test = dataset_config["X_test"]
-            y_test = dataset_config["y_test"]
-            display_kernel_and_biais(X_test, y_test, model.cnn_model)
-            
+            y_final = dataset_config["y_test"]
+
         else:
             test_files = dataset_config["test_files"]
             test_labels = dataset_config["test_labels"]
             picture_in_RGB = dataset_config["picture_in_RGB"]
-                
+
             img_size = (hyperparams.input_shape[1], hyperparams.input_shape[2])
             batch_size = hyperparams.batch_size
-            test_gen = batch_generator(test_files, test_labels, batch_size, img_size, True, picture_in_RGB)
-            
-            X_test, y_final = next(test_gen)    
-            display_kernel_and_biais(X_test, y_final, model.cnn_model) 
-                       
+
+            test_gen = batch_generator(
+                test_files,
+                test_labels,
+                batch_size,
+                img_size,
+                True,
+                picture_in_RGB
+            )
+
+            X_test, y_final = next(test_gen)
+
+        # === Final Display ===
+        display_kernel_and_biais(X_test, y_final, model.cnn_model)
         exit(0)
 
     if mode in {1}:
