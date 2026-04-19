@@ -14,11 +14,18 @@ from System.Constante import FOLDER_NAME_LOGBOOK
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
-def research(model, hyperparams):
+def research(model, hyperparams, dataset):
     
-    file_paths = input("Enter the path to load your picture:\n").strip().strip('"')
+    file_paths = input("\nEnter the path to load your picture:\n").strip().strip('"')
+    
+    if file_paths == "0":
+        exit(0)
+        
     img_shape = hyperparams.input_shape
     img_size = (img_shape[1], img_shape[2])
+    
+    class_to_idx = dataset.class_to_idx
+    idx_to_class = {v: k for k, v in class_to_idx.items()}
     
     # Lecture image
     if (img_shape[0] == 3):
@@ -44,7 +51,7 @@ def research(model, hyperparams):
 
     # Prédiction
     y_pred = model.forward_propagation(img_array, False).flatten()
-
+    
     if hyperparams.loss_metric == "CrossEntropyLoss":
         pred = np.argmax(y_pred)
         porcent = np.max(y_pred)
@@ -53,6 +60,8 @@ def research(model, hyperparams):
         pred = (y_pred >= 0.5).astype(int).item()
         porcent = np.max(y_pred)
     
+    display_pred = idx_to_class[pred]
+     
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
@@ -63,7 +72,7 @@ def research(model, hyperparams):
     else:
         axs[0].imshow(img_array[0].transpose(1, 2, 0))
         
-    axs[0].set_title(f"Predict:{pred} ({np.round(porcent, 2)}%)")
+    axs[0].set_title(f"Predict:{display_pred} ({np.round(porcent, 2)}%)")
     axs[0].axis("off")
 
     # Affichage de l'histogramme des probabilités
@@ -120,8 +129,10 @@ def main ():
 
     module_dir = lister_dossiers() 
     model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
-    model, hyperparams, _, _, _, _ = load_model(module_dir, model_name, None)    
-    research(model, hyperparams)
+    model, hyperparams, _, _, dataset, _ = load_model(module_dir, model_name, None)    
+    
+    while(1):
+        research(model, hyperparams, dataset)
                 
                
 main()
