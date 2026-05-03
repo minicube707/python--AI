@@ -133,6 +133,7 @@
             "validation_size":12000
         },
         "metadata":{
+            "dataset_name": "M-NIST",
             "name":"(0,99725)(0,99619)(2026-04-18_14-55-40)",
             "date":"2026-04-18_14-55-40",
             "Based_model":"X",

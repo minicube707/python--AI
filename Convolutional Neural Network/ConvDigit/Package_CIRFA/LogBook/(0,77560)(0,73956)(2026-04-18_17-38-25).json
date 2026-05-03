@@ -133,6 +133,7 @@
             "validation_size":10000
         },
         "metadata":{
+            "dataset_name": "CIFAR-10",
             "name":"(0,77560)(0,73956)(2026-04-18_17-38-25)",
             "date":"2026-04-18_17-38-25",
             "Based_model":"X",

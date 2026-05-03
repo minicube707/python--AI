@@ -170,6 +170,7 @@
             "validation_size":5434
         },
         "metadata":{
+            "dataset_name": "biggest-genderface-recognition-dataset",
             "name":"(0,88848)(0,84476)(2026-04-17_19-05-59)",
             "date":"2026-04-17_19-05-59",
             "Based_model":"X",
