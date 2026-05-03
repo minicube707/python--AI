@@ -135,6 +135,8 @@ W_log, B_log = [], []
 
 #Graphique Initilisation
 fig, axes, line_log, line_dx, line_W, line_B, line_model, scatter_target, line_error = init_animation(nb_iteraton)
+plt.pause(0.01)
+
 X_vis = np.linspace(-2, 2, 100)
 
 
