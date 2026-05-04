@@ -63,7 +63,7 @@ class MaxPooling_CPU(Layer):
                 dA_prev_full[:, :, h_start:h_end, w_start:w_end] += dA_prev[:, :, h, w, :, :]
 
         # Removal of padding
-        dX = remove_padding(dX, padding)
+        dA_prev_full = remove_padding(dA_prev_full, padding)
 
         return dA_prev_full
 
