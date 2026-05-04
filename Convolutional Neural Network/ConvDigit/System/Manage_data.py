@@ -3,6 +3,7 @@ import os
 import sys
 
 import numpy as np
+from tqdm import tqdm
 
 from .User_Input import ask_yes_no
 
@@ -71,3 +72,26 @@ def manage_data():
 
         else:
             print(f"❌ Numéro invalide. Veuillez choisir entre 1 et {len(files)}.")
+
+
+def load_file_paths(base_dir, class_to_idx):
+    file_paths = []
+    labels = []
+
+    if class_to_idx is None:
+        class_names = sorted(os.listdir(base_dir))  # stable
+        class_to_idx = {name: idx for idx, name in enumerate(class_names)} #Dict key: name_folder: value: number
+
+    for label in tqdm(class_to_idx.keys(), desc="Classes"):
+        folder = os.path.join(base_dir, label)
+
+        if not os.path.isdir(folder):
+            continue  # ignore fichiers
+
+        for filename in os.listdir(folder):
+            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                file_paths.append(os.path.join(folder, filename))
+                labels.append(class_to_idx[label])
+
+    print("Number of files uploaded:", len(file_paths))
+    return file_paths, labels, class_to_idx

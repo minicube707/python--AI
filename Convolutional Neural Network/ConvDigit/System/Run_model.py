@@ -4,9 +4,6 @@ from datetime import datetime
 
 # Third-party
 import numpy as np
-from PIL import Image
-from tqdm import tqdm
-from sklearn.model_selection import train_test_split
 from PIL import Image, ImageOps
 
 # Local imports
@@ -17,21 +14,17 @@ from .Set_mode import set_mode
 from .User_Input import ask_yes_no
 
 # Data / file management
-from .Manage_data import manage_data
 from .Manage_file import (
     file_management,
     select_model,
     load_model,
     save_model_parameters,
-    transform_name,
 )
 from .Manage_logbook import (
     save_model_configuration,
     show_all_info_model,
 )
-
-# Preprocessing
-from .Preprocessing import preprocessing, get_data_shape
+from .Dataset_builder import select_type_dataset, get_name_package_folder
 
 # Model & training
 from .FullModel import FullModel
@@ -48,487 +41,234 @@ from .Display_parametre_CNN import (
     display_dataset,
 )
 
-def load_file_paths(base_dir, class_to_idx):
-    file_paths = []
-    labels = []
 
-    if class_to_idx is None:
-        class_names = sorted(os.listdir(base_dir))  # stable
-        class_to_idx = {name: idx for idx, name in enumerate(class_names)} #Dict key: name_folder: value: number
+def delete_mode(module_dir):
 
-    for label in tqdm(class_to_idx.keys(), desc="Classes"):
-        folder = os.path.join(base_dir, label)
-
-        if not os.path.isdir(folder):
-            continue  # ignore fichiers
-
-        for filename in os.listdir(folder):
-            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
-                file_paths.append(os.path.join(folder, filename))
-                labels.append(class_to_idx[label])
-
-    print("Number of files uploaded:", len(file_paths))
-    return file_paths, labels, class_to_idx
-
-def change_dim_picture(train_picture, input_shape):
-
-    #Shape already init
-    if (len(input_shape) == 3):
-        if input_shape[0] == 1:
-            return False, input_shape
-        else:
-            return True, input_shape
-        
-    img = Image.open(train_picture)
-    img_array = np.array(img)
-            
-    if np.ndim(img_array) == 3:
-        img_array = img_array.transpose((2, 0, 1))
-                
-    print("\nCurrent shape of a picture: ", img_array.shape)
-
-    while(1):
-        
-        if np.ndim(img_array) == 2:
-            str_load_in_color = "n"
-        else:
-            str_load_in_color = input("\nDo you want to load the images in color? (yes/no): ").strip().lower()
-        
-        if str_load_in_color == "yes" or str_load_in_color == "y":
-            print("Images will be loaded in color (RGB).")
-            picture_in_RGB = True
-            break
-        
-        elif str_load_in_color == "non" or str_load_in_color == "n":
-            print("Images will be loaded in grayscale (black and white).")
-            picture_in_RGB = False
-            break
-
-        else:
-            print("Error: Please enter yes or no")
-
-    while(1):
-        answer = input("\nWhich shape do you want to train (-1 if unchanged): ").strip()
-        
-        if (answer == "-1"):
-            int_answer = img_array.shape[0]
-            break
-        
-        if not answer.isdigit():
-            print("Please enter a number")
-            continue
-        
-        else:
-            int_answer = int(answer)
-            break
-                  
-    if (not picture_in_RGB):
-        input_shape = (1, int_answer, int_answer)
-
-    else:
-        input_shape = (3, int_answer, int_answer)
-	
-    return picture_in_RGB, input_shape
-
-def get_package_folder(current_path, create_new_folder):
+    data_name = get_name_package_folder(module_dir, False)
+    module_dir = os.path.join(module_dir, data_name)
     
-    while True:
-        
-        if create_new_folder:
-            answer = input("\nWould you use an existance Package ?\n").strip().lower()
-        else:
-            answer = "y"
-            
-        if answer == "yes" or answer == "y":
-            
-            folders = sorted(os.listdir(current_path))
-            folder = [f for f in folders if os.path.isdir(os.path.join(current_path, f)) and "Package" in f]
-            
-            # Afficher les fichiers avec un numéro
-            print("\nSélectionnez un fichier en entrant son numéro :")
-            for idx, file in enumerate(folder, start=1):
-                print(f"{idx}. {file}")
-            
-            # Demander à l'utilisateur de choisir
-            while True:
-                choice = input("Entrez le numéro du fichier : ")
-                if not choice.isdigit():
-                    print("❌ Veuillez entrer un numéro valide.")
-                    continue
+    model_name, path_model = select_model(module_dir, FOLDER_NAME_LOGBOOK)   
+    path = os.path.dirname(os.path.dirname(path_model))
+    path_data = os.path.join(path, FOLDER_NAME_LOGBOOK, model_name + ".json")
 
-                choice = int(choice)
-                if 1 <= choice <= len(folder):
-                    selected_folder = folder[choice - 1]
-                    print(f"\n✅ Vous avez sélectionné : {selected_folder}")
-                    return selected_folder
-
-                elif choice == 0:
-                    exit(0)
-
-                else:
-                    print(f"❌ Numéro invalide. Veuillez choisir entre 1 et {len(folder)}.")
-        
-        else:
-            new_folder =  input("Enter name of the new package: \n")
-            return new_folder
-
-
-def get_dataset_config(module_dir, hyperparams, dataset):
+    print("\nThis file would be delete:")
+    print(path_model)
+    print(path_data)
     
-    answer = ask_yes_no("\nIs your dataset a single .npz file?")
-
-    if answer:
-        return handle_single_npz(module_dir, hyperparams, dataset)
-    else:
-        return handle_dataset_folder(module_dir, hyperparams, dataset)
-
-
-def handle_single_npz(module_dir, hyperparams, dataset):
+    answer = ask_yes_no("\nDelete this model?")
     
-
-    data = manage_data()
-    
-    split_mode = data["split_mode"]
-    data_name = data["selected_file"]
-    
-    dir_name = transform_name(data_name)
-    module_dir = os.path.join(module_dir, dir_name)     
-    
-    if not split_mode:
-        
-        X = split_mode = data["X"]
-        y = split_mode = data["y"]
-                            
-        dataset_size = int(len(y) * (1 - hyperparams.contamination))
-        dataset.completion_value(dataset_size, None, None, hyperparams.batch_size, True)
-    
-        input_shape, output_shape =  get_data_shape(X, y)
-        X_train, y_train, X_test, y_test, class_to_idx = preprocessing(X, y, hyperparams, dataset)
-        
-    else:
-        
-        X_train = split_mode = data["x_train"]
-        y_train = split_mode = data["y_train"]
-        X_test = split_mode = data["x_test"]
-        y_test = split_mode = data["y_test"]
-                    
-        dataset_size = int((len(y_train) + len(y_test)))
-        dataset.completion_value(dataset_size, len(y_train), len(y_test), hyperparams.batch_size, False)
-    
-        input_shape, output_shape =  get_data_shape(X_train, y_train.flatten())
-        class_to_idx = {int(label): idx for idx, label in enumerate(np.unique(y_train.flatten()))}
-            
-    if X_train.ndim == 4 and X_test.ndim == 4:
-        X_train = X_train.transpose((0, 3, 1, 2))
-        X_test = X_test.transpose((0, 3, 1, 2))
-                
-    dataset.class_to_idx = class_to_idx
-    dataset.print_info()
-    
-    return {
-        "full_size": True,
-        
-        "module_dir": module_dir,
-        "input_shape": input_shape,
-        "output_shape": output_shape,
-                
-        "X_train": X_train,
-        "y_train": y_train,
-        "X_test": X_test,
-        "y_test": y_test,
-        
-        "class_to_idx": class_to_idx,
-    }
-    
-
-def print_info_dataset(train_files, train_labels, test_files, test_labels, class_to_idx):
-    
-    print("")
-    print("NB Train file: ", len(train_files))
-    print("NB Train label: ", np.unique(train_labels, return_counts=True))
-    print("NB Test file: ", len(test_files))
-    print("NB Test label: ", np.unique(test_labels, return_counts=True))
-
-           
-def handle_dataset_folder(module_dir, hyperparams, dataset):
-    
-    split_mode = ask_yes_no("Dataset already split train/test?")
-
-    if split_mode:
-        #Train Set
-        path_train_file = input("\nEnter the path for the train file:\n").strip()
-        train_files, train_labels, class_to_idx = load_file_paths(path_train_file, None)
-
-        #Test Set
-        path_test_file = input("\nEnter the path for the test file:\n").strip()
-        test_files, test_labels, _ = load_file_paths(path_test_file, class_to_idx)
-    
-    else:
-        path_dataset = input("\nEnter the path for the dataset:\n").strip()
-        files, labels, class_to_idx = load_file_paths(path_dataset, None)
-                    
-        train_files, test_files, train_labels, test_labels = train_test_split(
-            files,
-            labels,
-            test_size=dataset.ratio_test,
-            stratify=labels,
-            random_state=42
-        )
-        
-    print_info_dataset(train_files, train_labels, test_files, test_labels, class_to_idx)
-    
-    picture_in_RGB, input_shape = change_dim_picture(train_files[0], hyperparams.input_shape)
-    
-    dataset_size = len(train_files) + len(test_files)
-    dataset.class_to_idx = class_to_idx
-    dataset.completion_value(dataset_size, len(train_files), len(test_files), hyperparams.batch_size, False)
-    dataset.print_info()
-    
-    return {
-        "full_size": False,
-        
-        "module_dir": module_dir,
-        "input_shape": input_shape,
-        "output_shape": len(class_to_idx.keys()),
-        
-        "train_files": train_files,
-        "train_labels": train_labels,
-        "test_files": test_files,
-        "test_labels": test_labels,
-        
-        "class_to_idx": class_to_idx,
-        
-        "picture_in_RGB": picture_in_RGB
-    }
-
-         
-def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer, dataset):
-
-    mode = set_mode()
-
-    if mode in {5}:
-        
-        data_name = get_package_folder(module_dir, False)
-        module_dir = os.path.join(module_dir, data_name)
-        
-        model_name, path_model = select_model(module_dir, FOLDER_NAME_LOGBOOK)   
-        path = os.path.dirname(os.path.dirname(path_model))
-        path_data = os.path.join(path, FOLDER_NAME_LOGBOOK, model_name + ".json")
-
-        print("\nThis file would be delete:")
-        print(path_model)
-        print(path_data)
-        
-        answer = ask_yes_no("\nDelete this model?")
-        
-        if not answer:
-            print("Cancel, the model is not deleted")
-            return
-        
-        os.remove(path_model)
-        os.remove(path_data)
-        print(f"\nModel deleted: {model_name}")
+    if not answer:
+        print("Cancel, the model is not deleted")
         return
     
-    if mode in {4}:
-        # === Load Model ===
-        data_name = get_package_folder(module_dir, False)
-        module_dir = os.path.join(module_dir, data_name)
+    os.remove(path_model)
+    os.remove(path_data)
+    print(f"\nModel deleted: {model_name}")
+    return
 
-        model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
-        model, hyperparams, structure, performance, dataset, metadata_old = load_model(
-            module_dir, model_name, None
-        )
 
-        print("")
-        show_all_info_model(hyperparams, structure, performance, dataset, metadata_old)
+def load_model_for_test(module_dir):
+    data_name = get_name_package_folder(module_dir, False)
+    module_dir = os.path.join(module_dir, data_name)
 
-        # === Chose user dataset ===
-        use_dataset = ask_yes_no("\nWould you use a dataset ?")
+    model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
 
-        if use_dataset:
-            dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
-            dataset_full_size = dataset_config["full_size"]
+    return load_model(module_dir, model_name, None), module_dir
 
-        else:
-            # === Loading a single image ===
-            file_path = input("\nEnter the path to load your picture:\n").strip().strip('"')
 
-            if file_path == "0":
-                exit(0)
+def display_model_info(hyperparams, structure, performance, dataset, metadata):
+    print("")
+    show_all_info_model(hyperparams, structure, performance, dataset, metadata)
 
-            img_shape = hyperparams.input_shape
-            img_size = (img_shape[1], img_shape[2])
 
-            # Read picture
-            mode = 'RGB' if img_shape[0] == 3 else 'L'
-            img = Image.open(file_path).convert(mode)
+def load_single_image_for_test(file_path, input_shape):
+    img_size = (input_shape[1], input_shape[2])
+    mode = 'RGB' if input_shape[0] == 3 else 'L'
 
-            # Resize with padding
-            img = ImageOps.pad(img, img_size, method=Image.Resampling.LANCZOS)
+    img = Image.open(file_path).convert(mode)
+    img = ImageOps.pad(img, img_size, method=Image.Resampling.LANCZOS)
 
-            # Normalization
-            img_array = np.array(img) / np.max(img)
+    img_array = np.array(img) / np.max(img)
 
-            # Formatting (batch + channels)
-            if img_array.ndim == 2:
-                img_array = img_array[None, None, :, :]  # (1, 1, H, W)
+    if img_array.ndim == 2:
+        img_array = img_array[None, None, :, :]
+    elif img_array.ndim == 3:
+        img_array = np.transpose(img_array, (2, 0, 1))
+        img_array = img_array[None, :, :, :]
+    else:
+        raise ValueError(f"Unexpected image shape: {img_array.shape}")
 
-            elif img_array.ndim == 3:
-                img_array = np.transpose(img_array, (2, 0, 1))  # (C, H, W)
-                img_array = img_array[None, :, :, :]  # (1, C, H, W)
+    return img_array
 
-            else:
-                raise ValueError(f"Unexpected image shape: {img_array.shape}")
 
-            display_kernel_and_biais(img_array, None, model.cnn_model)
-            exit(0)
+def handle_test_input(module_dir, hyperparams, dataset):
+    use_dataset = ask_yes_no("\nWould you use a dataset ?")
 
-        # === Test data preparation ===
-        if dataset_full_size:
-            X_test = dataset_config["X_test"]
-            y_final = dataset_config["y_test"]
+    if use_dataset:
+        return "dataset", select_type_dataset(module_dir, hyperparams, dataset)
 
-        else:
-            test_files = dataset_config["test_files"]
-            test_labels = dataset_config["test_labels"]
-            picture_in_RGB = dataset_config["picture_in_RGB"]
+    file_path = input("\nEnter the path to load your picture:\n").strip().strip('"')
 
-            img_size = (hyperparams.input_shape[1], hyperparams.input_shape[2])
-            batch_size = hyperparams.batch_size
-
-            test_gen = batch_generator(
-                test_files,
-                test_labels,
-                batch_size,
-                img_size,
-                True,
-                picture_in_RGB
-            )
-
-            X_test, y_final = next(test_gen)
-
-        # === Final Display ===
-        display_kernel_and_biais(X_test, y_final, model.cnn_model)
+    if file_path == "0":
         exit(0)
 
-    if mode in {1}:
+    return "image", load_single_image_for_test(file_path, hyperparams.input_shape)
 
-        # ============================
-        #     INITIALISATION CNN
-        # ============================
-        dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
-        
-        input_shape = dataset_config["input_shape"]
-        output_shape = dataset_config["output_shape"]
-        class_to_idx = dataset_config["class_to_idx"]
-        dataset_full_size = dataset_config["full_size"]
-                
-        hyperparams.add_shape(input_shape, output_shape)
-        hyperparams.check_support()
+
+def prepare_test_data(dataset_config, hyperparams):
+    if dataset_config["full_size"]:
+        return dataset_config["X_test"], dataset_config["y_test"]
+
+    test_files = dataset_config["test_files"]
+    test_labels = dataset_config["test_labels"]
+    picture_in_RGB = dataset_config["picture_in_RGB"]
+
+    img_size = (hyperparams.input_shape[1], hyperparams.input_shape[2])
+
+    test_gen = batch_generator(
+        test_files,
+        test_labels,
+        hyperparams.batch_size,
+        img_size,
+        True,
+        picture_in_RGB
+    )
+
+    return next(test_gen)
+
+
+def exam_mode(module_dir):
+
+    # Load model
+    (model, hyperparams, structure, performance, dataset, metadata), module_dir = load_model_for_test(module_dir)
+
+    display_model_info(hyperparams, structure, performance, dataset, metadata)
+
+    # User choice
+    input_type, data = handle_test_input(module_dir, hyperparams, dataset)
+
+    if input_type == "image":
+        display_kernel_and_biais(data, None, model.cnn_model)
+        exit(0)
+
+    # Dataset case
+    X_test, y_final = prepare_test_data(data, hyperparams)
+
+    display_kernel_and_biais(X_test, y_final, model.cnn_model)
+    exit(0)
+
+
+def save_model(module_dir, model, hyperparams, dataset, structure, elapsed_time_minutes, metadata_old, mode, data_test, data_train):
     
-        model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer)
-        metadata_old = None
+    date = datetime.today()
+    date = date.strftime('%Y-%m-%d_%H-%M-%S')
 
-        data_name = get_package_folder(module_dir, True)
-        module_dir = os.path.join(module_dir, data_name)
+    name_model = file_management(date, data_test["accu"][-1], data_test["conf"][-1])
+    print(name_model)
+
+    metadata = {}
+    metadata["name"] = name_model
+    metadata["date"] = date
+    
+    performance = {}
+    performance["cost_loss"] = data_test["loss"][-1]
+    performance["accuracy"] = data_test["accu"][-1]
+    performance["confidence_score"] = data_test["conf"][-1]
+    performance["accuracy_ratio"] = data_test['accu'][-1] / data_train['accu'][-1]
+    performance["overfitting_indicator"] = data_test['loss'][-1] - data_train['loss'][-1]
+    
+    save_model_parameters(module_dir, name_model, model)
+
+    save_model_configuration(mode, 
+                hyperparams, performance, dataset, structure,
+                elapsed_time_minutes,
+                metadata, metadata_old,
+                module_dir)
+
+
+def new_model_mode(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer, dataset):
+      
+    dataset_config = select_type_dataset(module_dir, hyperparams, dataset)
         
+    input_shape = dataset_config["input_shape"]
+    output_shape = dataset_config["output_shape"]
+    class_to_idx = dataset_config["class_to_idx"]
+    dataset_full_size = dataset_config["full_size"]
+            
+    hyperparams.add_shape(input_shape, output_shape)
+    hyperparams.check_support()
+
+    model = FullModel(hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer)
+    metadata_old = None
+
+    data_name = get_name_package_folder(module_dir, True)
+    module_dir = os.path.join(module_dir, data_name)
+    
+    return module_dir, model, metadata_old, class_to_idx, dataset_full_size, dataset_config
+
+
+def fine_tuning_model(module_dir, hyperparams, mode, dataset):
+     
+    # Chargement du modele existant
+    data_name = get_name_package_folder(module_dir, False)
+    module_dir = os.path.join(module_dir, data_name)
+    model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
+    
+    if mode in {3}:
+        hyperparams = None
+        
+    model, hyperparams, _, _, _, metadata_old = load_model(module_dir, model_name, hyperparams)
+    
+    dataset_config = select_type_dataset(module_dir, hyperparams, dataset)
+    
+    class_to_idx = dataset_config["class_to_idx"]
+    dataset_full_size = dataset_config["full_size"]
+    
+    return module_dir, model, hyperparams, metadata_old, class_to_idx, dataset_full_size, dataset_config
+
+
+def training(model, hyperparams, dataset, class_to_idx, dataset_config, dataset_full_size):
+    
+    #For One-Hot Encoder
+    if model.loss_metric.class_ == "CrossEntropyLoss":
+        num_classes = len(class_to_idx)
     else:
-
-        # ============================
-        #       SELECT A MODEL
-        # ============================
-
-        # Chargement du modele existant
-        data_name = get_package_folder(module_dir, False)
-        module_dir = os.path.join(module_dir, data_name)
-        model_name, _ = select_model(module_dir, FOLDER_NAME_LOGBOOK)
-        
-        if mode in {3}:
-            hyperparams = None
+        num_classes = None
             
-        model, hyperparams, _, _, _, metadata_old = load_model(module_dir, model_name, hyperparams)
+    if dataset_full_size:
         
-        dataset_config = get_dataset_config(module_dir, hyperparams, dataset)
+        X_train = dataset_config["X_train"]
+        y_train = dataset_config["y_train"]
+        X_test = dataset_config["X_test"]
+        y_test = dataset_config["y_test"]
         
-        input_shape = dataset_config["input_shape"]
-        output_shape = dataset_config["output_shape"]
-        class_to_idx = dataset_config["class_to_idx"]
-        dataset_full_size = dataset_config["full_size"]
-        
-    if mode in {1, 2}:
-        # ============================
-        #       TRAINNING
-        # ============================
+        data_train, data_test, elapsed_time_minutes = training_full_data(
+            model, 
+            hyperparams, dataset,
+            X_train, y_train, 
+            X_test, y_test,
+            num_classes)
 
-        # Entraînement d'un nouveau modèle
-
-        #For One-Hot Encoder
-        if model.loss_metric.class_ == "CrossEntropyLoss":
-            num_classes = len(class_to_idx)
-        else:
-            num_classes = None
+    else:
+        
+        train_files = dataset_config["train_files"]
+        train_labels = dataset_config["train_labels"]
+        test_files = dataset_config["test_files"]
+        test_labels = dataset_config["test_labels"]
+        picture_in_RGB = dataset_config["picture_in_RGB"]
                 
-        if dataset_full_size:
-            
-            X_train = dataset_config["X_train"]
-            y_train = dataset_config["y_train"]
-            X_test = dataset_config["X_test"]
-            y_test = dataset_config["y_test"]
-            
-            data_train, data_test, elapsed_time_minutes = training_full_data(
-                model, 
-                hyperparams, dataset,
-                X_train, y_train, 
-                X_test, y_test,
-                num_classes)
-
-        else:
-            
-            train_files = dataset_config["train_files"]
-            train_labels = dataset_config["train_labels"]
-            test_files = dataset_config["test_files"]
-            test_labels = dataset_config["test_labels"]
-            picture_in_RGB = dataset_config["picture_in_RGB"]
-                    
-            data_train, data_test, elapsed_time_minutes = training_batch_data(
-                model, 
-                hyperparams, dataset,
-                train_files, train_labels, 
-                test_files, test_labels, 
-                picture_in_RGB, num_classes)
+        data_train, data_test, elapsed_time_minutes = training_batch_data(
+            model, 
+            hyperparams, dataset,
+            train_files, train_labels, 
+            test_files, test_labels, 
+            picture_in_RGB, num_classes)
         
-        # ============================
-        #          SAVE
-        # ============================
+    return data_train, data_test, elapsed_time_minutes
 
-        # Sauvegarde du meilleur modèle entraîné ou chargé
-        date = datetime.today()
-        date = date.strftime('%Y-%m-%d_%H-%M-%S')
 
-        name_model = file_management(date, data_test["accu"][-1], data_test["conf"][-1])
-        print(name_model)
-
-        metadata = {}
-        metadata["name"] = name_model
-        metadata["date"] = date
-        
-        performance = {}
-        performance["cost_loss"] = data_test["loss"][-1]
-        performance["accuracy"] = data_test["accu"][-1]
-        performance["confidence_score"] = data_test["conf"][-1]
-        performance["accuracy_ratio"] = data_test['accu'][-1] / data_train['accu'][-1]
-        performance["overfitting_indicator"] = data_test['loss'][-1] - data_train['loss'][-1]
-        
-        save_model_parameters(module_dir, name_model, model)
-
-        save_model_configuration(mode, 
-                    hyperparams, performance, dataset, structure,
-                    elapsed_time_minutes,
-                    metadata, metadata_old,
-                    module_dir)
-        
-    #______________________________________________________________#
+def final_verification(model, hyperparams, class_to_idx, dataset_config, dataset_full_size):
+    
     while(1):
         
         str_answer = input("\nHow many test do you want to do ?\n")
@@ -565,3 +305,28 @@ def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, outpu
         X_test, y_final = next(test_gen)                
         display_first_picture(model, X_test, y_final, class_to_idx)
         display_dataset(model, X_test, y_final, nb_test, class_to_idx)
+
+
+def run_training_pipeline(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer, dataset):
+
+    mode = set_mode()
+
+    if mode in {5}:
+        delete_mode(module_dir)
+        
+    if mode in {4}:
+        exam_mode(module_dir)
+        
+    if mode in {1}:
+        module_dir, model, metadata_old, class_to_idx, dataset_full_size, dataset_config = new_model_mode(module_dir, hyperparams, structure, loss_metric, output_layer, optimizer, transition_layer, dataset)
+    
+    else:
+        module_dir, model, hyperparams, metadata_old, class_to_idx, dataset_full_size, dataset_config = fine_tuning_model(module_dir, hyperparams,mode, dataset)
+        
+    if mode in {1, 2}:
+        data_train, data_test, elapsed_time_minutes = training(model, hyperparams, dataset, class_to_idx, dataset_config, dataset_full_size)
+        
+        save_model(module_dir, model, hyperparams, dataset, structure, elapsed_time_minutes, metadata_old, mode, data_test, data_train)
+        
+        
+    final_verification(model, hyperparams, class_to_idx, dataset_config, dataset_full_size)
