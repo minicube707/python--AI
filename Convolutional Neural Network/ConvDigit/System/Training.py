@@ -92,6 +92,77 @@ def update_graph(lines, axs, data_train, data_test, window=4):
     plt.pause(0.01)
 
 
+def print_init(data_test):
+    
+    va = data_test["accu"][-1]
+    vc = data_test["conf"][-1]
+    vl = data_test["loss"][-1]
+    
+    print(f"\nInitial accurracy: {va}")
+    print(f"Initial confidence score: {vc}")
+    print(f"Initial loss: {vl}")
+    print("")
+
+
+def print_training(data_test, data_train, best_accu):
+    
+    def couleur(texte, code):
+        return f"\033[{code}m{texte}\033[0m"
+    
+    va = data_test["accu"][-1]
+    vc = data_test["conf"][-1]
+    vl = data_test["loss"][-1]
+
+    ta = data_train["accu"][-1]
+    tc = data_train["conf"][-1]
+    tl = data_train["loss"][-1]
+    
+    print("\n-----------------------")
+    if va > best_accu:
+        print(couleur("New record", 32))
+           
+    print(f"Accuracy test: {va}")
+    print(f"Confidence score test: {vc}")
+    print(f"Loss test: {vl}")
+    print("")
+    
+    print(f"Accuracy train: {ta}")
+    print(f"Confidence score train: {tc}")
+    print(f"Loss train: {tl}")
+    print("")
+
+      
+def print_final(data_train, data_test, elapsed_time_minutes):
+    
+    # Final results
+    print(f"\n🚂💰 Coût final - Train          : {data_train['loss'][-1]:.5f}")
+    print(f"🧪💰 Coût final - Test             : {data_test['loss'][-1]:.5f}")
+
+    print(f"🧠 Accuracy finale - Train          : {data_train['accu'][-1]:.5f}")
+    print(f"🧪 Accuracy finale - Test           : {data_test['accu'][-1]:.5f}")
+
+    print(f"🔎 Confidence score - Train         : {data_train['conf'][-1]:.5f}")
+    print(f"🔎 Confidence score - Test          : {data_test['conf'][-1]:.5f}")
+
+    print("\nIndicateur underfiting/overfiting")
+    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train['lear'][-1]:.5f}") 
+    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test['lear'][-1]:.5f}")
+    print("Accuracy Ratio                         :", data_test['accu'][-1] / data_train['accu'][-1])
+    print("Indicateur d’overfitting               :", data_test['loss'][-1] - data_train['loss'][-1])
+
+    print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
+    print("")
+
+
+def evaluate_model_on_samples_full_data(X_train, X_test, y_train, y_test, data_train, data_test, model, hyperparams, validation_size, batch_size):
+    
+    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
+    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
+
+    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
+    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
+ 
+    
 def compute_metrics_full_data(model, X, y, indices, batch_size, dict_performance, hyperparams):
 
     total_loss = 0.0
@@ -171,24 +242,16 @@ def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y
     "conf": [],
     }
 
-    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
-    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
-
-    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
-    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
-
-    va = data_test["accu"][-1]
-    vc = data_test["conf"][-1]
-    vl = data_test["loss"][-1]
-    
-    best_accu = va
-    print(f"\nInitial accurracy: {best_accu}")
-    print(f"Initial confidence score: {vc}")
-    print(f"Initial loss: {vl}")
-    print("")
+    evaluate_model_on_samples_full_data(X_train, X_test, y_train, y_test, data_train, data_test, 
+                                        model, hyperparams, validation_size, batch_size)
+ 
+    best_accu = data_test["accu"][-1]
+    print_init(data_test)
     
     fig, axs, lines = init_animation()
-    # Démarrer le chronomètre
+    update_graph(lines, axs, data_train, data_test)
+    
+    #Start the timer
     start_time = time.time()
     global_step = 1
 
@@ -210,89 +273,32 @@ def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y
             model.update()
             
             if (global_step % validation_frequency == 0):
+                
                 # Évaluation partielle
-                rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
-                rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
+                evaluate_model_on_samples_full_data(X_train, X_test, y_train, y_test, data_train, data_test, 
+                                    model, hyperparams, validation_size, batch_size)
 
-                compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
-                compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
-
+                print_training(data_test, data_train, best_accu)
                 update_graph(lines, axs, data_train, data_test)
-
-                va = data_test["accu"][-1]
-                vc = data_test["conf"][-1]
-                vl = data_test["loss"][-1]
-
-                ta = data_train["accu"][-1]
-                tc = data_train["conf"][-1]
-                tl = data_train["loss"][-1]
                 
-                if va > best_accu:
-                    best_accu = va
-                    print("\n-----------------------")
-                    print(f"New accuracy test: {va}")
-                    print(f"New confidence score test: {vc}")
-                    print(f"New loss test: {vl}")
-                    print("")
-                
-                else:
-                    print("\n-----------------------")
-                    print(f"Accuracy test: {va}")
-                    print(f"Confidence score test: {vc}")
-                    print(f"Loss test: {vl}")
-                    print("")
-                
-                print(f"Accuracy train: {ta}")
-                print(f"Confidence score train: {tc}")
-                print(f"Loss train: {tl}")
-                print("")
-
+                if data_test["accu"][-1] > best_accu:
+                    best_accu = data_test["accu"][-1]
+                    
             global_step += 1
             
-    # Arrêter le chronomètre
+    #Stop timer
     end_time = time.time()
 
     # Évaluation partielle
-    rand_idx_train = np.random.choice(X_train.shape[0], validation_size, replace=False)
-    rand_idx_test = np.random.choice(X_test.shape[0], validation_size, replace=False)
+    evaluate_model_on_samples_full_data(X_train, X_test, y_train, y_test, data_train, data_test, 
+                                    model, hyperparams, validation_size, batch_size)
 
-    compute_metrics_full_data(model, X_train, y_train, rand_idx_train, batch_size, data_train, hyperparams)
-    compute_metrics_full_data(model, X_test, y_test, rand_idx_test, batch_size, data_test, hyperparams)
-
-    va = data_test["accu"][-1]
-    vc = data_test["conf"][-1]
-    vl = data_test["loss"][-1]
-
-    if va > best_accu:
-        best_accu = va
-        print(f"\nNew accuracy: {va}")
-        print(f"New confidence score: {vc}")
-        print(f"New loss: {vl}")
-        print("")
+    print_training(data_test, data_train, best_accu)
+    update_graph(lines, axs, data_train, data_test)
 
     # Calcul du temps en minutes
     elapsed_time_minutes = (end_time - start_time) / 60
-        
-    # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train          : {data_train['loss'][-1]:.5f}")
-    print(f"🧪💰 Coût final - Test             : {data_test['loss'][-1]:.5f}")
-
-    print(f"🧠 Accuracy finale - Train          : {data_train['accu'][-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test           : {data_test['accu'][-1]:.5f}")
-
-    print(f"🔎 Confidence score - Train         : {data_train['conf'][-1]:.5f}")
-    print(f"🔎 Confidence score - Test          : {data_test['conf'][-1]:.5f}")
-
-    print("\nIndicateur underfiting/overfiting")
-    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train['lear'][-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test['lear'][-1]:.5f}")
-    print("Accuracy Ratio                         :", data_test['accu'][-1] / data_train['accu'][-1])
-    print("Indicateur d’overfitting               :", data_test['loss'][-1] - data_train['loss'][-1])
-
-    print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
-    print("")
-
-    update_graph(lines, axs, data_train, data_test)
+    print_final(data_train, data_test, elapsed_time_minutes)
 
     return data_train, data_test, elapsed_time_minutes
 
@@ -404,6 +410,15 @@ def compute_metrics_batch_data(model, file_paths, labels, batch_size, dict_perfo
     dict_performance["conf"].append(total_conf)
 
 
+def evaluate_model_on_samples_batch_data(train_files, test_files, train_labels, test_labels, data_train, data_test, model, hyperparams, validation_size, batch_size, img_size, picture_in_RGB, num_classes):
+    
+    train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
+    test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
+
+    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
+    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)                  
+
+
 def training_batch_data(model, hyperparams, dataset, train_files, train_labels, test_files, test_labels, picture_in_RGB, num_classes):
 
     nb_epoch = hyperparams.nb_epoch
@@ -428,25 +443,16 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
     "conf": [],
     }
 
-    train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
-    test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
-
-    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
-    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
-
-    va = data_test["accu"][-1]
-    vc = data_test["conf"][-1]
-    vl = data_test["loss"][-1]
+    evaluate_model_on_samples_batch_data(train_files, test_files, train_labels, test_labels, data_train, data_test, 
+                                         model, hyperparams, validation_size, batch_size, img_size, picture_in_RGB, num_classes)
     
-                    
-    best_accu = va
-    print(f"\nInitial accurracy: {best_accu}")
-    print(f"Initial confidence score: {vc}")
-    print(f"Initial loss: {vl}")
-    print("")
-                
+    best_accu = data_test["accu"][-1]
+    print_init(data_test)
+          
     fig, axs, lines = init_animation()
-    # Démarrer le chronomètre
+    update_graph(lines, axs, data_train, data_test)
+    
+    # Start the timer
     start_time = time.time()
     global_step = 1
 
@@ -470,93 +476,33 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
             model.forward_propagation(X_batch, training=True)
             model.backward_propagation(y_batch)
             model.update()
-
-            
+      
             if (global_step % validation_frequency == 0):
                 
                 # Évaluation partielle
-                train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
-                test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
-
-                compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
-                compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
+                evaluate_model_on_samples_batch_data(train_files, test_files, train_labels, test_labels, data_train, data_test, 
+                                         model, hyperparams, validation_size, batch_size, img_size, picture_in_RGB, num_classes)
                 
+                print_training(data_test, data_train, best_accu)
                 update_graph(lines, axs, data_train, data_test)
                 
-                va = data_test["accu"][-1]
-                vc = data_test["conf"][-1]
-                vl = data_test["loss"][-1]
-
-                ta = data_train["accu"][-1]
-                tc = data_train["conf"][-1]
-                tl = data_train["loss"][-1]
-                
-                if va > best_accu:
-                    best_accu = va
-                    print("\n-----------------------")
-                    print(f"New accuracy test: {va}")
-                    print(f"New confidence score test: {vc}")
-                    print(f"New loss test: {vl}")
-                    print("")
-                
-                else:
-                    print("\n-----------------------")
-                    print(f"Accuracy test: {va}")
-                    print(f"Confidence score test: {vc}")
-                    print(f"Loss test: {vl}")
-                    print("")
-                
-                print(f"Accuracy train: {ta}")
-                print(f"Confidence score train: {tc}")
-                print(f"Loss train: {tl}")
-                print("")
+                if data_test["accu"][-1] > best_accu:
+                    best_accu = data_test["accu"][-1]
             
             global_step += 1       
-                
-                    
-    # Arrêter le chronomètre
+                                
+    # Stop timer
     end_time = time.time()
 
     # Évaluation partielle
-    train_sample_files, train_sample_labels = sample_files(train_files, train_labels, validation_size)
-    test_sample_files, test_sample_labels = sample_files(test_files, test_labels, validation_size)
-
-    compute_metrics_batch_data(model, train_sample_files, train_sample_labels, batch_size, data_train, img_size, picture_in_RGB, num_classes, hyperparams)
-    compute_metrics_batch_data(model, test_sample_files, test_sample_labels, batch_size, data_test, img_size, picture_in_RGB, num_classes, hyperparams)
-
-    va = data_test["accu"][-1]
-    vc = data_test["conf"][-1]
-    vl = data_test["loss"][-1]
-
-    if va > best_accu:
-        best_accu = va
-        print(f"\nNew accuracy: {va}")
-        print(f"New confidence score: {vc}")
-        print(f"New loss: {vl}")
-        print("")
+    evaluate_model_on_samples_batch_data(train_files, test_files, train_labels, test_labels, data_train, data_test, 
+                                         model, hyperparams, validation_size, batch_size, img_size, picture_in_RGB, num_classes)
+    
+    print_training(data_test, data_train, best_accu)
+    update_graph(lines, axs, data_train, data_test)
 
     # Calcul du temps en minutes
     elapsed_time_minutes = (end_time - start_time) / 60
-        
-    # Résultats finaux
-    print(f"\n🚂💰 Coût final - Train          : {data_train['loss'][-1]:.5f}")
-    print(f"🧪💰 Coût final - Test             : {data_test['loss'][-1]:.5f}")
-
-    print(f"🧠 Accuracy finale - Train          : {data_train['accu'][-1]:.5f}")
-    print(f"🧪 Accuracy finale - Test           : {data_test['accu'][-1]:.5f}")
-
-    print(f"🔎 Confidence score - Train         : {data_train['conf'][-1]:.5f}")
-    print(f"🔎 Confidence score - Test          : {data_test['conf'][-1]:.5f}")
-
-    print("\nIndicateur underfiting/overfiting")
-    print(f"🧠📉 Derive Coût final - Train 🚆   : {data_train['lear'][-1]:.5f}") 
-    print(f"🧠📉 Derive Coût final - Test 🧪    : {data_test['lear'][-1]:.5f}")
-    print("Accuracy Ratio                         :", data_test['accu'][-1] / data_train['accu'][-1])
-    print("Indicateur d’overfitting               :", data_test['loss'][-1] - data_train['loss'][-1])
-
-    print(f"\nTemps d'entrenemant {elapsed_time_minutes} minutes, {elapsed_time_minutes/60} heures")
-    print("")
-
-    update_graph(lines, axs, data_train, data_test)
+    print_final(data_train, data_test, elapsed_time_minutes)
 
     return data_train, data_test, elapsed_time_minutes
