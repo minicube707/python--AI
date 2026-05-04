@@ -62,7 +62,7 @@ class Hyperparams:
                 gpu_count = 0
 
             if gpu_count == 0:
-                print("ERROR: No GPU found. Switching to CPU mode.")
+                print("\nERROR: No GPU found. Switching to CPU mode.")
                 self.support = "CPU"
 
     def print_info(self):
