@@ -134,7 +134,7 @@ def preprocessing(X, y, hyperparams, dataset):
     fig.suptitle("Train Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_train[i], cmap="gray")
+        plt.imshow(New_X_train[i])
 
         plt.title(str(np.argmax(y_train[i])))
         plt.axis("off")
@@ -148,7 +148,7 @@ def preprocessing(X, y, hyperparams, dataset):
     fig.suptitle("Test Dataset")
     for i in range(1,n):
         plt.subplot(4,5, i)
-        plt.imshow(New_X_test[i], cmap="gray")
+        plt.imshow(New_X_test[i])
         
 
         plt.title(str(np.argmax(y_test[i])))
