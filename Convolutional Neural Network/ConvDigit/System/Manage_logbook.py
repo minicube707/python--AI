@@ -33,13 +33,15 @@ def save_model_configuration(mode,
         metadata["total_epoch"] = hyperparams.nb_epoch
         metadata["training_time_(min)"] = elapsed_time_minutes
         metadata["Number_fine_tuning"] = 0
-
+        metadata["dataset_name"] =  input("What is the name of the dataset ?\n")
+        
     else:
         metadata["Based_model"] = metadata_old["name"]
         metadata["total_epoch"] = metadata_old["total_epoch"] + hyperparams.nb_epoch
         metadata["training_time_(min)"] = metadata_old["training_time_(min)"] + elapsed_time_minutes
         metadata["Number_fine_tuning"] = metadata_old["Number_fine_tuning"] + 1
-
+        metadata["dataset_name"] = metadata_old["dataset_name"]
+        
     new_log = {
         "hyperparameters": hyperparams,
         "structure" : structure,
