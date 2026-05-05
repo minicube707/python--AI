@@ -1,15 +1,17 @@
-
-import numpy as np
-import pygame
-import matplotlib
-matplotlib.use("TkAgg")  # Issue on linux PC 42
-import matplotlib.pyplot as plt
 import os
+import numpy as np
+import cupy as cp
+import matplotlib
+import pygame
+
+import matplotlib.pyplot as plt
 
 from System.Manage_file import select_model, load_model
 from System.User_Input import handle_key
 
 from System.Constante import FOLDER_NAME_LOGBOOK
+
+matplotlib.use("TkAgg")  # Issue on linux PC 42
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -113,8 +115,15 @@ def research(grid, model, rows, hyperparams, do_pool):
 
     grid /= 255
     
+    if (model.support == "GPU"):
+        grid = cp.array(grid)
+
     # Prédiction des probabilités avec softmax
     y_pred = model.forward_propagation(grid[None, None, ...], False).flatten()
+
+    if (model.support == "GPU"):
+        y_pred = cp.asnumpy(y_pred)
+        grid = cp.asnumpy(grid)
 
     pred = np.argmax(y_pred)
     porcent = np.max(y_pred)
