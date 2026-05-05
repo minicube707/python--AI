@@ -1,15 +1,18 @@
 
-import numpy as np
-import matplotlib
-matplotlib.use("TkAgg")  # Issue on linux PC 42
-import matplotlib.pyplot as plt
 import os
+import numpy as np
+import cupy as cp
+import matplotlib
+
+import matplotlib.pyplot as plt
 from PIL import Image, ImageOps
 
 from System.Manage_file import select_model, load_model
 from System.User_Input import handle_key
 
 from System.Constante import FOLDER_NAME_LOGBOOK
+
+matplotlib.use("TkAgg")  # Issue on linux PC 42
 
 module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
@@ -49,8 +52,15 @@ def research(model, hyperparams, dataset):
     else:
         raise ValueError(f"Unexpected image shape: {img_array.shape}")
 
+    if (model.support == "GPU"):
+        img_array = cp.array(img_array)
+
     # Prédiction
     y_pred = model.forward_propagation(img_array, False).flatten()
+    
+    if (model.support == "GPU"):
+        y_pred = cp.asnumpy(y_pred)
+        img_array = cp.asnumpy(img_array)
     
     if hyperparams.loss_metric == "CrossEntropyLoss":
         pred = np.argmax(y_pred)
