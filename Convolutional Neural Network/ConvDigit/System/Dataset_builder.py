@@ -152,15 +152,15 @@ def handle_dataset_folder(module_dir, hyperparams, dataset):
 
     if split_mode:
         #Train Set
-        path_train_file = input("\nEnter the path for the train file:\n").strip()
+        path_train_file = input("\nEnter the path for the train file:\n").strip().strip('"')
         train_files, train_labels, class_to_idx = load_file_paths(path_train_file, None)
 
         #Test Set
-        path_test_file = input("\nEnter the path for the test file:\n").strip()
+        path_test_file = input("\nEnter the path for the test file:\n").strip().strip('"')
         test_files, test_labels, _ = load_file_paths(path_test_file, class_to_idx)
     
     else:
-        path_dataset = input("\nEnter the path for the dataset:\n").strip()
+        path_dataset = input("\nEnter the path for the dataset:\n").strip().strip('"')
         files, labels, class_to_idx = load_file_paths(path_dataset, None)
                     
         train_files, test_files, train_labels, test_labels = train_test_split(
