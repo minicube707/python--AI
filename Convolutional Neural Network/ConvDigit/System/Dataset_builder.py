@@ -231,4 +231,4 @@ def get_name_package_folder(current_path, create_new_folder):
 
     else:
         new_folder =  input("Enter name of the new package: \n")
-        return new_folder
+        return transform_name(new_folder)

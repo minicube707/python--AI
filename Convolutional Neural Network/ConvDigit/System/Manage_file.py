@@ -169,7 +169,7 @@ def transform_name(filename):
         new_name = filename
     
     else:
-        new_name = "Package " + filename
+        new_name = "Package_" + filename
 
     return new_name
 
