@@ -283,7 +283,10 @@ def training_full_data(model,  hyperparams, dataset, X_train, y_train, X_test, y
                 
                 if data_test["accu"][-1] > best_accu:
                     best_accu = data_test["accu"][-1]
-                    
+
+            else:
+                plt.pause(0.01)
+
             global_step += 1
             
     #Stop timer
@@ -488,7 +491,10 @@ def training_batch_data(model, hyperparams, dataset, train_files, train_labels, 
                 
                 if data_test["accu"][-1] > best_accu:
                     best_accu = data_test["accu"][-1]
-            
+
+            else:
+                plt.pause(0.01)
+                
             global_step += 1       
                                 
     # Stop timer
