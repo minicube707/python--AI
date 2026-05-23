@@ -58,9 +58,22 @@ class Hyperparams:
         if self.support == "GPU":
             try:
                 gpu_count = cp.cuda.runtime.getDeviceCount()
-            except cp.cuda.runtime.CUDARuntimeError:
+                a = cp.random.randn((1,))
+                
+            except cp.cuda.runtime.CUDARuntimeError as e:
+                
+                error_message = str(e)
                 gpu_count = 0
-
+                
+                if (["libcuda.so", "CUDA driver", "cudaErrorInsufficientDriver"] in error_message):
+                    print("\nERROR: NVIDIA CUDA libraries/drivers not found.")
+                else:
+                    print(f"\nERROR: CUDA runtime error: {error_message}")
+                
+            except Exception as e:
+                print("\nERROR: GPU initialization failed: {e}")
+                gpu_count = 0
+                
             if gpu_count == 0:
                 print("\nERROR: No GPU found. Switching to CPU mode.")
                 self.support = "CPU"
