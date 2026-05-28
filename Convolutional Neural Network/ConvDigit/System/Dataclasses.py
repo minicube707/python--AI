@@ -51,6 +51,12 @@ class Hyperparams:
     
     def check_support(self):
 
+        cuda_errors = [
+        "libcuda.so",
+        "CUDA driver",
+        "cudaErrorInsufficientDriver",
+        ]
+        
         if self.support not in ["CPU", "GPU"]:
             print(f"ERROR: support '{self.support}' is not defined. Please correct with 'CPU' or 'GPU'.")
             exit(0)
@@ -58,9 +64,23 @@ class Hyperparams:
         if self.support == "GPU":
             try:
                 gpu_count = cp.cuda.runtime.getDeviceCount()
-            except cp.cuda.runtime.CUDARuntimeError:
+                cp.random.randn((1, ))
+                
+            except cp.cuda.runtime.CUDARuntimeError as e:
+                
+                error_msg =  str(e)
                 gpu_count = 0
+                
+                if any(err in error_msg for err in cuda_errors):
+                    print("\nERRROR: NVIDIA CUDA libraries/drivers not found.")
+                else:
+                    print(f"\nERROR: CUDA runtime error: {error_msg}")
 
+            except Exception as e:
+                
+                gpu_count = 0
+                print("\nERROR: GPU initialization failed: {e}")
+                
             if gpu_count == 0:
                 print("\nERROR: No GPU found. Switching to CPU mode.")
                 self.support = "CPU"
