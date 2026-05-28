@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import cupy as cp
 import matplotlib
 import pygame
 
@@ -10,6 +9,8 @@ from System.Manage_file import select_model, load_model
 from System.User_Input import handle_key
 
 from System.Constante import FOLDER_NAME_LOGBOOK
+
+from utilsConv import lister_dossiers, picture_prediction
 
 matplotlib.use("TkAgg")  # Issue on linux PC 42
 
@@ -79,6 +80,7 @@ def add_node(width, rows, grid, brush_size=2):
                             grid[r, c] = max(grid[r, c], intensity)  # Pour éviter d’écraser un plus fort dégradé
     return grid
 
+
 def delete_node (width, rows, grid):
 
     #Right click
@@ -91,6 +93,7 @@ def delete_node (width, rows, grid):
             
 
     return grid
+
 
 def pooling(grid, kernel_size):
 
@@ -107,83 +110,45 @@ def pooling(grid, kernel_size):
 
     return new_grid
 
+
 def research(grid, model, rows, hyperparams, do_pool):
 
     if (do_pool):
         grid = pooling(grid, kernel_size=2)
         rows = int(rows / 2)
-
+        
+    # =========================
+    # Preprocessing
+    # =========================
     grid /= 255
+    img = grid[None, None, :, :]
     
-    if (model.support == "GPU"):
-        grid = cp.array(grid)
-
-    # Prédiction des probabilités avec softmax
-    y_pred = model.forward_propagation(grid[None, None, ...], False).flatten()
-
-    if (model.support == "GPU"):
-        y_pred = cp.asnumpy(y_pred)
-        grid = cp.asnumpy(grid)
-
-    pred = np.argmax(y_pred)
-    porcent = np.max(y_pred)
+    # =========================
+    # Prediction
+    # =========================
+    prediction_scores, predicted_class, confidence_score = picture_prediction(model, hyperparams, img)
     
+    # =========================
+    # Display
+    # =========================
     # Création de la figure avec 2 sous-graphiques (image + histogramme)
     fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
     fig.canvas.mpl_connect('key_press_event', handle_key)  # Connecte l'événement clavier
 
     # Affichage de l'image
     axs[0].imshow(grid, cmap="gray")
-    axs[0].set_title(f"Predict:{pred} ({np.round(porcent, 2)}%)")
+    axs[0].set_title(f"Predict:{predicted_class} ({np.round(confidence_score, 2)}%)")
     axs[0].axis("off")
 
     # Affichage de l'histogramme des probabilités
-    axs[1].bar(range(len(y_pred)), y_pred, color="blue")
-    axs[1].set_xticks(range(len(y_pred)))
+    axs[1].bar(range(len(prediction_scores)), prediction_scores, color="blue")
+    axs[1].set_xticks(range(len(prediction_scores)))
     axs[1].set_xlabel("Classes")
     axs[1].set_ylabel("Probability")
     axs[1].set_ylim(0, 1)
 
     plt.tight_layout()
     plt.show()
-
-
-def lister_dossiers():
-    # Récupère le chemin du répertoire courant
-    repertoire_courant = os.getcwd()
-    
-    # Liste uniquement les dossiers qui contient des models
-    dossiers = [
-    d for d in os.listdir(repertoire_courant)
-    if os.path.isdir(os.path.join(repertoire_courant, d)) and "Package" in d
-    ]
-            
-    if not dossiers:
-        print("Aucun dossier trouvé dans le répertoire courant.")
-        return None
-    
-    # Affiche les dossiers avec un numéro
-    print("Dossiers disponibles :")
-    for i, dossier in enumerate(dossiers, start=1):
-        print(f"{i}. {dossier}")
-    
-    # Demande à l'utilisateur de choisir un dossier
-    while True:
-        try:
-            choix = int(input("\nEntrez le numéro du dossier à choisir : "))
-            if 1 <= choix <= len(dossiers):
-                dossier_choisi = dossiers[choix - 1]
-                print(f"\nVous avez choisi : {dossier_choisi}")
-                return dossier_choisi
-            
-            elif choix == 0:
-                exit(1)
-
-            else:
-                print("Numéro invalide, réessayez.")
-
-        except ValueError:
-            print("Veuillez entrer un nombre valide.")
 
 
 #Main algorithm
