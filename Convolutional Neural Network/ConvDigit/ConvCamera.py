@@ -1,17 +1,18 @@
 
 import os
-import numpy as np
-import cupy as cp
 import matplotlib
+import numpy as np
 import time
 import cv2
 import matplotlib.pyplot as plt
-from PIL import Image, ImageOps
+from PIL import Image
 
 from System.Manage_file import select_model, load_model
 from System.User_Input import handle_key
 
 from System.Constante import FOLDER_NAME_LOGBOOK
+
+from utilsConv import lister_dossiers, picture_preprocessing, picture_prediction
 
 matplotlib.use("TkAgg")  # Issue on linux PC 42
 
@@ -19,10 +20,93 @@ module_dir = os.path.dirname(__file__)
 os.chdir(module_dir)
 
 
-def research(model,hyperparams,dataset,interval=0.5):
+def new_prediction(model, hyperparams, frame, img_shape, idx_to_class):
+    
+    #OpenCV BGR -> RGB
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # =========================
+    # Preprocessing
+    # =========================
+    img = Image.fromarray(frame_rgb)
+    img_array = picture_preprocessing(img, img_shape)
+    
+    # =========================
+    # Prediction
+    # =========================
+    prediction_scores, predicted_class, confidence_score = picture_prediction(model, hyperparams, img_array)
+
+    pred_class = idx_to_class[predicted_class]
+    
+    return prediction_scores, pred_class, confidence_score, img_array
+
+
+def get_center_square_coords(width: int, height: int, size: int):
+
+    #Image center
+    cx, cy = width // 2, height // 2
+
+    #Square coordinates
+    x1 = cx - size // 2
+    y1 = cy - size // 2
+    x2 = cx + size // 2
+    y2 = cy + size // 2
+
+    return x1, y1, x2, y2
+
+
+def init(n_classes):
+
+    # Figure
+    fig, axs = plt.subplots(2, 1, figsize=(5, 7), gridspec_kw={'height_ratios': [3, 1]})
+
+    # Event clavier
+    fig.canvas.mpl_connect('key_press_event', handle_key)
+
+    # Histogramme initial
+    bars = axs[1].bar(range(n_classes), [0] * n_classes, color="blue")
+
+    axs[1].set_xticks(range(n_classes))
+    axs[1].set_xlabel("Classes")
+    axs[1].set_ylabel("Probability")
+    axs[1].set_ylim(0, 1)
+
+    plt.tight_layout()
+    plt.show(block=False)
+
+    return fig, axs, bars
+
+
+def update(axs, bars,
+           prediction_scores,
+           predicted_class,
+           confidence_score,
+           img_array):
+
+    # -------- IMAGE --------
+
+    axs[0].clear()
+
+    if img_array.ndim == 2:
+        axs[0].imshow(img_array[0], cmap="gray")
+    else:
+        axs[0].imshow(img_array[0].transpose(1, 2, 0))
+
+    axs[0].set_title(f"Predict: {predicted_class} ({np.round(confidence_score, 2)}%)")
+    axs[0].axis("off")
+
+    # -------- HISTOGRAMME --------
+
+    for bar, score in zip(bars, prediction_scores):
+        bar.set_height(score)
+        bar.set_color("blue")
+
+    plt.pause(0.01)
+
+  
+def research(model, hyperparams, dataset, interval=1):
 
     img_shape = hyperparams.input_shape
-    img_size = (img_shape[1], img_shape[2])
 
     class_to_idx = dataset.class_to_idx
     idx_to_class = {v: k for k, v in class_to_idx.items()}
@@ -30,136 +114,51 @@ def research(model,hyperparams,dataset,interval=0.5):
     cap = cv2.VideoCapture(0)
 
     if not cap.isOpened():
-        raise Exception("Impossible d'ouvrir la webcam")
+        raise Exception("Unable to open webcam")
 
     last_prediction_time = 0
-
     current_text = "Waiting prediction..."
+    squarre_size = 300
+    
+    print("Q to leave")
 
-    print("Q pour quitter")
-
+    fig, axs, bars = init(1)
+    
     while True:
 
         ret, frame = cap.read()
+        h, w, _ = frame.shape
 
         if not ret:
             break
 
-        now = time.time()
-
         # =========================
         # New prediction
         # =========================
+        now = time.time()
         if now - last_prediction_time >= interval:
-
             last_prediction_time = now
-
-            # OpenCV BGR -> RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            img = Image.fromarray(frame_rgb)
-
-            # RGB / grayscale
-            if img_shape[0] == 3:
-                img = img.convert("RGB")
-            else:
-                img = img.convert("L")
-
-            # Resize
-            img = ImageOps.pad(img, img_size, method=Image.Resampling.LANCZOS)
-
-            # =========================
-            # Preprocessing
-            # =========================
-            img_array = np.array(img).astype(np.float32)
-
-            if np.max(img_array) > 0:
-                img_array /= np.max(img_array)
-
-            # grayscale
-            if img_array.ndim == 2:
-                img_array = img_array[None, None, :, :]
-
-            # RGB
-            elif img_array.ndim == 3:
-                img_array = np.transpose(img_array, (2, 0, 1))
-                img_array = img_array[None, :, :, :]
-
-            # GPU
-            if model.support == "GPU":
-                img_array = cp.array(img_array)
-
-            # =========================
-            # Prediction
-            # =========================
-            y_pred = model.forward_propagation(img_array, False).flatten()
-
-            if model.support == "GPU":
-                y_pred = cp.asnumpy(y_pred)
-
-            # Classification
-            if hyperparams.loss_metric == "CrossEntropyLoss":
-                pred = np.argmax(y_pred)
-                confidence = float(np.max(y_pred))
-
-            else:
-                pred = int((y_pred >= 0.5).astype(int).item())
-                confidence = float(np.max(y_pred))
-
-            display_pred = idx_to_class[pred]
-
-            current_text = (f"{display_pred} ({confidence:.2f})")
-
+            
+            # Extract the centered square region and run the model prediction on it
+            x1, y1, x2, y2 = get_center_square_coords(w, h, squarre_size)
+            squarre_frame = frame[y1:y2, x1:x2]
+            prediction_scores, predicted_class, confidence_score, img_array = new_prediction(model, hyperparams, squarre_frame, img_shape, idx_to_class)
+            
         # =========================
         # Display
-        # =========================
-        cv2.putText(frame,current_text,(20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        # =========================  
+        #cv2.putText(frame, current_text,(20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         cv2.imshow("Live Prediction", frame)
-
+    
         # Quitter
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        if cv2.waitKey(1) & 0xFF in [27, ord('q')]:
             return 1
-
+     
+        update(axs, bars, prediction_scores, predicted_class, confidence_score, img_array)
+ 
     cap.release()
     cv2.destroyAllWindows()
-
-
-def lister_dossiers():
-    # Récupère le chemin du répertoire courant
-    repertoire_courant = os.getcwd()
-    
-    # Liste uniquement les dossiers qui contient des models
-    dossiers = [
-    d for d in os.listdir(repertoire_courant)
-    if os.path.isdir(os.path.join(repertoire_courant, d)) and "Package" in d
-    ]
-            
-    if not dossiers:
-        print("Aucun dossier trouvé dans le répertoire courant.")
-        return None
-    
-    # Affiche les dossiers avec un numéro
-    print("Dossiers disponibles :")
-    for i, dossier in enumerate(dossiers, start=1):
-        print(f"{i}. {dossier}")
-    
-    # Demande à l'utilisateur de choisir un dossier
-    while True:
-        try:
-            choix = int(input("\nEntrez le numéro du dossier à choisir : "))
-            if 1 <= choix <= len(dossiers):
-                dossier_choisi = dossiers[choix - 1]
-                print(f"\nVous avez choisi : {dossier_choisi}")
-                return dossier_choisi
-            
-            elif choix == 0:
-                exit(1)
-
-            else:
-                print("Numéro invalide, réessayez.")
-
-        except ValueError:
-            print("Veuillez entrer un nombre valide.")
 
 
 #Main algorithm
