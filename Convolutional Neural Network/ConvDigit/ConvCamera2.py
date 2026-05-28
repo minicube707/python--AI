@@ -63,21 +63,32 @@ class ComparisonLayerDisplay:
         """
 
         self.D = shape[0]
-        max_par_fig = self.D
-        self.max_par_fig = max_par_fig
+        self.max_par_fig = self.D
         self.Z_enabled = Z_enabled
 
-
-        cols = min(4, min(self.D, max_par_fig))
-        rows = int(np.ceil(min(self.D, max_par_fig) / cols))
+        cols = min(4, self.max_par_fig)
+        rows = int(np.ceil(min(self.D, self.max_par_fig) / cols))
 
         self.cols = cols
         self.rows = rows
 
-        fig_cols = cols * 2 if Z_enabled else cols
+        # Toujours 2 colonnes : A + Z/extra A
+        fig_cols = cols * 2
 
-        self.fig, self.axes = plt.subplots(rows, fig_cols, figsize=(2.2 * fig_cols, 2.2 * rows))
-        self.fig.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0.02, hspace=0.02)
+        self.fig, self.axes = plt.subplots(
+            rows,
+            fig_cols,
+            figsize=(2.2 * fig_cols, 2.2 * rows)
+        )
+
+        self.fig.subplots_adjust(
+            left=0,
+            right=1,
+            top=1,
+            bottom=0,
+            wspace=0.02,
+            hspace=0.02
+        )
 
         if rows == 1:
             self.axes = np.expand_dims(self.axes, 0)
@@ -88,7 +99,7 @@ class ComparisonLayerDisplay:
         self.images_A = []
         self.images_Z = []
 
-        n = min(self.D, max_par_fig)
+        n = min(self.D, self.max_par_fig)
 
         for i in range(n):
 
@@ -96,9 +107,12 @@ class ComparisonLayerDisplay:
             col = i % cols
 
             # ---------- A ----------
-            ax_a = self.axes[row, col * 2] if Z_enabled else self.axes[row, col]
+            ax_a = self.axes[row, col * 2]
 
-            img_a = ax_a.imshow(np.zeros(shape[1:]), animated=True,)
+            img_a = ax_a.imshow(
+                np.zeros(shape[1:]),
+                animated=True
+            )
 
             ax_a.set_xticks([])
             ax_a.set_yticks([])
@@ -106,18 +120,19 @@ class ComparisonLayerDisplay:
 
             self.images_A.append(img_a)
 
-            # ---------- Z ----------
-            if Z_enabled:
+            # ---------- Z / extra A ----------
+            ax_z = self.axes[row, col * 2 + 1]
 
-                ax_z = self.axes[row, col * 2 + 1]
+            img_z = ax_z.imshow(
+                np.zeros(shape[1:]),
+                animated=True
+            )
 
-                img_z = ax_z.imshow(np.zeros(shape[1:]), animated=True)
+            ax_z.set_xticks([])
+            ax_z.set_yticks([])
+            ax_z.set_frame_on(False)
 
-                ax_z.set_xticks([])
-                ax_z.set_yticks([])
-                ax_z.set_frame_on(False)
-
-                self.images_Z.append(img_z)
+            self.images_Z.append(img_z)
 
         plt.show(block=False)
 
@@ -133,13 +148,34 @@ class ComparisonLayerDisplay:
 
         for i in range(n):
 
+            # Affichage principal A
             self.images_A[i].set_data(A[i])
-            self.images_A[i].set_clim(vmin=np.min(A[i]), vmax=np.max(A[i]))
+            self.images_A[i].set_clim(
+                vmin=np.min(A[i]),
+                vmax=np.max(A[i])
+            )
 
+            # Colonne droite
             if self.Z_enabled and Z is not None:
 
+                # Affichage normal de Z
                 self.images_Z[i].set_data(Z[i])
-                self.images_Z[i].set_clim(vmin=np.min(Z[i]), vmax=np.max(Z[i]))
+                self.images_Z[i].set_clim(
+                    vmin=np.min(Z[i]),
+                    vmax=np.max(Z[i])
+                )
+
+            else:
+                # Affiche la suite de A dans Z
+                j = i + n
+
+                if j < A.shape[0]:
+
+                    self.images_Z[i].set_data(A[j])
+                    self.images_Z[i].set_clim(
+                        vmin=np.min(A[j]),
+                        vmax=np.max(A[j])
+                    )
 
         self.fig.canvas.draw_idle()
         plt.pause(0.001)
@@ -164,7 +200,7 @@ def research(model, hyperparams, dataset, interval=1):
     level = 0
     print("Q to leave")
 
-    viewer = ComparisonLayerDisplay(shape=(24, 64, 64), Z_enabled=True)
+    viewer = ComparisonLayerDisplay(shape=(32, 32, 32), Z_enabled=True)
     
     while True:
 
