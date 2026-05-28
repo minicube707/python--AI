@@ -33,3 +33,7 @@ Les dépendance sont décrites dans chaque project.
 Se référer au README du project concerné :  
     - `CNN/README.md`  
     - `DNN/README.md`  
+
+## License
+
+This project is licensed under the GPL-3.0 License.
