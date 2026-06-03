@@ -64,7 +64,7 @@ class Hyperparams:
         if self.support == "GPU":
             try:
                 gpu_count = cp.cuda.runtime.getDeviceCount()
-                cp.random.randn((1, ))
+                cp.random.randn(1)
                 
             except cp.cuda.runtime.CUDARuntimeError as e:
                 
@@ -79,7 +79,7 @@ class Hyperparams:
             except Exception as e:
                 
                 gpu_count = 0
-                print("\nERROR: GPU initialization failed: {e}")
+                print(f"\nERROR: GPU initialization failed: {e}")
                 
             if gpu_count == 0:
                 print("\nERROR: No GPU found. Switching to CPU mode.")
