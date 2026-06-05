@@ -28,7 +28,7 @@ def load_model(path, model_name, new_hyperparams):
     if (new_hyperparams != None):
         hyperparams.nb_epoch = new_hyperparams.nb_epoch
         hyperparams.batch_size = new_hyperparams.batch_size
-        hyperparams.lr = hyperparams.lr
+        hyperparams.lr = new_hyperparams.lr
         hyperparams.beta1 = new_hyperparams.beta1
         hyperparams.beta2 = new_hyperparams.beta2
         hyperparams.alpha = new_hyperparams.alpha
