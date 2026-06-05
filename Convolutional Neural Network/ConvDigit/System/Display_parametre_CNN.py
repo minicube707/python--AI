@@ -5,6 +5,7 @@ import cupy as cp
 import matplotlib.pyplot as plt
 from .User_Input import handle_key
 
+
 def display_comparaison_layer(A, Z=None, max_par_fig=12):
     """
     Affiche chaque couche du tableau 3D A, et optionnellement Z si fourni,
@@ -83,16 +84,30 @@ def display_comparaison_layer(A, Z=None, max_par_fig=12):
 
 
 
-def display_activation(X, y, model):
+def display_activation(X, y, model, dataset):
+
+    class_to_idx = dataset.class_to_idx
+    idx_to_class = {v: k for k, v in class_to_idx.items()}
 
     if y is not None:
         print("")
-        number_wanted = int(input("Which number do want ?\n"))
+        
+        min_y = min(y)
+        max_y = max(y)
+        number_wanted = -1
+
+        while True:
+            number_wanted = int(input(f"Select a number between {min_y} and {max_y}\n"))
+
+            if min_y <= number_wanted <= max_y:
+                break
+            print(f"Please enter a number between {min_y} and {max_y}\n")
 
         # Trouver tous les index correspondant au chiffre voulu
         indices = [i for i, label in enumerate(y) if label == number_wanted]
 
         # Choisir un index aléatoire parmi ceux-là
+
         index_choisi = np.random.choice(indices)
 
         X_chosen = X[index_choisi]
@@ -100,7 +115,7 @@ def display_activation(X, y, model):
     else:
         X_chosen = X[0]
 
-    # Afficher l'image X
+     # Afficher l'image X
     if X_chosen.ndim == 2:
         plt.imshow(X_chosen)
         X_chosen = X_chosen[None, None, ...]
@@ -110,14 +125,23 @@ def display_activation(X, y, model):
         X_chosen = X_chosen[None, ...]
 
     if y is not None:
-        plt.title(f"Chiffre: {y[index_choisi]}")
+        plt.title(f"Class: {idx_to_class[y[index_choisi]]}")
         
     plt.axis('off')
     plt.show()
 
+    if (model.support == "GPU"):
+        X_chosen = cp.array(X_chosen)
+
     C = model.C_CNN
     for i in range(C):  
         A, Z =  model.get_activations(X_chosen, i)
+
+        if (model.support == "GPU"):
+            A = cp.asnumpy(A)
+            if Z is not None:
+                Z = cp.asnumpy(Z)
+
         display_comparaison_layer(A, Z)
 
 
@@ -205,7 +229,7 @@ dict    parametres :    containt all the information for the pooling operation
 =========OUTPUT=========
 void
 """
-def display_kernel_and_biais(X, y, model):
+def display_kernel_and_biais(X, y, model, dataset):
 
     def set_mode():
         while(1):
@@ -244,7 +268,7 @@ def display_kernel_and_biais(X, y, model):
         return
     
     if mode == 1:
-        display_activation(X, y, model)
+        display_activation(X, y, model, dataset)
         return
     
     for i, block in enumerate(model.layers):

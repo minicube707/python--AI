@@ -148,13 +148,13 @@ def exam_mode(module_dir):
     input_type, data = handle_test_input(module_dir, hyperparams, dataset)
 
     if input_type == "image":
-        display_kernel_and_biais(data, None, model.cnn_model)
+        display_kernel_and_biais(data, None, model.cnn_model, dataset)
         exit(0)
 
     # Dataset case
     X_test, y_final = prepare_test_data(data, hyperparams)
 
-    display_kernel_and_biais(X_test, y_final, model.cnn_model)
+    display_kernel_and_biais(X_test, y_final, model.cnn_model, dataset)
     exit(0)
 
 
@@ -216,9 +216,9 @@ def fine_tuning_model(module_dir, hyperparams, mode, dataset):
     
     if mode in {3}:
         hyperparams = None
-        
-    model, hyperparams, _, _, _, metadata_old = load_model(module_dir, model_name, hyperparams)
     
+    model, hyperparams, _, _, _, metadata_old = load_model(module_dir, model_name, hyperparams)
+
     dataset_config = select_type_dataset(module_dir, hyperparams, dataset)
     
     class_to_idx = dataset_config["class_to_idx"]
